@@ -46,4 +46,10 @@ class Barang_persediaan_model extends CI_Model {
         $this->db->where('id !=', $id);
         return $this->db->get($this->table)->num_rows() > 0;
     }
+
+    public function is_kode_used($kode, $except_id = NULL) {
+        $this->db->where('kode_barang', $kode);
+        if ($except_id) $this->db->where('id !=', $except_id);
+        return $this->db->get($this->table)->num_rows() > 0;
+    }
 }

@@ -39,6 +39,7 @@ class Barang_persediaan extends CI_Controller {
         header('Content-Type: application/json; charset=utf-8');
 
         $this->form_validation->set_rules('kategori_id', 'Kategori', 'required|numeric');
+        $this->form_validation->set_rules('kode_barang', 'Kode Barang', 'required|trim|max_length[50]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('satuan', 'Satuan', 'trim|max_length[50]');
 
@@ -48,6 +49,7 @@ class Barang_persediaan extends CI_Controller {
         }
 
         $kategori_id = $this->input->post('kategori_id', true);
+        $kode_barang = trim($this->input->post('kode_barang', true));
         $nama_barang = trim($this->input->post('nama_barang', true));
         $satuan = trim($this->input->post('satuan', true)) ?: 'pcs';
         $status = $this->input->post('status', true) ?: 'Aktif';
@@ -58,6 +60,11 @@ class Barang_persediaan extends CI_Controller {
             return;
         }
 
+        if ($this->Barang_persediaan_model->is_kode_used($kode_barang)) {
+            echo json_encode(['status' => 'error', 'message' => 'Kode barang sudah dipakai!']);
+            return;
+        }
+
         if ($this->Barang_persediaan_model->check_duplicate($kategori_id, $nama_barang)) {
             echo json_encode(['status' => 'error', 'message' => 'Nama barang sudah ada dalam kategori ini!']);
             return;
@@ -65,6 +72,7 @@ class Barang_persediaan extends CI_Controller {
 
         $ok = $this->Barang_persediaan_model->insert([
             'kategori_id' => $kategori_id,
+            'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
             'status' => $status
@@ -80,6 +88,7 @@ class Barang_persediaan extends CI_Controller {
 
         $this->form_validation->set_rules('id', 'ID', 'required|numeric');
         $this->form_validation->set_rules('kategori_id', 'Kategori', 'required|numeric');
+        $this->form_validation->set_rules('kode_barang', 'Kode Barang', 'required|trim|max_length[50]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('satuan', 'Satuan', 'trim|max_length[50]');
 
@@ -90,6 +99,7 @@ class Barang_persediaan extends CI_Controller {
 
         $id = $this->input->post('id', true);
         $kategori_id = $this->input->post('kategori_id', true);
+        $kode_barang = trim($this->input->post('kode_barang', true));
         $nama_barang = trim($this->input->post('nama_barang', true));
         $satuan = trim($this->input->post('satuan', true)) ?: 'pcs';
         $status = $this->input->post('status', true) ?: 'Aktif';
@@ -100,6 +110,11 @@ class Barang_persediaan extends CI_Controller {
             return;
         }
 
+        if ($this->Barang_persediaan_model->is_kode_used($kode_barang, $id)) {
+            echo json_encode(['status' => 'error', 'message' => 'Kode barang sudah dipakai!']);
+            return;
+        }
+
         if ($this->Barang_persediaan_model->check_duplicate_except($kategori_id, $nama_barang, $id)) {
             echo json_encode(['status' => 'error', 'message' => 'Nama barang sudah ada dalam kategori ini!']);
             return;
@@ -107,6 +122,7 @@ class Barang_persediaan extends CI_Controller {
 
         $ok = $this->Barang_persediaan_model->update($id, [
             'kategori_id' => $kategori_id,
+            'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
             'status' => $status

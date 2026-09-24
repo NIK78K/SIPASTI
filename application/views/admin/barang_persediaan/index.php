@@ -19,6 +19,7 @@
                 <thead>
                     <tr class="bg-slate-900/90 header-subtitle border-b border-slate-800/50">
                         <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 50px;">No</th>
+                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 140px;">Kode</th>
                         <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 160px;">Kategori</th>
                         <th class="px-4 py-4 text-left text-sm font-semibold">Nama Barang</th>
                         <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 100px;">Satuan</th>
@@ -30,6 +31,11 @@
                     <?php $no = 1; foreach($barang as $brg): ?>
                     <tr class="border-b border-slate-800/50 hover:bg-slate-800/50 transition-all duration-200">
                         <td class="px-4 py-4 header-subtitle"><?= $no++ ?></td>
+                        <td class="px-4 py-4">
+                            <span class="px-2.5 py-1 bg-slate-800/80 text-cyan-300 rounded text-xs font-mono border border-slate-700/50 whitespace-nowrap">
+                                <?= htmlspecialchars($brg->kode_barang ?? '-') ?>
+                            </span>
+                        </td>
                         <td class="px-4 py-4">
                             <span class="px-2.5 py-1 bg-purple-900/40 text-purple-400 rounded-full text-xs font-medium border border-purple-800/40 shadow-sm whitespace-nowrap">
                                 <?= htmlspecialchars($brg->kategori_kode ?? '-') ?>
@@ -105,6 +111,15 @@
                         <option value="<?= $kat->id ?>" class="bg-slate-800 text-white"><?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    Kode Barang <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="kode_barang" name="kode_barang" required maxlength="50"
+                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all font-mono"
+                       placeholder="Contoh: ATK-01-002">
             </div>
 
             <div>
@@ -215,14 +230,15 @@ $(document).ready(function() {
         },
         pageLength: 15,
         lengthMenu: [[15, 25, 50, 100, -1], [15, 25, 50, 100, "Semua"]],
-        order: [[1, 'asc']],
+        order: [[2, 'asc']],
         columnDefs: [
-            { orderable: false, targets: 5 },
+            { orderable: false, targets: 6 },
             { width: "50px", targets: 0 },
-            { width: "160px", targets: 1 },
-            { width: "100px", targets: 3 },
-            { width: "120px", targets: 4 },
-            { width: "140px", targets: 5 }
+            { width: "140px", targets: 1 },
+            { width: "160px", targets: 2 },
+            { width: "100px", targets: 4 },
+            { width: "120px", targets: 5 },
+            { width: "140px", targets: 6 }
         ],
         autoWidth: false
     });
@@ -250,6 +266,7 @@ function editBarang(id) {
         document.getElementById('modalTitle').textContent = 'Edit Barang';
         document.getElementById('barang_id').value = d.id;
         document.getElementById('kategori_id').value = d.kategori_id;
+        document.getElementById('kode_barang').value = d.kode_barang || '';
         document.getElementById('nama_barang').value = d.nama_barang;
         document.getElementById('satuan').value = d.satuan;
         document.getElementById('status').value = d.status;
