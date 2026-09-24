@@ -1,0 +1,937 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class User_ticket_model extends CI_Model {
+
+    /* =========================
+       AMBIL ID KATEGORI DARI SLUG
+    ========================= */
+    public function get_kategori_id_by_slug($slug)
+    {
+        return $this->db
+            ->select('id')
+            ->from('master_kategori')
+            ->where('slug', $slug)
+            ->get()
+            ->row('id');
+    }
+
+    /* =========================
+       AMBIL SUB KATEGORI BERDASARKAN KATEGORI
+    ========================= */
+    public function get_sub_kategori_by_kategori($kategori_id)
+    {
+        return $this->db
+          ->select('id, nama_sub_kategori, slug, perlu_jadwal')
+            ->where('kategori_id', $kategori_id)
+            ->order_by('created_at', 'ASC')
+            ->get('master_sub_kategori')
+            ->result();
+    }
+
+    public function get_sub_kategori($kategori_id)
+    {
+        return $this->get_sub_kategori_by_kategori($kategori_id);
+    }
+
+    /* =========================
+       AMBIL DATA PERANGKAT
+    ========================= */
+    public function get_perangkat()
+    {
+        return $this->db
+            ->order_by('nama_barang', 'ASC')
+            ->get('perangkat')
+            ->result_array();
+    }
+
+    /* =========================
+       CREATE TIKET + NOTIFIKASI EMAIL LENGKAP
+    ========================= */
+public function create_ticket()
+{
+    $userId   = $this->session->userdata('user_id');
+    $userName = $this->session->userdata('name');
+
+    $kategori_slug   = $this->input->post('kategori');
+    $kategori_id     = $this->get_kategori_id_by_slug($kategori_slug);
+    $sub_kategori_id = $this->input->post('sub_kategori_id');
+
+    $data = [
+        'user_id'         => $userId,
+        'pelapor'         => $userName,
+        'kode_tiket'      => 'TKT-' . date('YmdHis'),
+        'kategori_id'     => $kategori_id,
+        'sub_kategori_id' => $sub_kategori_id ?: null,
+        'status'          => 'Menunggu',
+        'created_at'      => date('Y-m-d H:i:s')
+    ];
+
+    /* =========================================
+       KERUSAKAN / GANGGUAN
+    ========================================= */
+    if (in_array($kategori_slug, ['kerusakan', 'gangguan'])) {
+        $data['perangkat_id']    = $this->input->post('perangkat_id');
+        $data['lokasi']          = $this->input->post('lokasi');
+        $data['jenis_kerusakan'] = $this->input->post('jenis_kerusakan');
+    }
+
+    /* =========================================
+       PERMINTAAN RUANG RAPAT
+    ========================================= */
+  elseif ($kategori_slug === 'permintaan' &&
+        $this->input->post('is_ruang_rapat') == '1') {
+
+    // ✅ FIX: query by slug
+    $rr_sub = $this->db
+        ->select('id')
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-ruang-rapat'])
+        ->row();
+    $data['sub_kategori_id'] = $rr_sub ? $rr_sub->id : null;
+
+    $ruangan_id     = (int) $this->input->post('ruangan_id');
+        $tanggal        = $this->input->post('tanggal_rapat');
+        $jam_mulai      = $this->input->post('jam_mulai');
+        $jam_selesai    = $this->input->post('jam_selesai');
+        $keperluan      = $this->input->post('keperluan');
+        $jumlah_peserta = (int) $this->input->post('jumlah_peserta_rapat') ?: null;
+        $snack_corner   = $this->input->post('snack_corner') ?: 'Tidak';
+        $jumlah_snack   = ($snack_corner === 'Ya') ? (int) $this->input->post('jumlah_snack') : null;
+        $catatan        = $this->input->post('catatan_peminjam');
+
+        $conflict = $this->db
+            ->where('ruangan_id', $ruangan_id)
+            ->where('tanggal', $tanggal)
+            ->where_in('status', ['Menunggu', 'Disetujui'])
+            ->group_start()
+                ->where('jam_mulai <', $jam_selesai)
+                ->where('jam_selesai >', $jam_mulai)
+            ->group_end()
+            ->count_all_results('peminjaman_ruang_rapat');
+
+        if ($conflict > 0) {
+            $this->session->set_flashdata('error', 'Ruangan sudah dipesan pada waktu tersebut. Pilih waktu lain.');
+            return false;
+        }
+
+        $ruangan = $this->db
+            ->select('nama_ruangan, lokasi, kapasitas')
+            ->where('id', $ruangan_id)
+            ->get('master_ruang_rapat')
+            ->row_array();
+
+        $this->db->insert('peminjaman_ruang_rapat', [
+            'ruangan_id'       => $ruangan_id,
+            'nama_peminjam'    => $userName,
+            'unit_kerja'       => $this->input->post('unit_kerja'),
+            'tanggal'          => $tanggal,
+            'jam_mulai'        => $jam_mulai,
+            'jam_selesai'      => $jam_selesai,
+            'keperluan'        => $keperluan,
+            'jumlah_peserta'   => $jumlah_peserta,
+            'snack_corner'     => $snack_corner,
+            'jumlah_snack'     => $jumlah_snack,
+            'catatan_peminjam' => $catatan,
+            'status'           => 'Menunggu',
+            'selesai'          => 'Belum',
+            'created_by'       => $userId,
+        ]);
+        $peminjaman_id = $this->db->insert_id();
+
+        $catatan_arr   = [];
+        $catatan_arr[] = "Ruangan: "  . ($ruangan['nama_ruangan'] ?? '-');
+        $catatan_arr[] = "Lokasi: "   . ($ruangan['lokasi']       ?? '-');
+        $catatan_arr[] = "Tanggal: "  . date('d F Y', strtotime($tanggal));
+        $catatan_arr[] = "Jam: "      . $jam_mulai . " s.d. " . $jam_selesai;
+        $catatan_arr[] = "Keperluan: " . $keperluan;
+        if ($jumlah_peserta) $catatan_arr[] = "Jumlah Peserta: {$jumlah_peserta} orang";
+        if ($snack_corner === 'Ya')    $catatan_arr[] = "Snack Corner: Ya ({$jumlah_snack} porsi)";
+        if ($catatan)                  $catatan_arr[] = "Catatan: {$catatan}";
+        $catatan_arr[] = "[ref:peminjaman_id={$peminjaman_id}]";
+
+        $data['jenis_kerusakan'] = implode("\n", $catatan_arr);
+        $data['tanggal']         = $tanggal;
+        $data['jam']             = $jam_mulai;
+    }
+
+    /* =========================================
+       PERMINTAAN KENDARAAN DINAS  ← BLOK BARU
+    ========================================= */
+elseif ($kategori_slug === 'permintaan' &&
+      $this->input->post('is_kendaraan') == '1') {
+
+    // ✅ FIX: query by slug
+    $kend_sub = $this->db
+        ->select('id')
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-kendaraan'])
+        ->row();
+    $data['sub_kategori_id'] = $kend_sub ? $kend_sub->id : null;
+
+    $kendaraan_id    = (int) $this->input->post('kend_kendaraan_id');
+    $tipe_pinjam     = $this->input->post('kend_tipe_pinjam') ?: 'harian';
+    $tanggal_pinjam  = $this->input->post('kend_tanggal_pinjam');
+    $tanggal_kembali = $this->input->post('kend_tanggal_kembali');
+    $jam_pinjam      = ($tipe_pinjam === 'per_jam') ? $this->input->post('kend_jam_pinjam')  : null;
+    $jam_kembali     = ($tipe_pinjam === 'per_jam') ? $this->input->post('kend_jam_kembali') : null;
+
+    // Validasi per_jam
+    if ($tipe_pinjam === 'per_jam') {
+        if ($tanggal_pinjam !== $tanggal_kembali) {
+            $this->session->set_flashdata('error', 'Peminjaman per jam hanya boleh 1 hari yang sama.');
+            return false;
+        }
+        if (!$jam_pinjam || !$jam_kembali || $jam_pinjam >= $jam_kembali) {
+            $this->session->set_flashdata('error', 'Jam kembali harus lebih dari jam pinjam.');
+            return false;
+        }
+    }
+
+    // Cek konflik
+    $this->load->model('Peminjaman_kendaraan_model');
+    $conflict = $this->Peminjaman_kendaraan_model->is_conflict(
+        $kendaraan_id, $tanggal_pinjam, $tanggal_kembali, $jam_pinjam, $jam_kembali
+    );
+    if ($conflict) {
+        $this->session->set_flashdata('error', 'Kendaraan sudah dipinjam pada waktu tersebut.');
+        return false;
+    }
+
+    // Info kendaraan
+    $kend = $this->db
+        ->select('nama_kendaraan, nomor_polisi, jenis')
+        ->where('id', $kendaraan_id)
+        ->get('master_kendaraan')
+        ->row_array();
+
+    // Insert ke tabel peminjaman_kendaraan
+    $this->db->insert('peminjaman_kendaraan', [
+        'kendaraan_id'   => $kendaraan_id,
+        'nama_peminjam'  => $userName,
+        'unit_kerja'     => $this->input->post('kend_unit_kerja'),
+        'keperluan'      => $this->input->post('kend_keperluan'),
+        'tujuan'         => $this->input->post('kend_tujuan'),
+        'tanggal_pinjam' => $tanggal_pinjam,
+        'tanggal_kembali'=> $tanggal_kembali,
+        'tipe_pinjam'    => $tipe_pinjam,
+        'jam_pinjam'     => $jam_pinjam,
+        'jam_kembali'    => $jam_kembali,
+        'pengemudi'      => $this->input->post('kend_pengemudi') ?: 'Sendiri',
+        'no_hp'          => $this->input->post('kend_no_hp'),
+        'catatan'        => $this->input->post('kend_catatan'),
+        'status'         => 'Menunggu',
+        'created_by'     => $userId,
+    ]);
+    $pinjaman_id = $this->db->insert_id();
+
+    // Ringkasan untuk kolom tiket
+    $icon    = ($kend['jenis'] ?? '') === 'Mobil' ? '🚗' : '🏍️';
+    $lines   = [];
+    $lines[] = "Kendaraan: {$icon} " . ($kend['nama_kendaraan'] ?? '-')
+             . " (" . ($kend['nomor_polisi'] ?? '-') . ")";
+    $lines[] = "Keperluan: " . $this->input->post('kend_keperluan');
+
+    if ($t = $this->input->post('kend_tujuan')) $lines[] = "Tujuan: {$t}";
+
+    if ($tipe_pinjam === 'per_jam') {
+        $lines[] = "Tanggal: " . date('d F Y', strtotime($tanggal_pinjam));
+        $lines[] = "Jam: {$jam_pinjam} s.d. {$jam_kembali} WIB";
+    } else {
+        $lines[] = "Tanggal Pinjam: " . date('d F Y', strtotime($tanggal_pinjam));
+        $lines[] = "Est. Kembali: "   . date('d F Y', strtotime($tanggal_kembali));
+    }
+
+    if ($p = $this->input->post('kend_pengemudi')) $lines[] = "Pengemudi: {$p}";
+    if ($c = $this->input->post('kend_catatan'))   $lines[] = "Catatan: {$c}";
+    $lines[] = "[ref:peminjaman_kendaraan_id={$pinjaman_id}]";
+
+    $data['jenis_kerusakan'] = implode("\n", $lines);
+    $data['tanggal']         = $tanggal_pinjam;
+    $data['jam']             = $jam_pinjam;
+}
+/* =========================================
+       PERMINTAAN BMN
+    ========================================= */
+   elseif ($kategori_slug === 'permintaan' &&
+        $this->input->post('is_bmn') == '1') {
+
+    // ✅ FIX: query by slug biar works di local & server
+    $bmn_sub = $this->db
+        ->select('id')
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-peminjaman-bmn'])
+        ->row();
+    $data['sub_kategori_id'] = $bmn_sub ? $bmn_sub->id : null;
+
+    $bmn_id          = (int) $this->input->post('bmn_id');
+        $tanggal_pinjam  = $this->input->post('bmn_tanggal_pinjam');
+        $tanggal_kembali = $this->input->post('bmn_tanggal_kembali');
+        $tujuan          = $this->input->post('bmn_tujuan');
+        $unit_kerja      = $this->input->post('bmn_unit_kerja');
+        $catatan         = $this->input->post('bmn_catatan');
+
+        // Validasi tanggal
+        if ($tanggal_kembali < $tanggal_pinjam) {
+            $this->session->set_flashdata('error', 'Tanggal kembali tidak boleh sebelum tanggal pinjam.');
+            return false;
+        }
+
+        // Cek konflik
+        $this->load->model('Master_bmn_model');
+        if ($this->Master_bmn_model->is_conflict($bmn_id, $tanggal_pinjam, $tanggal_kembali)) {
+            $this->session->set_flashdata('error', 'Barang sedang dipinjam pada tanggal tersebut. Pilih tanggal lain.');
+            return false;
+        }
+
+        // Info barang
+        $bmn = $this->db
+            ->select('nama_barang, merek, kode_barang, nup')
+            ->where('id', $bmn_id)
+            ->get('master_bmn')
+            ->row_array();
+
+        // Insert ke peminjaman_bmn
+        $this->db->insert('peminjaman_bmn', [
+            'bmn_id'            => $bmn_id,
+            'nama_peminjam'     => $userName,
+            'unit_kerja'        => $unit_kerja,
+            'tujuan_peminjaman' => $tujuan,
+            'tanggal_pinjam'    => $tanggal_pinjam,
+            'tanggal_kembali'   => $tanggal_kembali,
+            'catatan'           => $catatan,
+            'status'            => 'Menunggu',
+            'selesai'           => 'Belum',
+            'created_by'        => $userId,
+        ]);
+        $pinjaman_id = $this->db->insert_id();
+
+        // Ringkasan untuk tiket
+        $lines   = [];
+        $lines[] = "Barang: " . ($bmn['nama_barang'] ?? '-');
+        if (!empty($bmn['merek']))      $lines[] = "Merek: " . $bmn['merek'];
+        if (!empty($bmn['kode_barang'])) $lines[] = "Kode: " . $bmn['kode_barang'] . " / NUP " . ($bmn['nup'] ?? '-');
+        $lines[] = "Unit Kerja: " . $unit_kerja;
+        $lines[] = "Tujuan: " . $tujuan;
+        $lines[] = "Tgl Pinjam: " . date('d F Y', strtotime($tanggal_pinjam));
+        $lines[] = "Rencana Kembali: " . date('d F Y', strtotime($tanggal_kembali));
+        if ($catatan) $lines[] = "Catatan: " . $catatan;
+        $lines[] = "[ref:peminjaman_bmn_id={$pinjaman_id}]";
+
+        $data['jenis_kerusakan'] = implode("\n", $lines);
+        $data['tanggal']         = $tanggal_pinjam;
+    }
+    /* =========================================
+       PERMINTAAN / LAYANAN IT BIASA
+    ========================================= */
+    elseif ($kategori_slug === 'permintaan') {
+
+        $jenis_layanan     = $this->input->post('jenis_layanan');
+        $sub_kategori_data = $this->db
+            ->get_where('master_sub_kategori', ['id' => $sub_kategori_id])
+            ->row();
+        $perlu_jadwal = $sub_kategori_data ? $sub_kategori_data->perlu_jadwal : 0;
+
+        if ($perlu_jadwal == 1) {
+
+            $tanggal_mulai   = $this->input->post('tanggal');
+            $tanggal_selesai = $this->input->post('tanggal_selesai') ?: null;
+            $jam             = $this->input->post('jam');
+            $durasi          = $this->input->post('durasi');
+
+            $data['tanggal']         = $tanggal_mulai;
+            $data['tanggal_selesai'] = $tanggal_selesai;
+            $data['jam']             = $jam;
+            $data['durasi']          = $durasi;
+
+            $jumlah_hari = 1;
+            if ($tanggal_selesai) {
+                $tM          = new DateTime($tanggal_mulai);
+                $tS          = new DateTime($tanggal_selesai);
+                $jumlah_hari = $tS->diff($tM)->days + 1;
+            }
+
+            $fmt_mulai = date('d F Y', strtotime($tanggal_mulai));
+            $catatan   = [];
+            $catatan[] = "Detail Permintaan: " . $jenis_layanan;
+
+            if ($jumlah_hari > 1) {
+                $fmt_selesai = date('d F Y', strtotime($tanggal_selesai));
+                $catatan[]   = "Periode: {$fmt_mulai} s.d. {$fmt_selesai} ({$jumlah_hari} hari)";
+            } else {
+                $catatan[] = "Tanggal: " . $fmt_mulai;
+            }
+
+            $catatan[] = "Jam Mulai (per hari): " . $jam . " WIB";
+            $catatan[] = "Durasi (per hari): "    . $durasi . " jam";
+
+            if ($v = $this->input->post('jumlah_peserta'))         $catatan[] = "Jumlah Peserta: {$v} orang";
+            if ($v = $this->input->post('jumlah_breakout'))        $catatan[] = "Jumlah Breakout Room: {$v}";
+            if ($v = $this->input->post('penanggung_jawab'))       $catatan[] = "Penanggung Jawab: {$v}";
+            if ($v = $this->input->post('host_cohost'))            $catatan[] = "Host/Co-Host: {$v}";
+            if ($v = $this->input->post('permintaan_lain_jadwal')) $catatan[] = "Permintaan Lainnya:\n{$v}";
+
+            $data['jenis_kerusakan'] = implode("\n", $catatan);
+
+        } else {
+
+            $catatan   = [];
+            $catatan[] = "Detail Permintaan: " . $jenis_layanan;
+
+            if ($lokasi = $this->input->post('lokasi_tanpa_jadwal')) {
+                $catatan[]      = "Lokasi/Unit: " . $lokasi;
+                $data['lokasi'] = $lokasi;
+            }
+            if ($v = $this->input->post('permintaan_lain_tanpa_jadwal')) {
+                $catatan[] = "Catatan Tambahan:\n{$v}";
+            }
+
+            $data['jenis_kerusakan'] = implode("\n", $catatan);
+        }
+    }
+
+    /* =========================================
+       KATEGORI LAIN
+    ========================================= */
+    else {
+        $perangkat_text = $this->input->post('perangkat');
+        $deskripsi      = $this->input->post('jenis_kerusakan');
+
+        if (!empty($perangkat_text)) {
+            $deskripsi = "Perangkat: " . $perangkat_text . "\n\n" . $deskripsi;
+        }
+
+        $data['lokasi']          = $this->input->post('lokasi');
+        $data['jenis_kerusakan'] = $deskripsi;
+    }
+
+    /* =========================================
+       UPLOAD FOTO
+    ========================================= */
+    if (!empty($_FILES['foto']['name'])) {
+        $config = [
+            'upload_path'   => FCPATH . 'uploads/tiket/',
+            'allowed_types' => 'jpg|jpeg|png',
+            'encrypt_name'  => true,
+            'max_size'      => 2048
+        ];
+        $this->load->library('upload', $config);
+        if ($this->upload->do_upload('foto')) {
+            $data['foto'] = $this->upload->data('file_name');
+        }
+    }
+
+    /* =========================================
+       SIMPAN TIKET
+    ========================================= */
+    $this->db->insert('tickets', $data);
+
+    /* =========================================
+       KIRIM EMAIL
+    ========================================= */
+    $this->send_detailed_email_to_rizky(
+        $data,
+        $kategori_slug,
+        $sub_kategori_data ?? null
+    );
+
+    return true;
+}
+    /* =========================
+       KIRIM EMAIL LENGKAP KE RIZKY
+    ========================= */
+   private function send_detailed_email_to_rizky($ticket_data, $kategori_slug, $sub_kategori_data)
+    {
+        $rizky_email = 'ipds1400@bps.go.id';
+
+        $kategori       = $this->db->get_where('master_kategori', ['id' => $ticket_data['kategori_id']])->row();
+        $kategori_nama  = $kategori ? $kategori->nama_kategori : '-';
+        $sub_kategori_nama = $sub_kategori_data ? $sub_kategori_data->nama_sub_kategori : '-';
+
+        /* ---- Perangkat ---- */
+        $perangkat_html = '';
+        if (!empty($ticket_data['perangkat_id'])) {
+            $perangkat = $this->db
+                ->select('kode_barang, nup, nama_barang')
+                ->where('id', $ticket_data['perangkat_id'])
+                ->get('perangkat')
+                ->row_array();
+
+            if ($perangkat) {
+                $perangkat_html = "
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>Perangkat</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        <strong>{$perangkat['kode_barang']} | {$perangkat['nup']}</strong><br>
+                        <span style='color:#6b7280;'>{$perangkat['nama_barang']}</span>
+                    </td>
+                </tr>";
+            }
+        }
+
+        /* ---- Jadwal (dengan dukungan multi-day) ---- */
+        $jadwal_html = '';
+        if (!empty($ticket_data['tanggal'])) {
+
+            $fmt_mulai   = date('d F Y', strtotime($ticket_data['tanggal']));
+            $jam         = !empty($ticket_data['jam'])    ? $ticket_data['jam']    : '-';
+            $durasi      = !empty($ticket_data['durasi']) ? $ticket_data['durasi'] . ' jam/hari' : '-';
+
+            /* Multi-day */
+            if (!empty($ticket_data['tanggal_selesai'])) {
+                $tM          = new DateTime($ticket_data['tanggal']);
+                $tS          = new DateTime($ticket_data['tanggal_selesai']);
+                $jumlah_hari = $tS->diff($tM)->days + 1;
+                $fmt_selesai = date('d F Y', strtotime($ticket_data['tanggal_selesai']));
+
+                $jadwal_html = "
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>📅 Periode</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        {$fmt_mulai} s.d. {$fmt_selesai}<br>
+                        <span style='color:#6b7280;'>({$jumlah_hari} hari)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>🕐 Jam Mulai/Hari</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        Pukul {$jam} WIB
+                    </td>
+                </tr>
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>⏱️ Durasi/Hari</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        {$durasi}
+                    </td>
+                </tr>";
+
+            /* Single-day */
+            } else {
+                $jadwal_html = "
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>📅 Tanggal</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        {$fmt_mulai}<br>
+                        <span style='color:#6b7280;'>Pukul {$jam} WIB</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                        <strong>⏱️ Durasi</strong>
+                    </td>
+                    <td style='padding:10px;color:#1f2937;'>
+                        {$durasi}
+                    </td>
+                </tr>";
+            }
+        }
+
+        /* ---- Lokasi ---- */
+        $lokasi_html = '';
+        if (!empty($ticket_data['lokasi'])) {
+            $lokasi_html = "
+            <tr>
+                <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'>
+                    <strong>📍 Lokasi</strong>
+                </td>
+                <td style='padding:10px;color:#1f2937;'>
+                    {$ticket_data['lokasi']}
+                </td>
+            </tr>";
+        }
+
+        /* ---- Foto ---- */
+        $foto_html = '';
+        if (!empty($ticket_data['foto'])) {
+            $foto_url  = base_url('uploads/tiket/' . $ticket_data['foto']);
+            $foto_html = "
+            <tr>
+                <td colspan='2' style='padding:20px 10px 10px 10px;'>
+                    <strong style='color:#6b7280;'>📷 Foto Lampiran:</strong>
+                </td>
+            </tr>
+            <tr>
+                <td colspan='2' style='padding:0 10px 10px 10px;'>
+                    <img src='{$foto_url}' alt='Foto Tiket'
+                         style='max-width:100%;height:auto;border-radius:8px;border:1px solid #e5e7eb;'>
+                </td>
+            </tr>";
+        }
+
+        $deskripsi   = nl2br(htmlspecialchars($ticket_data['jenis_kerusakan']));
+        $created_at  = date('d F Y, H:i', strtotime($ticket_data['created_at']));
+        $subject     = "🎫 [{$ticket_data['kode_tiket']}] Tiket Baru - {$kategori_nama}";
+
+        $message = "
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'></head>
+        <body style='margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;'>
+            <table width='100%' cellpadding='0' cellspacing='0' style='background-color:#f3f4f6;padding:40px 20px;'>
+                <tr><td align='center'>
+                    <table width='100%' style='max-width:600px;' cellpadding='0' cellspacing='0'>
+
+                        <!-- HEADER -->
+                        <tr>
+                            <td style='background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);padding:40px 30px;border-radius:12px 12px 0 0;'>
+                                <div style='font-size:48px;margin-bottom:10px;'>🎫</div>
+                                <h1 style='margin:0;color:#ffffff;font-size:28px;font-weight:bold;'>Tiket Baru Masuk!</h1>
+                                <p style='margin:12px 0 0 0;color:#fecaca;font-size:15px;'>Ada tiket baru yang membutuhkan penanganan Anda</p>
+                            </td>
+                        </tr>
+
+                        <!-- CONTENT -->
+                        <tr>
+                            <td style='background-color:#ffffff;'>
+
+                                <!-- Kode Tiket -->
+                                <table width='100%' cellpadding='0' cellspacing='0'
+                                       style='background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);padding:25px 30px;border-bottom:3px solid #f59e0b;'>
+                                    <tr>
+                                        <td>
+                                            <h2 style='margin:0 0 8px 0;color:#92400e;font-size:24px;font-weight:bold;'>
+                                                {$ticket_data['kode_tiket']}
+                                            </h2>
+                                            <span style='display:inline-block;padding:6px 16px;background:#dc2626;color:#ffffff;border-radius:20px;font-size:13px;font-weight:600;'>
+                                                ⏳ MENUNGGU PENANGANAN
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Detail -->
+                                <table width='100%' cellpadding='0' cellspacing='0' style='padding:30px;'>
+                                    <tr>
+                                        <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'><strong>👤 Pelapor</strong></td>
+                                        <td style='padding:10px;color:#1f2937;'><strong>{$ticket_data['pelapor']}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'><strong>📂 Kategori</strong></td>
+                                        <td style='padding:10px;color:#1f2937;'>{$kategori_nama}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'><strong>🏷️ Sub Kategori</strong></td>
+                                        <td style='padding:10px;color:#1f2937;'>{$sub_kategori_nama}</td>
+                                    </tr>
+
+                                    {$lokasi_html}
+                                    {$perangkat_html}
+                                    {$jadwal_html}
+
+                                    <tr>
+                                        <td style='padding:10px;width:180px;vertical-align:top;color:#6b7280;'><strong>🕐 Waktu Laporan</strong></td>
+                                        <td style='padding:10px;color:#1f2937;'>{$created_at} WIB</td>
+                                    </tr>
+
+                                    <!-- Divider -->
+                                    <tr><td colspan='2' style='padding:20px 10px;'>
+                                        <div style='border-top:2px solid #e5e7eb;'></div>
+                                    </td></tr>
+
+                                    <!-- Deskripsi -->
+                                    <tr>
+                                        <td colspan='2' style='padding:10px;'>
+                                            <strong style='color:#6b7280;font-size:14px;'>📝 DESKRIPSI / DETAIL:</strong>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan='2' style='padding:10px;background:#f9fafb;border-left:4px solid #dc2626;border-radius:6px;'>
+                                            <div style='color:#374151;line-height:1.7;font-size:14px;'>
+                                                {$deskripsi}
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    {$foto_html}
+                                </table>
+
+                                <!-- CTA -->
+                                <table width='100%' cellpadding='0' cellspacing='0' style='padding:0 30px 30px 30px;'>
+                                    <tr>
+                                        <td align='center' style='padding:20px 0;'>
+                                            <a href='" . base_url('/ticket') . "'
+                                               style='display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;'>
+                                                🚀 Lihat Tiket di Sistem
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                            </td>
+                        </tr>
+
+                        <!-- FOOTER -->
+                        <tr>
+                            <td style='background-color:#1f2937;padding:25px 30px;border-radius:0 0 12px 12px;text-align:center;'>
+                                <p style='margin:0;color:#9ca3af;font-size:13px;line-height:1.6;'>
+                                    Email ini dikirim secara otomatis oleh sistem<br>
+                                    <strong style='color:#ffffff;'>SIPASTI - Sistem Informasi Pengelolaan Aset dan Layanan TI</strong><br>
+                                    Segera tangani tiket ini untuk memberikan pelayanan terbaik
+                                </p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td></tr>
+            </table>
+        </body>
+        </html>
+        ";
+
+        $this->load->helper('email');
+        send_ticket_email($rizky_email, $subject, $message);
+    }
+
+    /* =========================
+       HISTORY USER
+    ========================= */
+public function get_history_limit($user_id, $limit, $offset)
+{
+    return $this->db
+        ->select('
+            t.*,
+            mk.nama_kategori,
+            mk.slug as kategori_slug,
+            msk.nama_sub_kategori,
+            msk.perlu_jadwal,
+            p.nama_barang,
+            u.name as nama_teknisi
+        ')
+        ->from('tickets t')
+        ->join('master_kategori mk',      'mk.id = t.kategori_id',       'left')
+        ->join('master_sub_kategori msk', 'msk.id = t.sub_kategori_id',  'left')
+        ->join('perangkat p',             'p.id = t.perangkat_id',        'left')
+        ->join('teknisi tek',             'tek.id = t.teknisi_id',        'left')
+        ->join('users u',                 'u.id = tek.user_id',           'left')
+        ->where('t.user_id', $user_id)
+        ->order_by('t.created_at', 'DESC')
+        ->limit($limit, $offset)
+        ->get()
+        ->result_array();
+}
+
+    public function count_history($user_id)
+    {
+        return $this->db
+            ->where('user_id', $user_id)
+            ->count_all_results('tickets');
+    }
+
+    /* =========================
+       RATING
+    ========================= */
+    public function update_rating($ticket_id, $user_id, $rating, $komentar = null)
+    {
+        $ticket = $this->db
+            ->where('id', $ticket_id)
+            ->where('user_id', $user_id)
+            ->where('status', 'Selesai')
+            ->get('tickets')
+            ->row_array();
+
+        if (!$ticket) {
+            $this->session->set_flashdata('error', 'Tiket tidak valid atau belum selesai');
+            return false;
+        }
+
+        $this->db->where('id', $ticket_id);
+        $this->db->where('user_id', $user_id);
+        $this->db->update('tickets', [
+            'rating'   => (int) $rating,
+            'komentar' => $komentar
+        ]);
+
+        if ($this->db->affected_rows() > 0) {
+            $this->session->set_flashdata('success', 'Terima kasih atas rating Anda! ⭐');
+            return true;
+        }
+
+        $this->session->set_flashdata('error', 'Gagal menyimpan rating');
+        return false;
+    }
+
+    /* =========================
+       SEARCH PERANGKAT
+    ========================= */
+    public function search_perangkat($q)
+    {
+        $q           = trim($q);
+        $kode_barang = $q;
+        $nup         = null;
+
+        if (preg_match('/^(\d+?)(\d{1,4})$/', $q, $match)) {
+            $kode_barang = $match[1];
+            $nup         = ltrim($match[2], '0');
+        }
+
+        $this->db
+            ->select('id, kode_barang, nup, nama_barang')
+            ->from('perangkat')
+            ->group_start()
+                ->like('kode_barang', $q)
+                ->or_like('nup', $q)
+                ->or_where("CONCAT(kode_barang, nup) =", $q);
+
+        if ($nup !== null) {
+            $this->db->or_group_start()
+                ->like('kode_barang', $kode_barang)
+                ->where('nup', $nup)
+            ->group_end();
+        }
+
+        $this->db
+            ->group_end()
+            ->limit(10)
+            ->order_by('kode_barang', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    /* =========================
+   AMBIL TIKET UNTUK EDIT (MILIK USER)
+========================= */
+public function get_ticket_for_edit($ticket_id, $user_id)
+{
+    return $this->db
+        ->select('t.*, mk.slug as kategori_slug, msk.nama_sub_kategori')
+        ->from('tickets t')
+        ->join('master_kategori mk',      'mk.id = t.kategori_id',      'left')
+        ->join('master_sub_kategori msk', 'msk.id = t.sub_kategori_id', 'left')
+        ->where('t.id', $ticket_id)
+        ->where('t.user_id', $user_id)
+        ->where_in('t.status', ['Menunggu', 'On Progress'])
+        ->get()
+        ->row_array();
+}
+
+/* =========================
+   UPDATE TIKET OLEH USER
+========================= */
+public function update_ticket_by_user($ticket_id, $user_id, $data)
+{
+    $this->db
+        ->where('id', $ticket_id)
+        ->where('user_id', $user_id)
+        ->where_in('status', ['Menunggu', 'On Progress'])
+        ->update('tickets', $data);
+
+    return $this->db->affected_rows() > 0;
+}
+
+/* =========================
+   AUTO RATING 5 BINTANG (24 JAM)
+========================= */
+public function auto_rate_expired_tickets($user_id)
+{
+    $tickets = $this->db
+        ->where('user_id', $user_id)
+        ->where('status', 'Selesai')
+        ->where('rating IS NULL', null, false)
+        ->where('selesai_at <= DATE_SUB(NOW(), INTERVAL 24 HOUR)', null, false)
+        ->get('tickets')
+        ->result_array();
+
+    if (empty($tickets)) return 0;
+
+    $this->db
+        ->where('user_id', $user_id)
+        ->where('status', 'Selesai')
+        ->where('rating IS NULL', null, false)
+        ->where('selesai_at <= DATE_SUB(NOW(), INTERVAL 24 HOUR)', null, false)
+        ->update('tickets', [
+            'rating'   => 5,
+            'komentar' => 'Dinilai otomatis oleh sistem'
+        ]);
+
+    return $this->db->affected_rows();
+}
+
+public function get_zoom_ticket_for_upload($ticket_id, $user_id)
+{
+    return $this->db
+        ->select('t.id, t.dokumen_peserta, msk.perlu_jadwal, mk.slug as kategori_slug')
+        ->from('tickets t')
+        ->join('master_kategori mk',      'mk.id = t.kategori_id',      'left')
+        ->join('master_sub_kategori msk', 'msk.id = t.sub_kategori_id', 'left')
+        ->where('t.id',      $ticket_id)
+        ->where('t.user_id', $user_id)
+        ->where('mk.slug',   'permintaan')
+        ->where('msk.perlu_jadwal', 1)
+        ->get()
+        ->row_array();
+}
+
+/* ===============================
+   GET RUANGAN AKTIF (AJAX)
+=============================== */
+public function get_ruangan_aktif()
+{
+    $this->load->model('Ruang_rapat_model');
+    $ruangan = $this->Ruang_rapat_model->get_aktif();
+
+    header('Content-Type: application/json');
+    echo json_encode($ruangan);
+}
+/* ===============================
+   CEK KONFLIK RUANG RAPAT
+   (dipanggil sebelum insert tiket)
+=============================== */
+public function cek_konflik_ruang_rapat($ruangan_id, $tanggal, $jam_mulai, $jam_selesai)
+{
+    return $this->db
+        ->where('ruangan_id', $ruangan_id)
+        ->where('tanggal', $tanggal)
+        ->where_in('status', ['Menunggu', 'Disetujui'])
+        ->group_start()
+            ->where('jam_mulai <', $jam_selesai)
+            ->where('jam_selesai >', $jam_mulai)
+        ->group_end()
+        ->count_all_results('peminjaman_ruang_rapat') > 0;
+}
+
+/* ===============================
+   CEK KONFLIK KENDARAAN
+=============================== */
+public function cek_konflik_kendaraan($kendaraan_id, $tgl_pinjam, $tgl_kembali, $jam_pinjam = null, $jam_kembali = null)
+{
+    if ($jam_pinjam && $jam_kembali && $tgl_pinjam === $tgl_kembali) {
+        return $this->db
+            ->where('kendaraan_id', $kendaraan_id)
+            ->where('tipe_pinjam', 'per_jam')
+            ->where('tanggal_pinjam', $tgl_pinjam)
+            ->where_in('status', ['Menunggu', 'Disetujui'])
+            ->group_start()
+                ->where('jam_pinjam <', $jam_kembali)
+                ->where('jam_kembali >', $jam_pinjam)
+            ->group_end()
+            ->count_all_results('peminjaman_kendaraan') > 0;
+    }
+
+    return $this->db
+        ->where('kendaraan_id', $kendaraan_id)
+        ->where_in('status', ['Menunggu', 'Disetujui'])
+        ->where('tanggal_pinjam <=', $tgl_kembali)
+        ->where('tanggal_kembali >=', $tgl_pinjam)
+        ->count_all_results('peminjaman_kendaraan') > 0;
+}
+
+/* ===============================
+   CEK KONFLIK BMN
+=============================== */
+public function cek_konflik_bmn($bmn_id, $tgl_pinjam, $tgl_kembali)
+{
+    return $this->db
+        ->where('bmn_id', $bmn_id)
+        ->where_in('status', ['Menunggu', 'Disetujui'])
+        ->where('tanggal_pinjam <=', $tgl_kembali)
+        ->where('tanggal_kembali >=', $tgl_pinjam)
+        ->count_all_results('peminjaman_bmn') > 0;
+}
+}
