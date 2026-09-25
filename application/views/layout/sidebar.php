@@ -8,7 +8,7 @@ $openTicketMenu     = in_array($current, ['ticket','history','zoom_management','
 $openLaporanMenu    = in_array($current, ['laporan','rekap','rekap_inventory','rekap_bulanan','rekap_zoom']);
 // Master Data sekarang include master_kendaraan
 $openMasterMenu = in_array($current, [
-    'master_kategori','kategori_persediaan','sub_kategori','master_lokasi','barang','barang_persediaan',
+    'master_kategori','kategori_persediaan','sub_kategori','master_lokasi','barang','barang_persediaan','stok_awal_persediaan',
     'master_ruang_rapat','master_pegawai','master_kendaraan','master_bmn'
 ]);
 $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
@@ -269,6 +269,7 @@ $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
                     <a class="<?= $current=='sub_kategori'?'sub-active':'' ?>" href="<?= base_url('sub_kategori') ?>">Master Sub Kategori</a>
                     <a class="<?= $current=='barang'?'sub-active':'' ?>" href="<?= base_url('barang') ?>">Master Barang</a>
                     <a class="<?= $current=='barang_persediaan'?'sub-active':'' ?>" href="<?= base_url('barang_persediaan') ?>">Master Barang Persediaan</a>
+                    <a class="<?= $current=='stok_awal_persediaan'?'sub-active':'' ?>" href="<?= base_url('stok_awal_persediaan') ?>">Master Stok Awal Persediaan</a>
                     <a class="<?= $current=='master_lokasi'?'sub-active':'' ?>" href="<?= base_url('master_lokasi') ?>">Master Lokasi</a>
                     <a class="<?= $current=='master_ruang_rapat'?'sub-active':'' ?>" href="<?= base_url('master_ruang_rapat') ?>">Master Ruang Rapat</a>
                     <a class="<?= $current=='master_pegawai'?'sub-active':'' ?>" href="<?= base_url('master_pegawai') ?>">Master Pegawai</a>

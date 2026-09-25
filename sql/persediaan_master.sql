@@ -183,3 +183,125 @@ INSERT IGNORE INTO `master_barang_persediaan` (`kode_barang`, `nama_barang`, `sa
 ('ARK-15-858', 'Lem Tikus', 'Buah', (SELECT id FROM master_kategori_persediaan WHERE kode='ARK-15'), 'Aktif'),
 ('ARK-15-859', 'PLASTIK MATAHARI JUMBO', 'Bungkus', (SELECT id FROM master_kategori_persediaan WHERE kode='ARK-15'), 'Aktif');
 
+-- 004: stok awal persediaan Januari 2026 (dari StokAwalSeeder.php, 104 baris)
+-- Idempoten: CREATE IF NOT EXISTS + INSERT IGNORE ... SELECT (skip kode hilang, tiru firstOrCreate).
+CREATE TABLE IF NOT EXISTS `stok_awal_persediaan` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `barang_id` INT NOT NULL,
+  `bulan` TINYINT NOT NULL DEFAULT 1,
+  `tahun` SMALLINT NOT NULL DEFAULT 2026,
+  `jumlah` INT NOT NULL DEFAULT 0,
+  `keterangan` VARCHAR(255) DEFAULT 'Stok awal Januari 2026',
+  `created_at` TIMESTAMP DEFAULT current_timestamp(),
+  `updated_at` TIMESTAMP DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_barang_periode` (`barang_id`, `bulan`, `tahun`),
+  CONSTRAINT `fk_stok_awal_barang` FOREIGN KEY (`barang_id`)
+    REFERENCES `master_barang_persediaan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 17, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 98, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100128';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 50, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100129';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 6, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100141';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 2, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100146';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 151, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100150';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 10, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100163';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 180, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100165';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 68, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100171';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 11, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100172';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 102, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100173';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 20, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100174';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 255, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100175';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 79, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100181';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 240, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-01-100182';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 3, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-02-001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 86, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 113, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-005';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 6, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-3011';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 168, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-3016';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 119, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-03-3021';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 8, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-04-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 76, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-04-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-05-100510';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 2, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-05-100514';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 1668, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-005';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100607';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 6, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100618';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 600, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100621';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100637';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 24, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100638';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 491, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100643';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100647';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 35, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-06-100649';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 42, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-07-001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 24, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-07-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 23, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 32, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-004';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 38, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-10008';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 12, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-10014';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 25, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-10027';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 8, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-10028';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-08-10029';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 7, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 1, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-H001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 19, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-H002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-H003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 13, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-I002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-09-I003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 49, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-10-999011';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 3, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-10-999035';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 57, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-10-999056';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 24, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-10-999065';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 39, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-10-999066';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 414, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-11-019';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 2, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-11-020';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 12, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-11-022';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 112, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-12-2005';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 7, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-12-2007';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 905, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-12-001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-13-012';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 512, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-13-016';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 1300, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-13-018';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 1175, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-13-019';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 10, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4043';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4137';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 11, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4138';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 11, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4139';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 10, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4140';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 7, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4162';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4185';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 8, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4189';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ATK-14-4213';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 3, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-01-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 5, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-01-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 9, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-01-013';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 30, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-02-004';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 12, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-02-010';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 6, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-08-086';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 15, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-08-101';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 21, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-08-126';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 14, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-08-136';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 19, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-08-141';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 34, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-09-040';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 33, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-09-046';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 18, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-09-048';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 12, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-10-028';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 6, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-10-093';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-10-096';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-11-010';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-11-026';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-11-029';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-12-002';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-12-007';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-12-S001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-12-ST001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-12-VT001';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-13-003';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-13-004';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-431';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-638';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-858';
+INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-859';
+
