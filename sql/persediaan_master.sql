@@ -305,3 +305,550 @@ INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumla
 INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-858';
 INSERT IGNORE INTO `stok_awal_persediaan` (`barang_id`, `bulan`, `tahun`, `jumlah`, `keterangan`) SELECT `id`, 1, 2026, 0, 'Stok awal Januari 2026' FROM `master_barang_persediaan` WHERE `kode_barang`='ARK-15-859';
 
+
+-- 005: transaksi persediaan dari TransaksiSeeder.php (105 baris)
+-- Idempoten: INSERT ... SELECT ... WHERE NOT EXISTS (skip nama hilang, cegah duplikat re-import).
+CREATE TABLE IF NOT EXISTS `transaksi_persediaan` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `barang_id` INT NOT NULL,
+  `jenis` ENUM('masuk','keluar') NOT NULL,
+  `tanggal` DATE NOT NULL,
+  `jumlah` INT NOT NULL DEFAULT 0,
+  `uraian` VARCHAR(255) DEFAULT NULL,
+  `penerima_sumber` VARCHAR(100) DEFAULT NULL,
+  `user_id` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT current_timestamp(),
+  `updated_at` TIMESTAMP DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `barang_id` (`barang_id`),
+  KEY `tanggal` (`tanggal`),
+  CONSTRAINT `fk_transaksi_barang` FOREIGN KEY (`barang_id`) REFERENCES `master_barang_persediaan` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_transaksi_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'masuk', '2026-01-29', 36, 'Gusmela (AZKO Living World Pekanbaru)', 'Gudang', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='MULTIFOLD TISSUE'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='MULTIFOLD TISSUE' AND t.`jenis`='masuk' AND t.`tanggal`='2026-01-29' AND t.`jumlah`=36 AND t.`uraian`='Gusmela (AZKO Living World Pekanbaru)' AND t.`penerima_sumber`='Gudang');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 2, 'Umum', 'Sariningsih', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Cokelat'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Cokelat' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Sariningsih');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Sariningsih', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Sariningsih');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Sariningsih', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AAA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AAA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Sariningsih');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Sariningsih', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Kertas Glossy'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Kertas Glossy' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Sariningsih');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 2, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Cokelat'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Cokelat' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='SAKLAR'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='SAKLAR' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='TL Philip 36 W'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='TL Philip 36 W' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Double Tape 3M (Merah)'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Double Tape 3M (Merah)' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-02', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Kertas HVS A4 Sidu, 70 Gram'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Kertas HVS A4 Sidu, 70 Gram' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-02' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 4, 'CS Lantai 3', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bayfresh Diff VB Reffil'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bayfresh Diff VB Reffil' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=4 AND t.`uraian`='CS Lantai 3' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Superpell YL RF 770'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Superpell YL RF 770' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 2, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Cling GC LMN RF'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Cling GC LMN RF' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=2 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Mama Lemon Pouch 680ML'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Mama Lemon Pouch 680ML' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 4, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Glade Matic Spray'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Glade Matic Spray' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=4 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Cling GC LMN RF'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Cling GC LMN RF' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 5, 'CS Lantai 2', 'Mulyani', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bayfresh Diff VB Reffil'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bayfresh Diff VB Reffil' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=5 AND t.`uraian`='CS Lantai 2' AND t.`penerima_sumber`='Mulyani');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='HEKTER BESAR'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='HEKTER BESAR' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 8, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Bening Kecil 1'''''
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Bening Kecil 1''''' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=8 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 2, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Double Tape 3M'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Double Tape 3M' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=2 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Hekter no 10'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Hekter no 10' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 1, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Staple Remover'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Staple Remover' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=1 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 12, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Standar'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Standar' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=12 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 12, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Kenko K-1'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Kenko K-1' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=12 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 100, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Map Plastik ukuran F4'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Map Plastik ukuran F4' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=100 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 3, 'IPDS', 'IPDS', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tatakan Mouse'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tatakan Mouse' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=3 AND t.`uraian`='IPDS' AND t.`penerima_sumber`='IPDS');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 2, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='STARTER'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='STARTER' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-05', 2, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='STOP KONTAK UTICON 5 LUBANG'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='STOP KONTAK UTICON 5 LUBANG' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-05' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='STARTER'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='STARTER' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 1, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Fitting TL Kap RM T8 YLI'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Fitting TL Kap RM T8 YLI' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 2, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sticky Notes'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sticky Notes' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=2 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 3, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sign Hire Combo'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sign Hire Combo' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=3 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 6, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Anak Hekter no 10'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Anak Hekter no 10' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=6 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 3, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Gunting sedang'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Gunting sedang' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=3 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 2, 'Umum', 'Hasan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Mouse Logiteck Warless'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Mouse Logiteck Warless' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hasan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-06', 1, 'Statistik Sosial', 'Azhari Andria', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Mouse Logiteck Warless'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Mouse Logiteck Warless' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-06' AND t.`jumlah`=1 AND t.`uraian`='Statistik Sosial' AND t.`penerima_sumber`='Azhari Andria');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-07', 3, 'Sekretaris', 'Ghea Madya', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AAA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AAA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-07' AND t.`jumlah`=3 AND t.`uraian`='Sekretaris' AND t.`penerima_sumber`='Ghea Madya');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-07', 12, 'Sekretaris', 'Ghea Madya', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Standar'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Standar' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-07' AND t.`jumlah`=12 AND t.`uraian`='Sekretaris' AND t.`penerima_sumber`='Ghea Madya');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-07', 1, 'Sekretaris', 'Ghea Madya', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Mouse Logiteck Warless'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Mouse Logiteck Warless' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-07' AND t.`jumlah`=1 AND t.`uraian`='Sekretaris' AND t.`penerima_sumber`='Ghea Madya');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-07', 1, 'Sekretaris', 'Ghea Madya', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Bening Kecil 1'''''
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Bening Kecil 1''''' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-07' AND t.`jumlah`=1 AND t.`uraian`='Sekretaris' AND t.`penerima_sumber`='Ghea Madya');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-07', 100, 'Sekretaris', 'Ghea Madya', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='MAP LOGO BPS'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='MAP LOGO BPS' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-07' AND t.`jumlah`=100 AND t.`uraian`='Sekretaris' AND t.`penerima_sumber`='Ghea Madya');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-08', 2, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Bening Kecil 1'''''
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Bening Kecil 1''''' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-08' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-08', 2, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Bening 2'''''
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Bening 2''''' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-08' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-08', 4, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Cokelat'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Cokelat' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-08' AND t.`jumlah`=4 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-08', 1, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Spidol Permanen'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Spidol Permanen' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-08' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-08', 2, 'Umum', 'Hadi Siswanto', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='TL Philip 36 W'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='TL Philip 36 W' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-08' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Hadi Siswanto');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Umum', 'Nurul Elisa', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sticky Notes'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sticky Notes' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Nurul Elisa');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Nurul Elisa', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Standar'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Standar' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Nurul Elisa');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Umum', 'Nurul Elisa', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena uniball signo-hitam'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena uniball signo-hitam' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Nurul Elisa');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Umum', 'Nurul Elisa', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Kenko 2'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Kenko 2' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Nurul Elisa');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 3, 'Umum', 'Nurul Elisa', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='BINDER KLIP NO.107'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='BINDER KLIP NO.107' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=3 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Nurul Elisa');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 12, 'SDM & Hukum', 'Ira Maya Susanti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena uniball signo-hitam'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena uniball signo-hitam' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=12 AND t.`uraian`='SDM & Hukum' AND t.`penerima_sumber`='Ira Maya Susanti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 12, 'SDM & Hukum', 'Ira Maya Susanti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Standar'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Standar' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=12 AND t.`uraian`='SDM & Hukum' AND t.`penerima_sumber`='Ira Maya Susanti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 12, 'SDM & Hukum', 'Ira Maya Susanti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pensil 2B'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pensil 2B' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=12 AND t.`uraian`='SDM & Hukum' AND t.`penerima_sumber`='Ira Maya Susanti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 12, 'SDM & Hukum', 'Ira Maya Susanti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Map Plastik ukuran F4'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Map Plastik ukuran F4' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=12 AND t.`uraian`='SDM & Hukum' AND t.`penerima_sumber`='Ira Maya Susanti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pensil 2B'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pensil 2B' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Trigonal Clip'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Trigonal Clip' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sign Hire Combo'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sign Hire Combo' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Gunting sedang'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Gunting sedang' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 12, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='MAP LOGO BPS'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='MAP LOGO BPS' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=12 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 10, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Kertas HVS A4 Sidu, 70 Gram'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Kertas HVS A4 Sidu, 70 Gram' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=10 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Black'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Black' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Cyan'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Cyan' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Yellow'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Yellow' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Magenta'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Magenta' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Cling GC LMN RF'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Cling GC LMN RF' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 4, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=4 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='MULTIFOLD TISSUE'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='MULTIFOLD TISSUE' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='PLASTIK MATAHARI JUMBO'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='PLASTIK MATAHARI JUMBO' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Glade Matic Spray'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Glade Matic Spray' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Superpell YL RF 770'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Superpell YL RF 770' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 3, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Dahlia Toilet Ball'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Dahlia Toilet Ball' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=3 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 2, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='WIPOL SEREH & JERUK 750ML'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='WIPOL SEREH & JERUK 750ML' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-09', 1, 'Umum', 'Jefri Afriawan', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='PORSTEX FC BRU BTL 1'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='PORSTEX FC BRU BTL 1' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-09' AND t.`jumlah`=1 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Jefri Afriawan');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 6, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Spidol Permanen'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Spidol Permanen' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=6 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 2, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Hekter no 10'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Hekter no 10' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=2 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 1, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Box file'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Box file' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=1 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 1, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lem Povinal'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lem Povinal' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=1 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 1, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Lakban Cokelat'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Lakban Cokelat' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=1 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 12, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Unibal signo-biru'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Unibal signo-biru' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=12 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 100, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='AMPLOP PUTIH PANJANG LOGO'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='AMPLOP PUTIH PANJANG LOGO' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=100 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 2, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 2, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AAA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AAA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=2 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-14', 3, 'Umum', 'Yusri', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Kenko 2'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Kenko 2' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-14' AND t.`jumlah`=3 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Yusri');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 12, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='MAP LOGO BPS'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='MAP LOGO BPS' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=12 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Trigonal Clip'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Trigonal Clip' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Anak Hekter no 10'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Anak Hekter no 10' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Kenko Easy Gell'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Kenko Easy Gell' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Hekter no 10'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Hekter no 10' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Black'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Black' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Cyan'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Cyan' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Yellow'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Yellow' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Tinta Epson L3110 003 Magenta'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Tinta Epson L3110 003 Magenta' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sign Hire Combo'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sign Hire Combo' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Gunting sedang'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Gunting sedang' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Unibal signo-biru'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Unibal signo-biru' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena uniball signo-hitam'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena uniball signo-hitam' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 2, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Bateray Alkaline AA'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Bateray Alkaline AA' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=2 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-22', 1, 'Produksi', 'Produksi', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Mouse Logiteck Warless'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Mouse Logiteck Warless' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-22' AND t.`jumlah`=1 AND t.`uraian`='Produksi' AND t.`penerima_sumber`='Produksi');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-23', 2, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Pena Unibal signo-biru'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Pena Unibal signo-biru' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-23' AND t.`jumlah`=2 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-23', 1, 'Newrilis', 'Newrilis', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Amplop putih pendek'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Amplop putih pendek' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-23' AND t.`jumlah`=1 AND t.`uraian`='Newrilis' AND t.`penerima_sumber`='Newrilis');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-23', 100, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Map Biola'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Map Biola' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-23' AND t.`jumlah`=100 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-23', 5, 'Keuangan', 'Dewi Astuti', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Sign Hire Combo'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Sign Hire Combo' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-23' AND t.`jumlah`=5 AND t.`uraian`='Keuangan' AND t.`penerima_sumber`='Dewi Astuti');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-27', 12, 'Umum', 'Umum', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Spidol Non Permanent'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Spidol Non Permanent' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-27' AND t.`jumlah`=12 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Umum');
+INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
+SELECT m.`id`, 'keluar', '2026-01-27', 3, 'Umum', 'Umum', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
+FROM `master_barang_persediaan` m
+WHERE m.`nama_barang`='Kertas Padi'
+AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Kertas Padi' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-27' AND t.`jumlah`=3 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Umum');
+
