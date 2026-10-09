@@ -205,22 +205,104 @@ public function get_ticket_teknisi($user_id)
             ->result_array();
     }
 
+    /* =========================================================
+       TIKET DITUGASKAN KE SAYA (VIRTUAL: Menunggu + teknisi_id=self)
+    ========================================================= */
+    public function get_ticket_assigned($user_id)
+    {
+        return $this->db
+            ->select('
+                t.id,
+                t.kode_tiket,
+                t.lokasi,
+                t.status,
+                t.created_at,
+                t.jenis_kerusakan,
+                t.foto,
+                t.tanggal,
+                t.jam,
+                u.name AS pelapor,
+                u.email AS email,
+                up.phone AS no_hp,
+                mk.nama_kategori,
+                sub.nama_sub_kategori
+            ')
+            ->from('tickets t')
+            ->join('users u','u.id = t.user_id','left')
+            ->join('user_profiles up', 'up.user_id = u.id', 'left')
+            ->join('master_kategori mk', 'mk.id = t.kategori_id', 'left')
+            ->join('master_sub_kategori sub', 'sub.id = t.sub_kategori_id', 'left')
+            ->join('teknisi tek', 'tek.id = t.teknisi_id', 'left')
+            ->where('tek.user_id', $user_id)
+            ->where('t.status','Menunggu')
+            ->order_by('t.created_at','ASC')
+            ->get()
+            ->result_array();
+    }
+
+/* =========================================================
+   INFO STOK PERSEDIAAN SEBELUM AMBIL TIKET (NON-BLOCKING)
+   return [] bila bukan persediaan; else deficient [{barang_id,nama,qty,sisa}]
+========================================================= */
+public function check_stok_ticket($ticket_id)
+{
+    $this->load->model('Transaksi_persediaan_model');
+    $items = $this->Transaksi_persediaan_model->get_items((int) $ticket_id);
+    if (empty($items)) return [];
+
+    $this->load->model('User_ticket_model');
+    $bulan = (int) date('n');
+    $tahun = (int) date('Y');
+
+    $deficient = [];
+    foreach ($items as $it) {
+        $qty  = (int) ($it['jumlah'] ?? 0);
+        $sisa = $this->User_ticket_model->get_sisa_persediaan((int) $it['barang_id'], $bulan, $tahun);
+        if ($sisa < $qty) {
+            $nama = $it['nama_barang_snapshot'] ?: ($it['nama_barang'] ?: ('ID ' . $it['barang_id']));
+            $deficient[] = [
+                'barang_id' => (int) $it['barang_id'],
+                'nama'      => $nama,
+                'qty'       => $qty,
+                'sisa'      => (int) $sisa,
+            ];
+        }
+    }
+    return $deficient;
+}
+
+public function stok_message($deficient)
+{
+    $parts = [];
+    foreach ($deficient as $d) {
+        $parts[] = $d['nama'] . ' x' . (int) $d['qty'] . ' (sisa ' . (int) $d['sisa'] . ')';
+    }
+    return 'Stok tidak mencukupi untuk tiket ini. Input barang masuk dulu: ' . implode(', ', $parts);
+}
+
 /* =========================================================
    TEKNISI AMBIL TIKET + KIRIM EMAIL
+   Guard: teknisi_id IS NULL OR teknisi_id=self (virtual assign reuse)
 ========================================================= */
 public function take_ticket($ticket_id, $user_id)
 {
     $teknisi = $this->get_by_user($user_id);
     if (!$teknisi) return false;
 
-    // Cek apakah tiket masih available
+    // Cek apakah tiket masih available (belum diambil ATAU virtual-assign ke diri sendiri)
     $ticket = $this->db
         ->where('id', $ticket_id)
-        ->where('teknisi_id IS NULL', null, false)
+        ->group_start()
+            ->where('teknisi_id IS NULL', null, false)
+            ->or_where('teknisi_id', $teknisi['id'])
+        ->group_end()
         ->get('tickets')
         ->row_array();
 
     if (!$ticket) return false;
+
+    // INFO stok: non-blocking, lanjut flip On Progress. deficient hanya warning.
+    $deficient = $this->check_stok_ticket($ticket_id);
 
     // ✅ GUNAKAN Ticket_model->update() BIAR KIRIM EMAIL
     $this->load->model('Ticket_model');
@@ -235,6 +317,14 @@ public function take_ticket($ticket_id, $user_id)
         ->where('id', $teknisi['id'])
         ->update('teknisi', ['status' => 'busy']);
 
+    // Tetap array ok + warning bila stok kurang.
+    if (!empty($deficient)) {
+        return [
+            'ok'        => true,
+            'warning'   => $this->stok_message($deficient),
+            'deficient' => $deficient,
+        ];
+    }
     return true;
 }
 

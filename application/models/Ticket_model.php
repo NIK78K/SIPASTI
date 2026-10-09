@@ -33,11 +33,12 @@ class Ticket_model extends CI_Model {
     public function get_by_id($id)
     {
         return $this->db
-            ->select('t.*, p.nama_barang AS nama_perangkat, ut.name AS nama_teknisi')
+            ->select('t.*, p.nama_barang AS nama_perangkat, ut.name AS nama_teknisi, mk.slug AS kategori_slug, mk.nama_kategori')
             ->from('tickets t')
             ->join('perangkat p',  'p.id = t.perangkat_id',  'left')
             ->join('teknisi tek',  'tek.id = t.teknisi_id',  'left')
             ->join('users ut',     'ut.id = tek.user_id',    'left')
+            ->join('master_kategori mk', 'mk.id = t.kategori_id', 'left')
             ->where('t.id', $id)
             ->get()
             ->row_array();
@@ -691,14 +692,29 @@ class Ticket_model extends CI_Model {
                 </tr>';
         }
 
+        $catatan_html = '';
+        if (!empty($ticket['layanan_catatan'])) {
+            $catatan_html = '
+                <tr>
+                    <td colspan="2" style="padding:12px 0 0 0;">
+                        <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:6px;padding:16px;">
+                            <p style="margin:0 0 8px 0;color:#92400e;font-size:14px;font-weight:600;">💬 Catatan dari Teknisi:</p>
+                            <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.6;">' . nl2br(htmlspecialchars($ticket['layanan_catatan'])) . '</p>'
+                            . (!empty($ticket['layanan_file']) ? '<p style="margin:8px 0 0 0;color:#1f2937;font-size:13px;">📎 File: ' . htmlspecialchars($ticket['layanan_file']) . '</p>' : '')
+                            . '
+                        </div>
+                    </td>
+                </tr>';
+        }
+
         return '
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
-        <tr><td align="center">
-            <table width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0">
 
                 <tr>
                     <td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:40px 30px;border-radius:12px 12px 0 0;">
@@ -753,6 +769,8 @@ class Ticket_model extends CI_Model {
                             </tr>
 
                             ' . $link_html . '
+
+                            ' . $catatan_html . '
 
                             <tr><td colspan="2" style="padding:20px 10px;"><div style="border-top:2px solid #e5e7eb;"></div></td></tr>
 

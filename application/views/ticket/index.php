@@ -24,6 +24,37 @@ $statusBadge = [
     'Dibatalkan'  => 'badge-batal'
 ];
 
+// Helper kondisi: Menunggu + sudah ada teknisi (dipakai cabang form).
+// Tidak dipakai untuk label badge/nama.
+if (!function_exists('is_ditugaskan_view')) {
+    function is_ditugaskan_view($t)
+    {
+        return ($t['status'] ?? '') === 'Menunggu'
+            && (!empty($t['nama_teknisi']) || !empty($t['teknisi_id']));
+    }
+}
+
+// ID tiket persediaan (punya items) pada halaman ini, untuk panel assign.
+$persediaan_ids  = [];
+$persediaan_info = [];
+if (!empty($tickets)) {
+    $ids = array_values(array_filter(array_map(function ($r) {
+        return (int)($r['id'] ?? 0);
+    }, $tickets)));
+    if (!empty($ids) && $this->db->table_exists('ticket_persediaan_items')) {
+        $rows = $this->db->select('ticket_id, COUNT(*) AS n_item, COALESCE(SUM(jumlah), 0) AS n_qty')
+            ->where_in('ticket_id', $ids)
+            ->group_by('ticket_id')
+            ->get('ticket_persediaan_items')
+            ->result_array();
+        foreach ($rows as $r) {
+            $tid = (int)$r['ticket_id'];
+            $persediaan_ids[] = $tid;
+            $persediaan_info[$tid] = $r;
+        }
+    }
+}
+
 // Ambil semua sub_kategori_id yang perlu_jadwal = 1 (Zoom/Meet)
 $sub_zoom_ids_raw = $this->db
     ->select('id')
@@ -36,6 +67,17 @@ $no = $page + 1;
 ?>
 
 <h1 class="text-2xl font-semibold mb-6 header-title">Manajemen Tiket</h1>
+
+<?php if ($this->session->flashdata('error')): ?>
+<div class="mb-4 flex items-center gap-3 px-5 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+    <?= $this->session->flashdata('error') ?>
+</div>
+<?php endif ?>
+<?php if ($this->session->flashdata('success')): ?>
+<div class="mb-4 flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+    <?= $this->session->flashdata('success') ?>
+</div>
+<?php endif ?>
 
 <!-- ================= STATUS CARDS ================= -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -175,8 +217,13 @@ $no = $page + 1;
                        && !$isBmn
                        && in_array($subKatId, $sub_zoom_ids);
 
-                // Tiket non-zoom = semua selain zoom
-                $isNonZoomPermintaan = $isPermintaan && !$isZoom;
+                $tidRow = (int)($t['id'] ?? 0);
+                $isPersediaan = in_array($tidRow, $persediaan_ids ?? []);
+                $isBelumTeknisi = empty($t['nama_teknisi']) && empty($t['teknisi_id']);
+
+                // Tiket non-zoom = semua selain zoom dan selain persediaan
+                // (persediaan punya form assign sendiri di bawah agar dropdown tidak ganda)
+                $isNonZoomPermintaan = $isPermintaan && !$isZoom && !$isPersediaan;
             ?>
             <tr class="tbl-row">
 
@@ -199,8 +246,14 @@ $no = $page + 1;
                 <td class="px-2 py-3 sc-muted text-xs"><?= date('d M Y', strtotime($t['created_at'])) ?></td>
 
                 <td class="px-2 py-3 text-center">
-                    <span class="<?= $statusBadge[$status] ?? 'badge-menunggu' ?>" title="<?= $statusText[$status] ?? $status ?>">
-                        <?= $statusText[$status] ?? $status ?>
+                    <?php
+                    $isDitugaskanRow = is_ditugaskan_view($t);
+                    $badgeClass = $statusBadge[$status] ?? 'badge-menunggu';
+                    $badgeLabel = $statusText[$status] ?? $status;
+                    $badgeTitle = $badgeLabel;
+                    ?>
+                    <span class="<?= $badgeClass ?>" title="<?= htmlspecialchars($badgeTitle) ?>">
+                        <?= htmlspecialchars($badgeLabel) ?>
                     </span>
                 </td>
 
@@ -209,6 +262,13 @@ $no = $page + 1;
                 ============================================================ -->
                 <td class="px-2 py-3 text-xs">
 
+                    <?php if ($isPersediaan && $isDitugaskanRow): ?>
+                    <div class="flex items-center gap-1 text-cyan-400 text-xs font-semibold">
+                        <span>👨‍🔧</span>
+                        <span class="truncate"><?= htmlspecialchars($t['nama_teknisi'] ?? '-') ?></span>
+                    </div>
+
+                    <?php else: ?>
                     <?php
                     /* ── CABANG 1: TIKET ZOOM (permintaan + perlu_jadwal=1) ── */
                     if ($isZoom):
@@ -282,8 +342,8 @@ $no = $page + 1;
                             <div class="mt-1 text-[10px] text-orange-400 font-medium">📦 BMN</div>
                             <?php endif ?>
 
-                        <?php elseif ($status === 'Menunggu' || $status === 'On Progress'): ?>
-                            <?php /* Belum ada teknisi — dropdown assign */ ?>
+                        <?php elseif (($status === 'Menunggu' || $status === 'On Progress') && !$isPersediaan): ?>
+                            <?php /* Belum ada teknisi — dropdown assign (persediaan pakai form sendiri di bawah) */ ?>
                             <?php if ($isRuangRapat): ?>
                             <div class="text-[10px] text-indigo-400 font-medium mb-1">🏢 Ruang Rapat</div>
                             <?php elseif ($isKendaraan): ?>
@@ -316,8 +376,8 @@ $no = $page + 1;
                     else:
                     ?>
 
-                        <?php if ($status === 'Menunggu'): ?>
-                            <?php /* Belum ada teknisi — dropdown assign */ ?>
+                        <?php if ($status === 'Menunggu' && !$isPersediaan): ?>
+                            <?php /* Belum ada teknisi — dropdown assign (persediaan pakai form sendiri) */ ?>
                             <form method="post" action="<?= base_url('ticket/assign_teknisi/'.$t['id']) ?>">
                                 <div class="tbl-select-wrap">
                                     <select name="teknisi_id" class="tbl-select w-full" onchange="this.form.submit()">
@@ -343,6 +403,25 @@ $no = $page + 1;
                         <?php endif ?>
 
                     <?php endif /* akhir cabang */ ?>
+
+                    <?php if ($isPersediaan && $status === 'Menunggu' && $isBelumTeknisi): ?>
+                    <form method="post" action="<?= base_url('ticket/assign_persediaan/'.$t['id']) ?>" class="mt-1 space-y-1">
+                        <div class="tbl-select-wrap">
+                            <select name="teknisi_id" class="tbl-select w-full" required onchange="this.form.submit()">
+                                <option value="">Pilih Teknisi</option>
+                                <?php foreach ($teknisi_available as $tek): ?>
+                                    <option value="<?= $tek['id'] ?>"><?= htmlspecialchars($tek['name']) ?></option>
+                                <?php endforeach ?>
+                            </select>
+                            <span class="tbl-chevron">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </form>
+                    <?php endif ?>
+                    <?php endif /* akhir blok persediaan */ ?>
 
                 </td>
                 <!-- ============================================================ -->
@@ -407,8 +486,8 @@ $no = $page + 1;
 </div>
 
 <!-- ================= MODAL DETAIL ================= -->
-<div id="modal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
-    <div class="theme-card border rounded-xl w-full max-w-xl p-5">
+<div id="modal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4">
+    <div class="theme-card border rounded-xl w-full max-w-3xl p-5 max-h-[90vh] overflow-y-auto">
         <div id="modal-content"></div>
         <button onclick="closeModal()" class="mt-5 w-full bg-gray-700/70 hover:bg-gray-600 py-2 rounded-md text-sm transition text-white">Tutup</button>
     </div>
@@ -612,6 +691,37 @@ html.light .swal2-popup { background-color: #ffffff !important; border-color: rg
 .swal2-title { color: var(--text-primary) !important; }
 .swal2-html-container { color: var(--text-secondary) !important; }
 
+/* ══════════════════════════════════════
+   CETAK FORM PERSEDIAAN (tiruan sisi user/teknisi)
+══════════════════════════════════════ */
+.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; font-weight:700; text-align:center; }
+.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
+.pm-print-meta strong { font-weight:400; }
+.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
+.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
+.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
+.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
+.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
+.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
+@media screen {
+    #pmPrintSheetTicket { display:none; }
+}
+@media print {
+    @page { size:A4 landscape; margin:0; }
+    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
+    body * { visibility:hidden !important; }
+    #modal, #modal > div, #modal-content, #pmPrintSheetTicket, #pmPrintSheetTicket * { visibility:visible !important; }
+    #modal { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; }
+    #modal > div { display:block !important; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border:0 !important; box-shadow:none !important; border-radius:0 !important; }
+    #modal > div > *:not(#modal-content) { display:none !important; }
+    #modal-content > *:not(#pmPrintSheetTicket) { display:none !important; }
+    #pmPrintSheetTicket { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
+    #pmPrintSheetTicket, #pmPrintSheetTicket * { page-break-inside:avoid !important; }
+    #pmPrintSheetTicket .pm-print-signature { page-break-inside:avoid !important; }
+}
+
 /* Misc */
 body { opacity: 0; animation: fadeIn 0.3s ease-in forwards; }
 @keyframes fadeIn { to { opacity: 1; } }
@@ -638,6 +748,64 @@ function openDetailModal(id) {
 function closeModal() {
     document.getElementById('modal').classList.replace('flex','hidden');
 }
+
+/* ── CETAK PERSEDIAAN (global di induk; fragment via innerHTML tak eksekusi script) ── */
+function fillPersediaanPrintTicket() {
+    var txt = function (id) { var el = document.getElementById(id); return el ? (el.textContent || '').trim() : ''; };
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    // ponytail: DOM on-screen is source of truth; JSON fallback covers empty-table only.
+    var items = [];
+    var tb = document.getElementById('tckt-persediaan-items');
+    if (tb) {
+        Array.prototype.forEach.call(tb.querySelectorAll('tr'), function (tr) {
+            if (!tr.cells || tr.cells.length < 4) return;
+            if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
+            var k = (tr.cells[1].textContent || '').trim();
+            var n = (tr.cells[2].textContent || '').trim();
+            var j = (tr.cells[3].textContent || '').trim();
+            if (!k && !n && !j) return;
+            items.push({ kode: k || '-', nama: n || '-', jumlah: j || '' });
+        });
+    }
+    if (!items.length) {
+        try {
+            var raw = document.getElementById('tckt-persediaan-data');
+            var parsed = raw ? JSON.parse(raw.textContent || '[]') : [];
+            if (Array.isArray(parsed)) items = parsed;
+        } catch (e) {}
+    }
+    var faktur = txt('tckt-faktur'), tanggal = txt('tckt-tanggal'), unit = txt('tckt-unit'),
+        butuh = txt('tckt-butuh'), pemohon = txt('tckt-pemohon'), teknisi = txt('tckt-teknisi');
+    if ((!faktur || faktur === '-') && !items.length) return false;
+    set('print_faktur_ticket', faktur || '-');
+    set('print_tanggal_ticket', tanggal || '-');
+    set('print_unit_ticket', unit || '-');
+    set('print_butuh_ticket', butuh || '-');
+    set('print_pemohon_ticket', pemohon || '-');
+    set('print_pemohon_nama_ticket', pemohon || '-');
+    set('print_teknisi_nama_ticket', (teknisi && teknisi !== '-') ? teknisi : '-');
+    var printRows = document.getElementById('print_items_ticket');
+    if (!printRows) return false;
+    printRows.innerHTML = '';
+    var n = Math.max(items.length, 6);
+    for (var i = 0; i < n; i++) {
+        var it = items[i] || {};
+        var tr = document.createElement('tr');
+        [i + 1, it.kode || '', it.nama || '', it.jumlah || ''].forEach(function (v) {
+            var td = document.createElement('td');
+            td.textContent = v;
+            tr.appendChild(td);
+        });
+        printRows.appendChild(tr);
+    }
+    return true;
+}
+function exportPersediaanPdfTicket() {
+    fillPersediaanPrintTicket();
+    window.print();
+}
+window.fillPersediaanPrintTicket = fillPersediaanPrintTicket;
+window.exportPersediaanPdfTicket = exportPersediaanPdfTicket;
 
 /* ── FORM MODAL ── */
 function closeFormModal() {

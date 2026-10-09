@@ -1,4 +1,5 @@
 <?php
+if (!function_exists('_parse_ticket_title_view')) {
 function _parse_ticket_title_view($jenis_kerusakan, $kategori_nama) {
     if (in_array(strtolower($kategori_nama), ['gangguan', 'kerusakan'])) return null;
     if (empty($jenis_kerusakan)) return null;
@@ -17,6 +18,92 @@ function _parse_ticket_title_view($jenis_kerusakan, $kategori_nama) {
         }
     }
     return null;
+}
+}
+// Ringkasan items persediaan per tiket (tampilan saja, tanpa ubah model).
+if (!function_exists('_persediaan_ringkas_view')) {
+function _persediaan_ringkas_view($ci, $ticket_id) {
+    if (!$ci->db->table_exists('ticket_persediaan_items')) return [];
+    return $ci->db
+        ->select('i.jumlah, i.nama_barang_snapshot, b.nama_barang, i.satuan_snapshot, b.satuan')
+        ->from('ticket_persediaan_items i')
+        ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
+        ->where('i.ticket_id', (int)$ticket_id)
+        ->order_by('i.id', 'ASC')
+        ->limit(3)
+        ->get()
+        ->result_array();
+}
+}
+// Full items persediaan per tiket (tanpa limit, untuk modal detail + cetak + ACC).
+// Sertakan barang_id + jumlah_disetujui (fallback = diminta bila belum ACC).
+if (!function_exists('_persediaan_full_view')) {
+function _persediaan_full_view($ci, $ticket_id) {
+    if (!$ci->db->table_exists('ticket_persediaan_items')) return [];
+    $hasAcc = $ci->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
+    return $ci->db
+        ->select('i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ', i.nama_barang_snapshot, b.nama_barang, b.kode_barang, i.satuan_snapshot, b.satuan')
+        ->from('ticket_persediaan_items i')
+        ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
+        ->where('i.ticket_id', (int)$ticket_id)
+        ->order_by('i.id', 'ASC')
+        ->get()
+        ->result_array();
+}
+}
+// Sisa stok kini per barang (cache per request; null bila tak bisa dihitung).
+// ponytail: hitung di view agar modal ACC langsung tampil sisa; pindah ke controller/model bila daftar tiket membesar.
+if (!function_exists('_persediaan_sisa_view')) {
+function _persediaan_sisa_view($ci, $barang_id) {
+    static $cache = [];
+    $bid = (int)$barang_id;
+    if ($bid <= 0) return null;
+    if (array_key_exists($bid, $cache)) return $cache[$bid];
+    $sisa = null;
+    try {
+        $ci->load->model('User_ticket_model');
+        $sisa = $ci->User_ticket_model->get_sisa_persediaan($bid, (int)date('n'), (int)date('Y'));
+    } catch (Throwable $e) { $sisa = null; }
+    $cache[$bid] = $sisa;
+    return $sisa;
+}
+}
+// Paket siap JSON untuk modal ACC: barang_id, kode, nama, diminta, disetujui, sisa, satuan.
+if (!function_exists('_persediaan_acc_view')) {
+function _persediaan_acc_view($ci, $ticket_id) {
+    $out = [];
+    foreach (_persediaan_full_view($ci, $ticket_id) as $it) {
+        $diminta = (int)($it['jumlah'] ?? 0);
+        $acc = (array_key_exists('jumlah_disetujui', $it) && $it['jumlah_disetujui'] !== null && $it['jumlah_disetujui'] !== '')
+            ? (int)$it['jumlah_disetujui'] : $diminta;
+        $out[] = [
+            'barang_id' => (int)($it['barang_id'] ?? 0),
+            'kode'      => $it['kode_barang'] ?? '-',
+            'nama'      => $it['nama_barang_snapshot'] ?: ($it['nama_barang'] ?? '-'),
+            'satuan'    => $it['satuan_snapshot'] ?: ($it['satuan'] ?? ''),
+            'diminta'   => $diminta,
+            'disetujui' => $acc,
+            'sisa'      => _persediaan_sisa_view($ci, $it['barang_id'] ?? 0),
+        ];
+    }
+    return $out;
+}
+}
+// Tandai tiket persediaan: nama sub kategori mengandung 'persediaan' atau ada marker di jenis_kerusakan.
+if (!function_exists('_is_persediaan_view')) {
+function _is_persediaan_view($t) {
+    if (stripos($t['nama_sub_kategori'] ?? '', 'persediaan') !== false) return true;
+    return strpos($t['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false;
+}
+}
+// Gabung items full + flag + paket ACC ke JSON kartu detail (dipakai 4 titik kartu di file ini).
+if (!function_exists('_tkn_detail_json_view')) {
+function _tkn_detail_json_view($ci, $t) {
+    $t['persediaan_items_full'] = _persediaan_full_view($ci, $t['id'] ?? 0);
+    $t['is_persediaan'] = _is_persediaan_view($t);
+    $t['persediaan_acc_items'] = $t['is_persediaan'] ? _persediaan_acc_view($ci, $t['id'] ?? 0) : [];
+    return $t;
+}
 }
 ?>
 <!-- ===== THEME VARIABLES TEKNISI ===== -->
@@ -85,12 +172,14 @@ html.light select option {
 html.light #modalEditTiket,
 html.light #modalEditZoom,
 html.light #modalDetail,
+html.light #modalAccPersediaan,
 html.light #modalAlasanOffline {
     background-color: var(--tkn-modal-overlay) !important;
 }
 html.light #modalEditTiket > div,
 html.light #modalEditZoom  > div,
 html.light #modalDetail    > div,
+html.light #modalAccPersediaan > div,
 html.light #modalAlasanOffline > div {
     background-color: var(--tkn-bg-card) !important;
     border-color: var(--tkn-border) !important;
@@ -359,6 +448,52 @@ html.light #alasanOfflineInput {
 html.light #alasanOfflineInput::placeholder { color: var(--tkn-text-muted) !important; }
 
 /* ══════════════════════════════════════════
+   LIGHT MODE — DITUGASKAN (amber tetap terbaca)
+══════════════════════════════════════════ */
+html.light #ticketsAssignedContainer .text-amber-400 { color: #92400e !important; }
+html.light #ticketsAssignedContainer .bg-amber-500\/20 { background-color: rgba(245,158,11,0.16) !important; }
+html.light .stok-kurang-badge { background-color: #fef3c7 !important; color: #92400e !important; border-color: #f59e0b !important; }
+
+/* ══════════════════════════════════════════
+   LIGHT MODE — DAFTAR BARANG PERSEDIAAN MODAL
+══════════════════════════════════════════ */
+html.light #modal-persediaan-container { background-color: #f0fdf9 !important; border-color: rgba(16,185,129,0.30) !important; }
+html.light #modal-persediaan-container thead tr { color: #64748b !important; }
+html.light #modal-persediaan-items td { color: #0f172a !important; border-color: var(--tkn-border) !important; }
+html.light #btnExportPersediaanTeknisi { background: linear-gradient(to right, #059669, #10b981) !important; color: #ffffff !important; border-color: #059669 !important; }
+html.light #modal-persediaan-container .text-emerald-400 { color: #059669 !important; }
+
+/* ══════════════════════════════════════════
+   CETAK FORM PERSEDIAAN TEKNISI (tiruan sisi user)
+══════════════════════════════════════════ */
+.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; font-weight:700; text-align:center; }
+.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
+.pm-print-meta strong { font-weight:400; }
+.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
+.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
+.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
+.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
+.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
+.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
+@media screen {
+    #pmPrintSheetTeknisi { display:none; }
+}
+@media print {
+    @page { size:A4 landscape; margin:0; }
+    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
+    body * { visibility:hidden !important; }
+    #modalDetail, #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { visibility:visible !important; }
+    #modalDetail { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; overflow:hidden !important; }
+    #modalDetail > div:not(#pmPrintSheetTeknisi) { display:none !important; }
+    #pmPrintSheetTeknisi { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
+    #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { page-break-inside:avoid !important; }
+    #pmPrintSheetTeknisi .pm-print-signature { page-break-inside:avoid !important; }
+    #pmPrintSheetTeknisi .pm-print-signature > div { min-width:180px; text-align:center; }
+}
+
+/* ══════════════════════════════════════════
    POINTER EVENTS — RUANG RAPAT (dark + light)
 ══════════════════════════════════════════ */
 #editSectionRuangRapat textarea,
@@ -535,6 +670,123 @@ html.light #alasanOfflineInput::placeholder { color: var(--tkn-text-muted) !impo
 </div>
 <?php endif; ?>
 
+<!-- ================= DITUGASKAN KE SAYA (VIRTUAL: Menunggu + teknisi_id=self) ================= -->
+<div class="mb-10">
+    <div class="flex items-center gap-3 mb-5">
+        <div class="w-1 h-6 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
+        <h2 class="text-xl font-bold header-title">Ditugaskan ke Saya</h2>
+        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-semibold">
+            <?= count($tickets_assigned ?? []) ?>
+        </span>
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            Status: Ditugaskan
+        </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="ticketsAssignedContainer">
+
+    <?php if (empty($tickets_assigned)): ?>
+        <div class="theme-card border border-dashed rounded-2xl p-8 text-center col-span-full">
+            <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <p class="header-subtitle text-sm">Tidak ada tiket yang ditugaskan ke Anda</p>
+        </div>
+    <?php else: ?>
+    <?php foreach ($tickets_assigned as $t): ?>
+    <?php $judulAssigned = _parse_ticket_title_view($t['jenis_kerusakan'], $t['nama_kategori'] ?? ''); ?>
+    <?php $itemsAssigned = _persediaan_ringkas_view($this, $t['id'] ?? 0); ?>
+    <?php $detailAssigned = _tkn_detail_json_view($this, $t); ?>
+    <?php $isPersediaanAssigned = !empty($detailAssigned['is_persediaan']); ?>
+
+    <div class="ticket-assigned-card group theme-card bg-gradient-to-br from-amber-500/10 via-transparent to-transparent
+                border border-amber-500/25 rounded-2xl p-5
+                hover:border-amber-400/45 hover:shadow-lg hover:shadow-amber-500/10
+                transition-all duration-300 flex flex-col h-full">
+        <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-mono font-semibold">
+                    <?= $t['kode_tiket'] ?>
+                </span>
+                <span class="px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-md text-[10px] font-semibold border border-amber-500/30">
+                    📌 Ditugaskan
+                </span>
+                <?php if (!empty($itemsAssigned)): ?>
+                <span class="stok-kurang-badge px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-md text-[10px] font-semibold border border-amber-500/30" title="Tiket persediaan — stok hanya info, tidak menghambat Ambil atau Selesaikan">
+                    Stok hanya info — ACC 0 sampai diminta
+                </span>
+                <?php endif; ?>
+                <?php if (!empty($t['nama_kategori'])): ?>
+                <span class="px-2 py-0.5 bg-slate-700/60 text-slate-300 rounded-md text-[10px] font-medium border border-slate-600/50">
+                    <?= htmlspecialchars($t['nama_kategori']) ?>
+                </span>
+                <?php endif; ?>
+                <?php if (!empty($t['nama_sub_kategori'])): ?>
+                <span class="px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-md text-[10px] font-medium border border-cyan-500/20">
+                    <?= htmlspecialchars($t['nama_sub_kategori']) ?>
+                </span>
+                <?php endif; ?>
+            </div>
+            <?php if ($judulAssigned): ?>
+            <div class="text-xs text-cyan-300 font-medium truncate mb-1" title="<?= htmlspecialchars($judulAssigned) ?>">
+                📋 <?= htmlspecialchars($judulAssigned) ?>
+            </div>
+            <?php endif; ?>
+            <div class="header-title font-medium mb-2 flex items-center gap-2">
+                <svg class="w-4 h-4 header-subtitle flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="truncate"><?= $t['pelapor'] ?></span>
+            </div>
+            <div class="header-subtitle text-sm flex items-center gap-2 mb-3">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span class="truncate"><?= $t['lokasi'] ?: 'Lokasi tidak disebutkan' ?></span>
+            </div>
+            <?php if (!empty($itemsAssigned)): ?>
+            <div class="text-[11px] header-subtitle leading-relaxed mb-1">
+                📦 <?= htmlspecialchars(($itemsAssigned[0]['nama_barang_snapshot'] ?: ($itemsAssigned[0]['nama_barang'] ?? '-')) . ' x ' . (int)$itemsAssigned[0]['jumlah'] . ' ' . ($itemsAssigned[0]['satuan_snapshot'] ?: ($itemsAssigned[0]['satuan'] ?? ''))) ?><?php if (count($itemsAssigned) > 1): ?>, <?= htmlspecialchars(($itemsAssigned[1]['nama_barang_snapshot'] ?: ($itemsAssigned[1]['nama_barang'] ?? '-')) . ' x ' . (int)$itemsAssigned[1]['jumlah']) ?><?php endif; ?><?php if (count($itemsAssigned) > 2): ?> +<?= count($itemsAssigned) - 2 ?> jenis lain<?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="flex flex-col gap-2 mt-auto">
+            <button onclick='showDetailModal(<?= json_encode($detailAssigned, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
+                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-slate-700/50 hover:bg-slate-600
+                           text-white border border-slate-600 hover:border-slate-500 transition-all duration-200">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                Detail
+            </button>
+
+            <button onclick="takeTicket(<?= $t['id'] ?>, this)"
+                    data-persediaan="<?= $isPersediaanAssigned ? '1' : '0' ?>"
+                    data-kode="<?= htmlspecialchars($t['kode_tiket'] ?? '') ?>"
+                    data-acc='<?= json_encode($detailAssigned['persediaan_acc_items'] ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'
+                    class="w-full px-5 py-2.5 rounded-xl text-sm bg-gradient-to-r from-amber-600 to-amber-500
+                           hover:from-amber-500 hover:to-amber-400 text-white font-medium
+                           shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Ambil<?= $isPersediaanAssigned ? ' &amp; ACC' : '' ?>
+            </button>
+            <?php if ($isPersediaanAssigned): ?>
+            <p class="text-[11px] header-subtitle leading-relaxed text-center">Klik Ambil untuk cek jumlah yang disetujui. Stok hanya info.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php endforeach; endif; ?>
+    </div>
+</div>
+
 <!-- ================= TIKET BELUM DIAMBIL ================= -->
 <div class="mb-10">
     <div class="flex items-center gap-3 mb-5">
@@ -562,6 +814,8 @@ html.light #alasanOfflineInput::placeholder { color: var(--tkn-text-muted) !impo
         foreach ($tickets_available as $t):
             $displayCount++;
             $isHidden = $displayCount > $maxDisplay ? 'hidden' : '';
+            $detailAvail = _tkn_detail_json_view($this, $t);
+            $isPersediaanAvail = !empty($detailAvail['is_persediaan']);
     ?>
 
     <div class="ticket-available-card <?= $isHidden ?> group theme-card bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent
@@ -615,7 +869,7 @@ html.light #alasanOfflineInput::placeholder { color: var(--tkn-text-muted) !impo
             );
             ?>
 
-            <button onclick='showDetailModal(<?= json_encode($t, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
+            <button onclick='showDetailModal(<?= json_encode($detailAvail, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
                     class="w-full px-4 py-2.5 rounded-xl text-sm bg-slate-700/50 hover:bg-slate-600
                            text-white border border-slate-600 hover:border-slate-500 transition-all duration-200">
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -649,15 +903,21 @@ html.light #alasanOfflineInput::placeholder { color: var(--tkn-text-muted) !impo
             </button>
             <?php endif; ?>
 
-            <button onclick="takeTicket(<?= $t['id'] ?>)"
+            <button onclick="takeTicket(<?= $t['id'] ?>, this)"
+                    data-persediaan="<?= $isPersediaanAvail ? '1' : '0' ?>"
+                    data-kode="<?= htmlspecialchars($t['kode_tiket'] ?? '') ?>"
+                    data-acc='<?= json_encode($detailAvail['persediaan_acc_items'] ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'
                     class="w-full px-5 py-2.5 rounded-xl text-sm bg-gradient-to-r from-emerald-600 to-emerald-500
                            hover:from-emerald-500 hover:to-emerald-400 text-white font-medium
                            shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-200">
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Ambil
+                Ambil<?= $isPersediaanAvail ? ' &amp; ACC' : '' ?>
             </button>
+            <?php if ($isPersediaanAvail): ?>
+            <p class="text-[11px] header-subtitle leading-relaxed text-center">Klik Ambil untuk atur jumlah yang disetujui. Stok hanya info.</p>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -745,6 +1005,10 @@ foreach ($tickets_my as $t):
 
         // Sudah ada link Zoom?
         $sudahAdaLink = !empty($t['layanan_link']);
+
+        // Paket ACC persediaan untuk tombol Ubah ACC (fallback = diminta bila belum ACC).
+        $detailProgress = _tkn_detail_json_view($this, $t);
+        $isPersediaanProgress = !empty($detailProgress['is_persediaan']);
     ?>
 
     <div class="theme-card bg-gradient-to-br from-yellow-500/5 via-transparent to-transparent
@@ -802,7 +1066,7 @@ foreach ($tickets_my as $t):
         <div class="flex flex-col gap-2 mt-auto">
 
             <!-- Tombol Detail -->
-            <button onclick='showDetailModal(<?= json_encode($t, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
+            <button onclick='showDetailModal(<?= json_encode($detailProgress, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
                     class="w-full px-4 py-2.5 rounded-xl text-sm bg-slate-700/50 hover:bg-slate-600
                            text-white border border-slate-600 hover:border-slate-500 transition-all duration-200">
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -811,6 +1075,21 @@ foreach ($tickets_my as $t):
                 </svg>
                 Detail
             </button>
+            <?php if ($isPersediaanProgress): ?>
+            <button onclick="bukaModalAcc(<?= $t['id'] ?>, '<?= htmlspecialchars($t['kode_tiket'] ?? '', ENT_QUOTES) ?>', this)"
+                    data-acc='<?= json_encode($detailProgress['persediaan_acc_items'] ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'
+                    data-mode="edit"
+                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-emerald-600/20 hover:bg-emerald-500/40
+                           text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-400
+                           transition-all duration-200 flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Ubah ACC
+            </button>
+            <p class="text-[11px] header-subtitle leading-relaxed text-center">Atur jumlah disetujui 0 sampai diminta. Selesaikan memakai jumlah yang disetujui.</p>
+            <?php endif; ?>
 <button onclick="bukaEditTiket(<?= $t['id'] ?>)"
         class="w-full px-4 py-2.5 rounded-xl text-sm bg-amber-600/30 hover:bg-amber-500/50
                text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-400
@@ -1201,7 +1480,27 @@ foreach ($tickets_my as $t):
                           placeholder="Tambahkan catatan penyelesaian permintaan..."
                           class="w-full bg-slate-800/80 border border-blue-500/30 rounded-lg px-3 py-2 text-xs header-title
                                  focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none"
-                          rows="3"><?= htmlspecialchars($t['layanan_catatan'] ?? '') ?></textarea>
+                          rows="3"></textarea>
+                <div class="relative">
+                    <input type="file" name="layanan_file" id="file<?= $t['id'] ?>"
+                           accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="hidden">
+                    <label for="file<?= $t['id'] ?>"
+                           class="flex items-center justify-center gap-2 w-full px-3 py-2 text-xs
+                                  bg-slate-800/80 border border-blue-500/30 rounded-lg
+                                  text-blue-300 hover:bg-blue-500/10 cursor-pointer transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                        <span id="fileName<?= $t['id'] ?>">
+                            <?php if (!empty($t['layanan_file'])): ?>
+                                <?= htmlspecialchars($t['layanan_file']) ?>
+                            <?php else: ?>
+                                Pilih File (JPG, PNG, PDF, DOC)
+                            <?php endif; ?>
+                        </span>
+                    </label>
+                </div>
                 <button type="button" onclick="simpanCatatan(<?= $t['id'] ?>)"
                         class="w-full px-4 py-2 text-xs rounded-lg bg-blue-600/50 hover:bg-blue-500
                                text-white font-medium border border-blue-500/50 transition-all duration-200">
@@ -1403,8 +1702,16 @@ foreach ($tickets_my as $t):
             <?= htmlspecialchars($t['pelapor']) ?>
         </span>
     </div>
-    <?php $judul = _parse_ticket_title_view($t['jenis_kerusakan'], $t['nama_kategori'] ?? ''); ?>
-    <?php if ($judul): ?>
+<?php $judul = _parse_ticket_title_view($t['jenis_kerusakan'], $t['nama_kategori'] ?? ''); ?>
+<?php $itemsAvailable = _persediaan_ringkas_view($this, $t['id'] ?? 0); ?>
+<?php if (!empty($itemsAvailable)): ?>
+<div class="mb-3">
+    <span class="stok-kurang-badge px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-md text-[10px] font-semibold border border-amber-500/30" title="Tiket persediaan — stok hanya info, tidak menghambat Ambil atau Selesaikan">
+        Stok hanya info — ACC 0 sampai diminta
+    </span>
+</div>
+<?php endif; ?>
+<?php if ($judul): ?>
     <div class="text-[10px] text-cyan-400 truncate mt-0.5 max-w-[160px]" title="<?= htmlspecialchars($judul) ?>">
         📋 <?= htmlspecialchars($judul) ?>
     </div>
@@ -1464,7 +1771,7 @@ foreach ($tickets_my as $t):
                     <td class="px-4 py-3.5 text-center whitespace-nowrap">
                         <div class="flex items-center justify-center gap-1.5">
                             <!-- Tombol Detail -->
-                            <button onclick='showDetailModal(<?= json_encode($t, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
+                            <button onclick='showDetailModal(<?= json_encode(_tkn_detail_json_view($this, $t), JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
                                     title="Lihat Detail"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
                                            bg-slate-700/60 hover:bg-slate-600 text-slate-300 hover:text-white
@@ -2112,6 +2419,48 @@ foreach ($tickets_my as $t):
                 </div>
             </div>
 
+            <!-- Daftar Barang Persediaan -->
+            <div id="modal-persediaan-container" class="hidden bg-gradient-to-br from-emerald-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-5">
+                <h4 class="text-sm font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10V11m0 10l-8-4V7m8 4L4 7m8 4l8-4"/>
+                    </svg>
+                    Daftar Barang Persediaan
+                </h4>
+                <div class="bg-slate-800/40 rounded-xl p-4 overflow-x-auto">
+                    <table class="w-full text-sm min-w-[520px]">
+                        <thead>
+                            <tr class="header-subtitle text-[11px] uppercase tracking-wider text-left">
+                                <th class="pb-2 pr-3 font-semibold w-10 text-center">No</th>
+                                <th class="pb-2 pr-3 font-semibold">Kode</th>
+                                <th class="pb-2 pr-3 font-semibold">Nama Barang</th>
+                                <th class="pb-2 font-semibold text-right">Diminta</th>
+                                <th class="pb-2 font-semibold text-right">Disetujui</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-persediaan-items"></tbody>
+                    </table>
+                </div>
+                <p class="header-subtitle text-xs mt-3">Disetujui mengikuti jumlah diminta bila belum diubah. Selesaikan memakai jumlah yang disetujui. Unduh PDF bila perlu arsip atau serah terima.</p>
+                <div class="flex justify-between mt-4 text-center">
+                    <div class="flex-1">
+                        <div class="header-subtitle text-xs">Petugas / Teknisi</div>
+                        <div id="modal-persediaan-teknisi" class="header-title text-xs font-semibold mt-10">-</div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="header-subtitle text-xs">Pemohon</div>
+                        <div id="modal-persediaan-pemohon" class="header-title text-xs font-semibold mt-10">-</div>
+                    </div>
+                </div>
+                <button id="btnExportPersediaanTeknisi" type="button" onclick="exportPersediaanPdfTeknisi()"
+                        class="mt-3 w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+
             <!-- Jadwal Layanan -->
             <div id="modal-jadwal-container" class="hidden bg-gradient-to-br from-cyan-500/5 to-transparent border border-cyan-500/20 rounded-2xl p-5">
                 <h4 class="text-sm font-bold text-cyan-400 mb-4 flex items-center gap-2">
@@ -2146,7 +2495,7 @@ foreach ($tickets_my as $t):
                 </div>
             </div>
 
-            <!-- Lampiran Foto -->
+            <!-- Lampiran Foto (non-persediaan saja) -->
             <div id="modal-lampiran-container" class="hidden bg-gradient-to-br from-pink-500/5 to-transparent border border-pink-500/20 rounded-2xl p-5">
                 <h4 class="text-sm font-bold text-pink-400 mb-3 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2156,19 +2505,6 @@ foreach ($tickets_my as $t):
                 </h4>
                 <div class="bg-slate-800/40 rounded-xl p-2 overflow-hidden">
                     <img id="modal-lampiran" src="" alt="Lampiran" class="w-full rounded-lg">
-                </div>
-            </div>
-
-            <!-- Catatan Layanan -->
-            <div id="modal-catatan-container" class="hidden bg-gradient-to-br from-yellow-500/5 to-transparent border border-yellow-500/20 rounded-2xl p-5">
-                <h4 class="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    Catatan Layanan
-                </h4>
-                <div class="bg-slate-800/40 rounded-xl p-4">
-                    <p id="modal-catatan" class="header-title text-sm leading-relaxed"></p>
                 </div>
             </div>
 
@@ -2191,6 +2527,73 @@ foreach ($tickets_my as $t):
                 </div>
             </div>
 
+        </div>
+    </div>
+    <div id="pmPrintSheetTeknisi" aria-hidden="true">
+        <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
+        <div class="pm-print-meta">No Faktur: <strong id="print_faktur_teknisi"></strong></div>
+        <div class="pm-print-meta">Tanggal: <strong id="print_tanggal_teknisi"></strong></div>
+        <div class="pm-print-meta">Tim Kerja: <strong id="print_unit_teknisi"></strong></div>
+        <div class="pm-print-meta">Tanggal Dibutuhkan: <strong id="print_butuh_teknisi"></strong></div>
+        <div class="pm-print-meta">Pemohon: <strong id="print_pemohon_teknisi"></strong></div>
+        <table class="pm-print-table">
+            <thead>
+                <tr>
+                    <th>NO</th>
+                    <th>Kode barang</th>
+                    <th>NAMA BARANG</th>
+                    <th>Jumlah</th>
+                </tr>
+            </thead>
+            <tbody id="print_items_teknisi"></tbody>
+        </table>
+        <div class="pm-print-signature">
+            <div><div>Petugas / Teknisi</div><strong id="print_teknisi_nama_teknisi"></strong></div>
+            <div><div>Pemohon</div><strong id="print_pemohon_nama_teknisi"></strong></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= MODAL ACC PERSEDIAAN ================= -->
+<div id="modalAccPersediaan"
+     class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="theme-card border border-emerald-500/30 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-b border-emerald-500/20 p-6 flex items-center justify-between flex-shrink-0">
+            <div>
+                <h3 class="text-lg font-bold header-title flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="accModalTitle">Atur jumlah yang disetujui</span>
+                </h3>
+                <p class="text-xs header-subtitle mt-1" id="accModalSubtitle">Tiket -</p>
+            </div>
+            <button onclick="tutupModalAcc()"
+                    class="w-9 h-9 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
+            <input type="hidden" id="accTicketId" value="">
+            <input type="hidden" id="accMode" value="take">
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs header-title leading-relaxed">
+                Isi jumlah yang disetujui per barang (0 sampai diminta). Sisa stok hanya info, tidak menghambat Ambil atau Selesaikan. Selesaikan memakai jumlah yang disetujui.
+            </div>
+            <div id="accItemsWrap" class="space-y-3"></div>
+            <p id="accEmpty" class="hidden text-sm header-subtitle text-center py-4">Data barang tidak tersedia.</p>
+            <div class="flex gap-3 pt-2">
+                <button onclick="tutupModalAcc()"
+                        class="flex-1 px-4 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-all">
+                    Batal
+                </button>
+                <button id="accSubmitBtn" onclick="submitAccPersediaan()"
+                        class="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white transition-all bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 shadow-lg shadow-emerald-500/30">
+                    Simpan &amp; Ambil
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -2536,7 +2939,35 @@ function batalAmbilTiket(id) {
         .catch(() => Swal.fire('Error', 'Gagal memproses permintaan', 'error'));
     });
 }
-function takeTicket(id) {
+function _tknEsc(s) {
+    return String(s ?? '-').replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+function _tknReadAccItems(src) {
+    try {
+        if (Array.isArray(src)) return src;
+        if (src && src.dataset && src.dataset.acc) {
+            var parsed = JSON.parse(src.dataset.acc);
+            return Array.isArray(parsed) ? parsed : [];
+        }
+        if (typeof src === 'string' && src) {
+            var p2 = JSON.parse(src);
+            return Array.isArray(p2) ? p2 : [];
+        }
+    } catch (e) { /* abaikan, fallback di bawah */ }
+    return [];
+}
+
+function takeTicket(id, btn) {
+    var isPersediaan = !!(btn && btn.dataset && btn.dataset.persediaan === '1');
+    if (isPersediaan) {
+        var items = _tknReadAccItems(btn);
+        var kode = (btn && btn.dataset && btn.dataset.kode) || ('#' + id);
+        bukaModalAcc(id, kode, items, 'take');
+        return;
+    }
     Swal.fire({
         title: 'Ambil tiket ini?',
         text: 'Pastikan Anda siap mengerjakannya',
@@ -2545,21 +2976,208 @@ function takeTicket(id) {
         confirmButtonText: 'Ya, Ambil',
         cancelButtonText: 'Batal'
     }).then(res => {
-        if (res.isConfirmed) {
-            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        if (res.isConfirmed) doTakeTicketRequest(id);
+    });
+}
+
+function doTakeTicketRequest(id) {
+    Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    fetch('<?= base_url("teknisi_panel/take_ticket/") ?>' + id, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.status === 'success') {
+            if (res.warning || res.deficient_items) {
+                _tknTakeWarning(res);
+                return;
+            }
+            Swal.fire({ icon: 'success', title: res.message || 'Tiket berhasil diambil', timer: 1500, showConfirmButton: false })
+                .then(() => location.reload());
+            return;
+        }
+        // Kompatibilitas: backend lama bisa kirim code stok_habis — perlakukan sebagai info, bukan penolak.
+        if ((res.code || '') === 'stok_habis') {
+            _tknTakeWarning(res);
+            return;
+        }
+        Swal.fire({ icon: 'error', title: res.message || 'Gagal mengambil tiket', confirmButtonColor: '#059669' });
+    })
+    .catch(() => Swal.fire('Error', 'Gagal mengambil tiket', 'error'));
+}
+
+function _tknTakeWarning(res) {
+    var items = res.deficient_items || res.deficient || [];
+    var list = (items || []).map(function (d) {
+        return '<li>' + _tknEsc(d.nama ?? '-') + ' x' + (d.qty ?? '?') + ' (sisa ' + (d.sisa ?? 0) + ')</li>';
+    }).join('');
+    var url = res.input_masuk_url || null;
+    var html = '<p>' + _tknEsc(res.warning || res.message || 'Stok menipis, tapi tiket tetap diambil.') + '</p>'
+        + (list ? '<ul style="text-align:left;margin:8px 0 0 18px;list-style:disc;">' + list + '</ul>' : '')
+        + '<p style="margin-top:8px;font-size:12px;">Stok hanya info — tidak menghambat Ambil atau Selesaikan.</p>';
+    Swal.fire({
+        icon: 'warning',
+        title: res.status === 'success' ? 'Tiket berhasil diambil' : 'Info stok',
+        html: html,
+        showCancelButton: !!url,
+        confirmButtonText: 'Mengerti, muat ulang',
+        cancelButtonText: url ? 'Catat Barang Masuk (opsional)' : 'Tutup',
+        confirmButtonColor: '#059669'
+    }).then(function (r) {
+        if (r.dismiss === Swal.DismissReason.cancel && url) {
+            window.location.href = url;
+            return;
+        }
+        location.reload();
+    });
+}
+
+// ================================================================
+// MODAL ACC PERSEDIAAN (fleksibel: 0 <= disetujui <= diminta)
+// Alur: Simpan & Ambil = POST acc_persediaan lalu POST take_ticket lalu reload.
+// Mode edit (Ubah ACC): POST acc saja tanpa take ulang.
+var _accTicketId = null;
+var _accMode = 'take';
+
+function bukaModalAcc(id, kode, src, mode) {
+    var items = _tknReadAccItems(src);
+    var m = 'take';
+    if (src && src.dataset && src.dataset.mode) m = src.dataset.mode;
+    else if (typeof mode === 'string' && mode) m = mode;
+    _accTicketId = id;
+    _accMode = (m === 'edit') ? 'edit' : 'take';
+
+    document.getElementById('accTicketId').value = id;
+    document.getElementById('accMode').value = _accMode;
+    document.getElementById('accModalSubtitle').textContent = 'Tiket ' + (kode || ('#' + id));
+    document.getElementById('accModalTitle').textContent = (_accMode === 'edit') ? 'Ubah jumlah yang disetujui' : 'Atur jumlah yang disetujui';
+    document.getElementById('accSubmitBtn').innerHTML = (_accMode === 'edit') ? 'Simpan ACC' : 'Simpan &amp; Ambil';
+
+    var wrap = document.getElementById('accItemsWrap');
+    var empty = document.getElementById('accEmpty');
+    wrap.innerHTML = '';
+    if (!items.length) {
+        empty.classList.remove('hidden');
+    } else {
+        empty.classList.add('hidden');
+        items.forEach(function (it, idx) {
+            var bid = parseInt(it.barang_id ?? 0, 10) || 0;
+            var diminta = parseInt(it.diminta ?? it.jumlah ?? 0, 10) || 0;
+            var accVal = (it.disetujui !== null && it.disetujui !== undefined && it.disetujui !== '')
+                ? (parseInt(it.disetujui, 10) || 0) : diminta;
+            if (accVal < 0) accVal = 0;
+            if (accVal > diminta) accVal = diminta;
+            var sisa = (it.sisa !== null && it.sisa !== undefined && it.sisa !== '') ? ('Sisa kini: ' + it.sisa) : 'Sisa kini: -';
+            var satuan = it.satuan ? ' ' + it.satuan : '';
+            var row = document.createElement('div');
+            row.className = 'bg-slate-800/40 border border-white/5 rounded-xl p-3 flex flex-col gap-2';
+            row.innerHTML = '<div class="flex items-start justify-between gap-3">'
+                + '<div><div class="header-title text-sm font-semibold"></div>'
+                + '<div class="header-subtitle text-xs mt-0.5">Diminta ' + diminta + satuan + ' · ' + _tknEsc(sisa) + '</div></div>'
+                + '<div class="text-[11px] header-subtitle whitespace-nowrap">#' + (idx + 1) + '</div></div>'
+                + '<label class="text-xs header-subtitle font-semibold">Jumlah disetujui (0–' + diminta + ')</label>'
+                + '<input type="number" class="acc-input w-full bg-slate-800/80 border border-emerald-500/30 rounded-lg px-3 py-2 text-sm header-title focus:outline-none focus:ring-2 focus:ring-emerald-500/50"'
+                + ' min="0" max="' + diminta + '" step="1" value="' + accVal + '" data-barang="' + bid + '" data-max="' + diminta + '">';
+            row.querySelector('.header-title').textContent = (it.kode ? it.kode + ' — ' : '') + (it.nama || '-');
+            var input = row.querySelector('.acc-input');
+            input.addEventListener('change', function () {
+                var mx = parseInt(input.dataset.max || '0', 10) || 0;
+                var v = parseInt(input.value, 10);
+                if (isNaN(v)) v = mx;
+                if (v < 0) v = 0;
+                if (v > mx) v = mx;
+                input.value = v;
+            });
+            wrap.appendChild(row);
+        });
+    }
+
+    document.getElementById('modalAccPersediaan').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function tutupModalAcc() {
+    document.getElementById('modalAccPersediaan').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    _accTicketId = null;
+}
+
+function _tknCollectAcc() {
+    var values = {};
+    var inputs = document.querySelectorAll('#accItemsWrap .acc-input');
+    for (var i = 0; i < inputs.length; i++) {
+        var bid = parseInt(inputs[i].dataset.barang || '0', 10) || 0;
+        var mx = parseInt(inputs[i].dataset.max || '0', 10) || 0;
+        var v = parseInt(inputs[i].value, 10);
+        if (!bid) return { ok: false, msg: 'Data barang tidak valid.' };
+        if (isNaN(v)) return { ok: false, msg: 'Isi jumlah yang disetujui dengan angka.' };
+        if (v < 0 || v > mx) return { ok: false, msg: 'Jumlah harus 0 sampai ' + mx + '.' };
+        values[bid] = v;
+    }
+    if (!Object.keys(values).length) return { ok: false, msg: 'Tidak ada barang untuk ACC.' };
+    return { ok: true, values: values };
+}
+
+function _tknPostAcc(id, values) {
+    var fd = new FormData();
+    Object.keys(values).forEach(function (bid) { fd.append('items[' + bid + ']', values[bid]); });
+    return fetch('<?= base_url("teknisi_panel/acc_persediaan/") ?>' + id, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    }).then(function (r) { return r.json(); });
+}
+
+function submitAccPersediaan() {
+    var id = _accTicketId || document.getElementById('accTicketId').value;
+    if (!id) return;
+    var got = _tknCollectAcc();
+    if (!got.ok) {
+        Swal.fire({ icon: 'warning', title: got.msg, confirmButtonColor: '#059669' });
+        return;
+    }
+    Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    _tknPostAcc(id, got.values)
+        .then(function (accRes) {
+            if (accRes.status !== 'success') {
+                Swal.fire({ icon: 'error', title: accRes.message || 'Gagal menyimpan ACC', confirmButtonColor: '#059669' });
+                return;
+            }
+            // Mode edit: cukup simpan ACC tanpa ambil ulang.
+            if (_accMode === 'edit') {
+                tutupModalAcc();
+                Swal.fire({ icon: 'success', title: accRes.message || 'Jumlah disetujui tersimpan', timer: 1500, showConfirmButton: false })
+                    .then(() => location.reload());
+                return;
+            }
+            // Mode ambil: simpan ACC dulu, lalu ambil tiket, lalu muat ulang.
             fetch('<?= base_url("teknisi_panel/take_ticket/") ?>' + id, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(res => res.json())
-            .then(res => {
-                Swal.fire({ icon: res.status, title: res.message, timer: 1500, showConfirmButton: false })
-                    .then(() => { if (res.status === 'success') location.reload(); });
+            .then(function (r) { return r.json(); })
+            .then(function (takeRes) {
+                tutupModalAcc();
+                if (takeRes.status === 'success') {
+                    if (takeRes.warning || takeRes.deficient_items) {
+                        _tknTakeWarning(takeRes);
+                        return;
+                    }
+                    Swal.fire({ icon: 'success', title: takeRes.message || 'Tiket berhasil diambil', timer: 1500, showConfirmButton: false })
+                        .then(() => location.reload());
+                    return;
+                }
+                Swal.fire({ icon: 'error', title: takeRes.message || 'Gagal mengambil tiket', confirmButtonColor: '#059669' });
             })
-            .catch(() => Swal.fire('Error', 'Gagal mengambil tiket', 'error'));
-        }
-    });
+            .catch(() => Swal.fire('Error', 'ACC tersimpan, tapi ambil tiket gagal. Muat ulang lalu coba lagi.', 'error'));
+        })
+        .catch(() => Swal.fire('Error', 'Gagal menyimpan ACC', 'error'));
 }
+
+document.getElementById('modalAccPersediaan').addEventListener('click', function (e) {
+    if (e.target === this) tutupModalAcc();
+});
 
 function batalkanTiketMenunggu(id, kode) {
     Swal.fire({
@@ -2817,7 +3435,11 @@ function showDetailModal(ticket) {
     const statusBadge = document.getElementById('modal-status-badge');
     let statusClass = '';
     let statusText  = ticket.status || '-';
-    switch (ticket.status) {
+    const isAssignedJs = (ticket.status === 'Menunggu') && (ticket.teknisi_id != null && ticket.teknisi_id !== '');
+    if (isAssignedJs) {
+        statusClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        statusText = '📌 Ditugaskan';
+    } else switch (ticket.status) {
         case 'Menunggu':    statusClass = 'bg-gray-500/20 text-gray-300 border border-gray-500/30';    statusText = '⏳ ' + statusText; break;
         case 'On Progress': statusClass = 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'; statusText = '⚡ ' + statusText; break;
         case 'Selesai':     statusClass = 'bg-green-500/20 text-green-300 border border-green-500/30';  statusText = '✓ ' + statusText;  break;
@@ -2853,12 +3475,6 @@ document.getElementById('modal-jenis-kerusakan').textContent = cleanJK || 'Tidak
         layananContainer.classList.remove('hidden');
     } else { layananContainer.classList.add('hidden'); }
 
-    const catatanContainer = document.getElementById('modal-catatan-container');
-    if (ticket.layanan_catatan) {
-        document.getElementById('modal-catatan').textContent = ticket.layanan_catatan;
-        catatanContainer.classList.remove('hidden');
-    } else { catatanContainer.classList.add('hidden'); }
-
     const fileContainer = document.getElementById('modal-file-container');
     if (ticket.layanan_file) {
         document.getElementById('modal-file-link').href        = '<?= base_url("uploads/layanan/") ?>' + ticket.layanan_file;
@@ -2867,14 +3483,162 @@ document.getElementById('modal-jenis-kerusakan').textContent = cleanJK || 'Tidak
     } else { fileContainer.classList.add('hidden'); }
 
     const lampiranContainer = document.getElementById('modal-lampiran-container');
-    if (ticket.foto) {
+    const isPForFoto = !!(ticket && ticket.is_persediaan);
+    if (!isPForFoto && ticket.foto) {
         document.getElementById('modal-lampiran').src = '<?= base_url("uploads/tiket/") ?>' + ticket.foto;
         lampiranContainer.classList.remove('hidden');
     } else { lampiranContainer.classList.add('hidden'); }
 
+    renderPersediaanTeknisi(ticket);
+
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
+
+let _tknPersediaanCache = { ticket: null, items: [] };
+
+function _tknParsePersediaanFallback(jk) {
+    const out = [];
+    (jk || '').split('\n').forEach(function (line) {
+        line = line.trim();
+        if (line.indexOf('- ') !== 0) return;
+        const m = line.match(/^-\s*(.+?)\s*-\s*(.+?)\s*x\s*(\d+)\s*(.*)$/i);
+        if (m) {
+            out.push({ kode_barang: m[1].trim() || '-', nama_barang_snapshot: m[2].trim(), nama_barang: m[2].trim(), jumlah: parseInt(m[3], 10) || 0, satuan_snapshot: (m[4] || '').trim(), satuan: (m[4] || '').trim() });
+        } else {
+            out.push({ kode_barang: '-', nama_barang_snapshot: line.replace(/^-\s*/, ''), nama_barang: line.replace(/^-\s*/, ''), jumlah: 0, satuan_snapshot: '', satuan: '' });
+        }
+    });
+    return out;
+}
+
+function renderPersediaanTeknisi(ticket) {
+    const container = document.getElementById('modal-persediaan-container');
+    const tbody = document.getElementById('modal-persediaan-items');
+    const isP = !!(ticket && ticket.is_persediaan);
+    if (!container || !tbody) return;
+    if (!isP) {
+        container.classList.add('hidden');
+        _tknPersediaanCache = { ticket: null, items: [] };
+        return;
+    }
+    // Sumber utama: paket ACC (ada diminta + disetujui + sisa); fallback ke full lalu parse teks.
+    let raw = Array.isArray(ticket.persediaan_acc_items) && ticket.persediaan_acc_items.length
+        ? ticket.persediaan_acc_items.map(function (a) {
+            return {
+                kode_barang: a.kode || '-', nama_barang_snapshot: a.nama || '-', nama_barang: a.nama || '-',
+                jumlah: a.diminta ?? 0, jumlah_disetujui: (a.disetujui !== null && a.disetujui !== undefined) ? a.disetujui : null,
+                satuan_snapshot: a.satuan || '', satuan: a.satuan || ''
+            };
+        })
+        : (Array.isArray(ticket.persediaan_items_full) ? ticket.persediaan_items_full : []);
+    let items = raw.length ? raw : [];
+    if (!items.length) items = _tknParsePersediaanFallback(ticket.jenis_kerusakan || '');
+    _tknPersediaanCache = { ticket: ticket, items: items };
+    tbody.innerHTML = '';
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="header-subtitle text-xs text-center py-4">Data barang tidak tersedia</td></tr>';
+    } else {
+        items.forEach(function (it, idx) {
+            const kode = it.kode_barang || '-';
+            const nama = it.nama_barang_snapshot || it.nama_barang || '-';
+            const satuan = it.satuan_snapshot || it.satuan || '';
+            const diminta = parseInt(it.jumlah, 10) || 0;
+            const accRaw = (it.jumlah_disetujui !== null && it.jumlah_disetujui !== undefined && it.jumlah_disetujui !== '')
+                ? parseInt(it.jumlah_disetujui, 10) : diminta;
+            const disetujui = isNaN(accRaw) ? diminta : accRaw;
+            const tr = document.createElement('tr');
+            tr.className = 'border-t border-white/5';
+            tr.innerHTML = '<td class="py-2 pr-3 text-center header-subtitle text-xs">' + (idx + 1) + '</td>'
+                + '<td class="py-2 pr-3 font-mono text-xs header-title"></td>'
+                + '<td class="py-2 pr-3 text-xs header-title"></td>'
+                + '<td class="py-2 text-right text-xs header-title"></td>'
+                + '<td class="py-2 text-right text-xs header-title font-semibold"></td>';
+            tr.children[1].textContent = kode;
+            tr.children[2].textContent = nama;
+            tr.children[3].textContent = diminta + (satuan ? ' ' + satuan : '');
+            tr.children[4].textContent = disetujui + (satuan ? ' ' + satuan : '');
+            tbody.appendChild(tr);
+        });
+    }
+    var _tknEl = document.getElementById('modal-persediaan-teknisi');
+    var _pmhEl = document.getElementById('modal-persediaan-pemohon');
+    if (_tknEl) _tknEl.textContent = ticket.nama_teknisi || '-';
+    if (_pmhEl) _pmhEl.textContent = ticket.pelapor || '-';
+    fillPersediaanPrintTeknisi();
+    container.classList.remove('hidden');
+}
+
+function fillPersediaanPrintTeknisi() {
+    var txt = function (id) { var el = document.getElementById(id); return el ? (el.textContent || '').trim() : ''; };
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    // ponytail: DOM on-screen sumber utama; cache/JSON hanya fallback bila tabel kosong.
+    var items = [];
+    var tb = document.getElementById('modal-persediaan-items');
+    if (tb) {
+        Array.prototype.forEach.call(tb.querySelectorAll('tr'), function (tr) {
+            if (!tr.cells || tr.cells.length < 5) return;
+            if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
+            var k = (tr.cells[1].textContent || '').trim();
+            var n = (tr.cells[2].textContent || '').trim();
+            var j = (tr.cells[4].textContent || '').trim() || (tr.cells[3].textContent || '').trim();
+            if (!k && !n && !j) return;
+            items.push({ kode_barang: k || '-', nama_barang_snapshot: n || '-', nama_barang: n || '-', jumlah: j || '', satuan_snapshot: '', satuan: '' });
+        });
+    }
+    var cache = (typeof _tknPersediaanCache !== 'undefined') ? _tknPersediaanCache : { ticket: null, items: [] };
+    var ticket = cache.ticket || null;
+    if (!items.length && cache.items && cache.items.length) items = cache.items;
+    var kode = txt('modal-kode');
+    var dibuat = txt('modal-created');
+    var pemohon = txt('modal-persediaan-pemohon');
+    if (!pemohon || pemohon === '-') pemohon = txt('modal-pelapor');
+    var teknisi = txt('modal-persediaan-teknisi');
+    var jk = txt('modal-jenis-kerusakan');
+    if (ticket) {
+        if (!kode || kode === '-') kode = ticket.kode_tiket || kode;
+        if (!dibuat || dibuat === '-') dibuat = ticket.created_at || ticket.tanggal || dibuat;
+        if (!pemohon || pemohon === '-') pemohon = ticket.pelapor || pemohon;
+        if (!teknisi || teknisi === '-') teknisi = ticket.nama_teknisi || teknisi;
+        if (!jk || jk === 'Tidak ada deskripsi') jk = ticket.jenis_kerusakan || jk;
+    }
+    if ((!kode || kode === '-') && (!items.length)) return false;
+    var unitM = (jk || '').match(/Unit Kerja:\s*(.+)/i);
+    var butuhM = (jk || '').match(/Tanggal dibutuhkan:\s*(.+)/i);
+    set('print_faktur_teknisi', kode || '-');
+    set('print_tanggal_teknisi', dibuat || '-');
+    set('print_unit_teknisi', unitM ? unitM[1].trim() : '-');
+    set('print_butuh_teknisi', butuhM ? butuhM[1].trim() : '-');
+    set('print_pemohon_teknisi', pemohon || '-');
+    set('print_pemohon_nama_teknisi', pemohon || '-');
+    set('print_teknisi_nama_teknisi', (teknisi && teknisi !== '-') ? teknisi : '-');
+    var printRows = document.getElementById('print_items_teknisi');
+    if (!printRows) return false;
+    printRows.innerHTML = '';
+    var n = Math.max(items.length, 6);
+    for (var i = 0; i < n; i++) {
+        var it = items[i] || {};
+        var kkode = it.kode_barang || '';
+        var nnama = it.nama_barang_snapshot || it.nama_barang || '';
+        var satuan = it.satuan_snapshot || it.satuan || '';
+        var jml = it.jumlah ? it.jumlah + (satuan ? ' ' + satuan : '') : '';
+        var tr = document.createElement('tr');
+        [i + 1, kkode, nnama, jml].forEach(function (v) {
+            var td = document.createElement('td');
+            td.textContent = v;
+            tr.appendChild(td);
+        });
+        printRows.appendChild(tr);
+    }
+    return true;
+}
+
+function exportPersediaanPdfTeknisi() {
+    fillPersediaanPrintTeknisi();
+    window.print();
+}
+window.fillPersediaanPrintTeknisi = fillPersediaanPrintTeknisi;
+window.exportPersediaanPdfTeknisi = exportPersediaanPdfTeknisi;
 
 function closeDetailModal() {
     document.getElementById('modalDetail').classList.add('hidden');
@@ -2889,6 +3653,7 @@ document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         closeDetailModal();
         tutupEditZoom();
+        if (typeof tutupModalAcc === 'function') tutupModalAcc();
     }
 });
 

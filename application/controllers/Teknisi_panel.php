@@ -28,6 +28,7 @@ class Teknisi_panel extends CI_Controller {
         $data['profil']            = $this->Teknisi_model->get_by_user($user_id);
         $data['tickets_my']        = $this->Teknisi_model->get_ticket_teknisi($user_id);
         $data['tickets_available'] = $this->Teknisi_model->get_ticket_available();
+        $data['tickets_assigned']  = $this->Teknisi_model->get_ticket_assigned($user_id);
         $data['maxDisplay']        = 5;
 
         $this->load->view('layout/header');
@@ -48,6 +49,7 @@ class Teknisi_panel extends CI_Controller {
         $profil            = $this->Teknisi_model->get_by_user($user_id);
         $tickets_my        = $this->Teknisi_model->get_ticket_teknisi($user_id);
         $tickets_available = $this->Teknisi_model->get_ticket_available();
+        $tickets_assigned  = $this->Teknisi_model->get_ticket_assigned($user_id);
 
         $total_tiket   = count($tickets_my);
         $belum_diambil = count($tickets_available);
@@ -73,6 +75,12 @@ class Teknisi_panel extends CI_Controller {
                 'pelapor'    => $t['pelapor'],
                 'lokasi'     => $t['lokasi'],
             ], $tickets_available),
+            'tickets_assigned' => array_map(fn($t) => [
+                'id'         => $t['id'],
+                'kode_tiket' => $t['kode_tiket'],
+                'pelapor'    => $t['pelapor'],
+                'lokasi'     => $t['lokasi'],
+            ], $tickets_assigned),
             'tickets_on_progress' => array_map(fn($t) => [
                 'id'              => $t['id'],
                 'kode_tiket'      => $t['kode_tiket'],
@@ -148,8 +156,11 @@ public function take_ticket($ticket_id)
 
         $ticket = $this->db
             ->where('id', $ticket_id)
-            ->where('teknisi_id IS NULL', null, false)
             ->where('status', 'Menunggu')
+            ->group_start()
+                ->where('teknisi_id IS NULL', null, false)
+                ->or_where('teknisi_id IN (SELECT id FROM teknisi WHERE user_id = ' . (int) $user_id . ')', null, false)
+            ->group_end()
             ->get('tickets')
             ->row_array();
 
@@ -157,6 +168,10 @@ public function take_ticket($ticket_id)
             echo json_encode(['status' => 'error', 'message' => 'Tiket sudah diambil teknisi lain']);
             return;
         }
+
+        // INFO stok: non-blocking, lanjut take. deficient hanya warning.
+        $deficient = $this->Teknisi_model->check_stok_ticket($ticket_id);
+        $stok_warning = !empty($deficient) ? $this->Teknisi_model->stok_message($deficient) : null;
 
         $this->db->insert('teknisi', [
             'user_id'  => $user_id,
@@ -175,7 +190,13 @@ public function take_ticket($ticket_id)
         $this->_sync_peminjaman_status($ticket_id, 'Disetujui');
         $this->_sync_kendaraan_status($ticket_id, 'Disetujui');
 
-        echo json_encode(['status' => 'success', 'message' => 'Tiket berhasil diambil']);
+        // Selalu success; warning stok sebagai info.
+        $resp = ['status' => 'success', 'message' => 'Tiket berhasil diambil'];
+        if ($stok_warning) {
+            $resp['warning'] = $stok_warning;
+            $resp['deficient_items'] = $deficient;
+        }
+        echo json_encode($resp);
         return;
     }
 
@@ -185,18 +206,84 @@ public function take_ticket($ticket_id)
         return;
     }
 
-$success = $this->Teknisi_model->take_ticket($ticket_id, $user_id);
+    // INFO stok: non-blocking, lanjut take. deficient hanya warning.
+    $info_deficient = $this->Teknisi_model->check_stok_ticket($ticket_id);
+    $info_warning = !empty($info_deficient) ? $this->Teknisi_model->stok_message($info_deficient) : null;
 
-    if ($success) {
+    $result = $this->Teknisi_model->take_ticket($ticket_id, $user_id);
+
+    // Model baru return array ok+warning; model lama return bool true.
+    $warning = $info_warning;
+    $warn_items = $info_deficient;
+    if (is_array($result)) {
+        if (empty($result['ok'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Tiket sudah diambil teknisi lain']);
+            return;
+        }
+        if (!empty($result['warning'])) { $warning = $result['warning']; $warn_items = $result['deficient'] ?? $warn_items; }
+        $result = true;
+    }
+
+    if ($result) {
         $this->_sync_bmn_status($ticket_id, 'Disetujui');
         $this->_sync_peminjaman_status($ticket_id, 'Disetujui');
         $this->_sync_kendaraan_status($ticket_id, 'Disetujui');
     }
 
-    echo json_encode($success
-        ? ['status' => 'success', 'message' => 'Tiket berhasil diambil']
-        : ['status' => 'error',   'message' => 'Tiket sudah diambil teknisi lain']
-    );
+    // Selalu lanjut take; warning stok sebagai info.
+    if ($result) {
+        $resp = ['status' => 'success', 'message' => 'Tiket berhasil diambil'];
+        if ($warning) { $resp['warning'] = $warning; $resp['deficient_items'] = $warn_items; }
+        echo json_encode($resp);
+        return;
+    }
+    echo json_encode(['status' => 'error', 'message' => 'Tiket sudah diambil teknisi lain']);
+}
+
+/* ===============================
+   ACC JUMLAH PERSEDIAAN (AJAX POST items[barang_id]=disetujui)
+   Guard milik + status Menunggu/On Progress, panggil save_acc_ticket.
+   Admin-switch ikut path sama (resolve teknisi_id milik tiket/user).
+=============================== */
+public function acc_persediaan($ticket_id)
+{
+    header('Content-Type: application/json');
+    if (!$this->input->is_ajax_request()) { echo json_encode(['status' => 'error', 'message' => 'Akses tidak diizinkan']); return; }
+
+    $ticket_id = (int) $ticket_id;
+    $user_id = $this->session->userdata('user_id');
+    $teknisi = $this->Teknisi_model->get_by_user($user_id);
+    $teknisi_id = $teknisi ? (int) $teknisi['id'] : 0;
+
+    $ticket = $this->db->where('id', $ticket_id)->get('tickets')->row_array();
+    if (!$ticket) { echo json_encode(['status' => 'error', 'message' => 'Tiket tidak ditemukan']); return; }
+
+    // Admin-switch: tanpa row teknisi, pakai teknisi_id milik tiket.
+    // Tiket unassigned (owner 0) + status Menunggu: izinkan teknisi_id 0 lanjut.
+    $owner = (int) ($ticket['teknisi_id'] ?? 0);
+    if (!$teknisi_id) {
+        if (!in_array($this->session->userdata('original_role'), ['admin', 'superadmin'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Data teknisi tidak ditemukan']); return;
+        }
+        if ($owner === 0 && ($ticket['status'] ?? '') === 'Menunggu') {
+            $teknisi_id = 0;
+        } else {
+            $teknisi_id = $owner;
+        }
+    }
+    if ($owner !== 0 && $owner !== $teknisi_id) {
+        echo json_encode(['status' => 'error', 'message' => 'Tiket ini bukan milik Anda']); return;
+    }
+    if (!in_array($ticket['status'] ?? '', ['Menunggu', 'On Progress'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Tiket sudah diproses']); return;
+    }
+
+    $items = $this->input->post('items');
+    if (!is_array($items) || empty($items)) { echo json_encode(['status' => 'error', 'message' => 'Items kosong']); return; }
+
+    $this->load->model('Transaksi_persediaan_model');
+    $res = $this->Transaksi_persediaan_model->save_acc_ticket($ticket_id, $teknisi_id, $items);
+    echo json_encode($res['ok'] ? ['status' => 'success', 'message' => $res['msg']] : ['status' => 'error', 'message' => $res['msg']]);
 }
 
 /* ===============================
@@ -209,7 +296,7 @@ public function selesai($id)
 
     if (!$teknisi) {
         $this->session->set_flashdata('error', 'Data teknisi tidak ditemukan.');
-        redirect('index.php/teknisi_panel');
+        redirect('teknisi_panel');
         exit;
     }
 
@@ -224,7 +311,16 @@ public function selesai($id)
 
     if (!$ticket) {
         $this->session->set_flashdata('error', 'Tiket tidak ditemukan.');
-        redirect('index.php/teknisi_panel');
+        redirect('teknisi_panel');
+        exit;
+    }
+
+    // Jalur persediaan: stock-out atomik via model, email via Ticket_model->update.
+    $this->load->model('Transaksi_persediaan_model');
+    if ($this->Transaksi_persediaan_model->has_items((int) $id)) {
+        $res = $this->Transaksi_persediaan_model->selesaikan_persediaan((int) $id);
+        $this->session->set_flashdata($res['ok'] ? 'success' : 'error', $res['msg']);
+        redirect('teknisi_panel');
         exit;
     }
 
@@ -242,7 +338,7 @@ public function selesai($id)
     $this->_sync_kendaraan_status($id, 'Selesai');
 
     $this->session->set_flashdata('success', 'Tiket berhasil diselesaikan.');
-    redirect('index.php/teknisi_panel');
+    redirect('teknisi_panel');
     exit;
 }
 
@@ -259,7 +355,7 @@ public function selesai($id)
         /* ── Ambil tiket lama ── */
         $ticket = $this->Ticket_model->get_by_id($id);
         if (!$ticket) {
-            redirect('index.php/teknisi_panel');
+            redirect('teknisi_panel');
             return;
         }
 
@@ -270,7 +366,7 @@ public function selesai($id)
         /* ── Validasi akun_zoom ── */
         if (!in_array($akun_zoom, [1, 2])) {
             $this->session->set_flashdata('error_zoom_' . $id, 'Pilih akun Zoom terlebih dahulu');
-            redirect('index.php/teknisi_panel');
+            redirect('teknisi_panel');
             return;
         }
 
@@ -300,7 +396,7 @@ public function selesai($id)
         // dan trigger email On Progress + Layanan jika kategori = permintaan
         $this->Ticket_model->update($id, ['status' => 'On Progress']);
 
-        redirect('index.php/teknisi_panel');
+        redirect('teknisi_panel');
     }
 
     /* ===============================
@@ -455,6 +551,22 @@ $this->db->where('id', $id)->update('tickets', [
         }
 
         $this->Teknisi_model->update_layanan_catatan($ticket_id, $data);
+
+        $this->load->helper('email');
+        $user = $this->db->where('id', $ticket['user_id'])->get('users')->row_array();
+        if ($user && !empty($user['email'])) {
+            $nama_teknisi = $ticket['nama_teknisi'] ?? $this->session->userdata('name') ?? 'Teknisi';
+            $catatan_baru = $data['layanan_catatan'] ?? $ticket['layanan_catatan'] ?? '';
+            $file_baru    = $data['layanan_file'] ?? $ticket['layanan_file'] ?? '';
+            $subject = "[SIPASTI] {$ticket['kode_tiket']} - Catatan baru dari teknisi";
+            $body = "<p>Yth. <strong>" . htmlspecialchars($user['name'] ?? 'Pengguna') . "</strong>,</p>"
+                . "<p>Teknisi <strong>" . htmlspecialchars($nama_teknisi) . "</strong> menambahkan catatan pada tiket "
+                . "<strong>" . htmlspecialchars($ticket['kode_tiket']) . "</strong>:</p>"
+                . "<div>" . nl2br(htmlspecialchars($catatan_baru)) . "</div>"
+                . (!empty($file_baru) ? "<p>File: " . htmlspecialchars($file_baru) . "</p>" : "")
+                . "<p><a href='" . base_url('user_ticket/history') . "'>Lihat riwayat tiket</a></p>";
+            send_ticket_email($user['email'], $subject, $body);
+        }
 
         echo json_encode(['status' => 'success', 'message' => 'Catatan berhasil disimpan']);
     }
@@ -690,6 +802,10 @@ public function update_ticket($id)
 
         if ($jenis_kerusakan) $update_data['jenis_kerusakan'] = $jenis_kerusakan;
 
+        // ponytail: catatan persediaan (perlu_jadwal=0) ikut tersimpan; jadwal/zoom tetap di gate bawah.
+        $layanan_cat = trim((string) $this->input->post('layanan_catatan'));
+        if (!empty($layanan_cat)) $update_data['layanan_catatan'] = $layanan_cat;
+
         if ($perlu_jadwal == 1) {
             if ($tanggal) $update_data['tanggal'] = $tanggal;
             if ($jam)     $update_data['jam']     = $jam;
@@ -698,12 +814,10 @@ public function update_ticket($id)
 
             $layanan_link  = trim((string) $this->input->post('layanan_link'));
             $undangan_link = $this->input->post('undangan_link');
-            $layanan_cat   = trim((string) $this->input->post('layanan_catatan'));
             $akun_zoom     = (int) $this->input->post('akun_zoom');
 
             if (!empty($layanan_link))        $update_data['layanan_link']    = $layanan_link;
             if ($undangan_link !== false)      $update_data['undangan_link']   = $undangan_link ?: null;
-            if (!empty($layanan_cat))          $update_data['layanan_catatan'] = $layanan_cat;
             if (in_array($akun_zoom, [1, 2])) {
                 $update_data['akun_zoom'] = $akun_zoom;
                 $this->load->model('Zoom_model');

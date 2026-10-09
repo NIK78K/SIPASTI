@@ -17,8 +17,14 @@ $sub_zoom_raw = $this->db->select('id')->where('perlu_jadwal', 1)
                          ->get('master_sub_kategori')->result_array();
 $sub_zoom_ids = array_column($sub_zoom_raw, 'id');
 $isZoom       = $isPermintaan && !$isRuangRapat && !$isKendaraan && !$isBmn
-                && in_array($subKatId, $sub_zoom_ids);
-$isPermintaanBiasa = $isPermintaan && !$isZoom && !$isRuangRapat && !$isKendaraan && !$isBmn;
+                && in_array($subKatId, $sub_zoom_ids);   
+$subSlug = '';
+if ($subKatId > 0) {
+    $subSlug = strtolower($this->db->select('slug')->where('id', $subKatId)->get('master_sub_kategori')->row('slug') ?? '');
+}
+$isPersediaan = $isPermintaan && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isZoom
+                && (strpos($subSlug, 'persediaan') !== false || strpos($jk, '[PERMINTAAN BARANG PERSEDIAAN]') !== false);
+$isPermintaanBiasa = $isPermintaan && !$isZoom && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isPersediaan;
 
 /* ── Helper: ambil nilai dari baris jenis_kerusakan ── */
 function parseJkField($jk, $label) {
@@ -42,6 +48,11 @@ if ($isRuangRapat) {
     $focusColor = 'focus:ring-purple-500';
     $accentCls  = 'text-purple-400';
     $catatanPlh = 'Catatan persetujuan / penolakan BMN...';
+} elseif ($isPersediaan) {
+    $tipeLabel  = '📦 Permintaan Barang Persediaan';
+    $focusColor = 'focus:ring-teal-500';
+    $accentCls  = 'text-teal-400';
+    $catatanPlh = 'Catatan persetujuan / penolakan barang persediaan...';
 } elseif ($isZoom) {
     $tipeLabel  = '📹 Permintaan Zoom / Meet';
     $focusColor = 'focus:ring-emerald-500';
@@ -71,11 +82,17 @@ $status = $ticket['status'] ?? 'Menunggu';
 
 /* ── Data ruang rapat jika ada ── */
 $peminjaman = $ticket['peminjaman'] ?? [];
+if (empty($peminjaman) && $isRuangRapat) {
+    preg_match('/\[ref:peminjaman_id=(\d+)\]/', $jk, $m);
+    if (!empty($m[1])) {
+        $peminjaman = $this->db->where('id', (int)$m[1])->get('peminjaman_ruang_rapat')->row_array() ?: [];
+    }
+}
 $ruangan_list = [];
 if ($isRuangRapat) {
     $ruangan_list = $this->db
         ->select('id, nama_ruangan, lokasi, kapasitas')
-        ->where('aktif', 1)
+        ->where('status', 'Aktif')
         ->order_by('nama_ruangan', 'ASC')
         ->get('master_ruang_rapat')
         ->result_array();

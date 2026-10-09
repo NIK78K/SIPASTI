@@ -33,7 +33,7 @@ public function __construct()
                 'title' => 'Akses Ditolak',
                 'text'  => 'Anda tidak memiliki izin untuk mengakses fitur ini.'
             ]);
-            redirect('index.php/ticket');
+            redirect('ticket');
             exit;
         }
     }
@@ -185,7 +185,7 @@ public function index()
     public function assign_teknisi($ticket_id)
     {
         $teknisi_id = $this->input->post('teknisi_id');
-        if (!$teknisi_id) redirect('index.php/ticket');
+        if (!$teknisi_id) redirect('ticket');
 
         $this->Ticket_model->update($ticket_id, [
             'teknisi_id' => $teknisi_id,
@@ -194,11 +194,92 @@ public function index()
 
         $this->Teknisi_model->update($teknisi_id, ['status' => 'busy']);
 
-        redirect('index.php/ticket');
+        redirect('ticket');
+    }
+
+    public function assign_persediaan($ticket_id)
+    {
+        // VIRTUAL Ditugaskan: tulis teknisi_id TANPA flip status (tetap Menunggu).
+        $ticket_id  = (int) $ticket_id;
+        $teknisi_id = (int) $this->input->post('teknisi_id');
+        if ($ticket_id <= 0 || !$teknisi_id) {
+            $this->session->set_flashdata('error', 'Pilih dulu teknisi persediaan.');
+            redirect('ticket');
+        }
+
+        $ticket = $this->db->where('id', $ticket_id)->get('tickets')->row_array();
+        if (!$ticket || ($ticket['status'] ?? '') !== 'Menunggu' || !empty($ticket['teknisi_id'])) {
+            $this->session->set_flashdata('error', 'Tiket sudah diproses atau sudah ada teknisi.');
+            redirect('ticket');
+        }
+
+        $this->load->model('Transaksi_persediaan_model');
+        $items = $this->Transaksi_persediaan_model->get_items($ticket_id);
+        if (empty($items)) {
+            $this->session->set_flashdata('error', 'Tiket ini bukan permintaan persediaan.');
+            redirect('ticket');
+        }
+
+        $tek = $this->db->select('t.id, t.status, u.name, u.email')
+            ->from('teknisi t')->join('users u', 'u.id = t.user_id', 'left')
+            ->where('t.id', $teknisi_id)->get()->row_array();
+        if (!$tek || ($tek['status'] ?? '') !== 'available') {
+            $this->session->set_flashdata('error', 'Teknisi tidak tersedia.');
+            redirect('ticket');
+        }
+
+        // Assign non-blocking: tanpa cek stok; take + selesai juga non-blocking (ACC atur jumlah).
+
+        $nama_tek = $tek['name'] ?: ('Teknisi #' . $teknisi_id);
+        $this->db->where('id', $ticket_id)->where('status', 'Menunggu')->where('teknisi_id IS NULL', null, false)
+            ->update('tickets', [
+                'teknisi_id'      => $teknisi_id,
+            ]);
+        if ((int) $this->db->affected_rows() !== 1) {
+            $this->session->set_flashdata('error', 'Gagal assign. Tiket sudah diproses teknisi lain.');
+            redirect('ticket');
+        }
+        $this->db->where('id', $teknisi_id)->update('teknisi', ['status' => 'busy']);
+
+        // Tanpa insert transaksi_persediaan. Queue email teknisi + user.
+        $this->load->helper('email');
+        $baris = [];
+        foreach ($items as $it) {
+            $nm = $it['nama_barang_snapshot'] ?: ($it['nama_barang'] ?? '-');
+            $st = $it['satuan_snapshot'] ?: ($it['satuan'] ?? '');
+            $baris[] = '- ' . $nm . ' x ' . (int) $it['jumlah'] . ' ' . $st;
+        }
+        $link = base_url('teknisi_panel');
+        $user = $this->db->where('id', $ticket['user_id'])->get('users')->row_array();
+        if (!empty($tek['email'])) {
+            send_ticket_email(
+                $tek['email'],
+                '[SIPASTI] ' . $ticket['kode_tiket'] . ' - Permintaan Persediaan Ditugaskan',
+                'Tiket ' . htmlspecialchars($ticket['kode_tiket']) . ' (' . htmlspecialchars($ticket['kebutuhan'] ?: '-') . ') ditugaskan ke Anda.<br>Items:<br>' . nl2br(htmlspecialchars(implode("\n", $baris))) . '<br><a href="' . $link . '">Buka panel teknisi</a>'
+            );
+        }
+        if ($user && !empty($user['email'])) {
+            send_ticket_email(
+                $user['email'],
+                '[SIPASTI] ' . $ticket['kode_tiket'] . ' - Ditugaskan ke ' . $nama_tek,
+                'Permintaan persediaan Anda (' . htmlspecialchars($ticket['kode_tiket']) . ') ditugaskan ke ' . htmlspecialchars($nama_tek) . '.'
+            );
+        }
+
+        $this->session->set_flashdata('success', 'Tiket ' . $ticket['kode_tiket'] . ' ditugaskan ke ' . $nama_tek . '.');
+        redirect('ticket');
     }
 
     public function selesai($id)
     {
+        // Jalur persediaan: stock-out atomik via model, email via Ticket_model->update.
+        $this->load->model('Transaksi_persediaan_model');
+        if ($this->Transaksi_persediaan_model->has_items((int) $id)) {
+            $res = $this->Transaksi_persediaan_model->selesaikan_persediaan((int) $id);
+            $this->session->set_flashdata($res['ok'] ? 'success' : 'error', $res['msg']);
+            redirect('ticket');
+        }
+
         // ambil tiket
         $ticket = $this->Ticket_model->get_by_id($id);
 
@@ -217,7 +298,7 @@ public function index()
             );
         }
 
-        redirect('index.php/ticket');
+        redirect('ticket');
     }
 
     public function detail($id)
@@ -231,7 +312,7 @@ public function index()
     public function delete($id)
     {
         $this->Ticket_model->delete($id);
-        redirect('index.php/ticket');
+        redirect('ticket');
     }
 
     public function create()
@@ -302,7 +383,7 @@ public function index()
             return;
         }
 
-        redirect('index.php/ticket');
+        redirect('ticket');
     }
 
     private function generateKodeTiket()
@@ -354,7 +435,7 @@ public function edit($id)
             echo json_encode(['status' => 'error', 'message' => 'Tiket tidak ditemukan']);
             return;
         }
-        redirect('index.php/ticket');
+        redirect('ticket');
         return;
     }
  
@@ -675,7 +756,7 @@ $updated = $this->Ticket_model->update($id, $data);
         return;
     }
  
-    redirect('index.php/ticket');
+    redirect('ticket');
 }
  
 
@@ -688,7 +769,7 @@ $updated = $this->Ticket_model->update($id, $data);
             'status'           => 'On Progress'
         ]);
 
-        redirect('index.php/ticket');
+        redirect('ticket');
     }
     
 }
