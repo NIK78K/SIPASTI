@@ -2,14 +2,18 @@
 $current = uri_string();
 
 $openUserMenu       = in_array($current, ['admin','teknisi','user']);
-$openInventoryMenu  = in_array($current, ['inventory','inventory_umum']);
+$openInventoryMenu  = in_array($current, ['inventory','inventory_umum','inventory_persediaan']);
 $openPengajuanMenu  = in_array($current, ['inventory/pengajuan','perangkat_dihapus']);
 $openTicketMenu     = in_array($current, ['ticket','history','zoom_management','ruang_rapat']);
 $openLaporanMenu    = in_array($current, ['laporan','rekap','rekap_inventory','rekap_bulanan','rekap_zoom']);
+$openLaporanUmumMenu = in_array($current, ['laporan/kartu_persediaan','laporan/bulanan_persediaan','laporan/tahunan_persediaan']);
 // Master Data sekarang include master_kendaraan
 $openMasterMenu = in_array($current, [
-    'master_kategori','kategori_persediaan','sub_kategori','master_lokasi','barang','barang_persediaan','stok_awal_persediaan',
+    'master_kategori','sub_kategori','master_lokasi','barang',
     'master_ruang_rapat','master_pegawai','master_kendaraan','master_bmn'
+]);
+$openMasterPersediaanMenu = in_array($current, [
+    'kategori_persediaan','barang_persediaan','stok_awal_persediaan'
 ]);
 $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
 ?>
@@ -166,6 +170,7 @@ $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
                 <div id="<?= $id ?>Menu" class="submenu <?= $openInventoryMenu?'':'hidden' ?>">
                     <a class="<?= $current=='inventory'?'sub-active':'' ?>" href="<?= base_url('inventory') ?>">Inventory IT</a>
                     <a class="<?= $current=='inventory_umum'?'sub-active':'' ?>" href="<?= base_url('inventory_umum') ?>">Inventory Umum</a>
+                    <a class="<?= $current=='inventory_persediaan'?'sub-active':'' ?>" href="<?= base_url('inventory_persediaan') ?>">Inventory Persediaan</a>
                 </div>
             </div>
 
@@ -249,6 +254,27 @@ $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
                 </div>
             </div>
 
+            <!-- LAPORAN UMUM -->
+            <?php $id='laporan_umum'; ?>
+            <div>
+                <button onclick="toggleMenu('<?= $id ?>')" class="menu-btn <?= $openLaporanUmumMenu?'active':'' ?>">
+                    <div class="flex items-center gap-3">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6m4 6V7m4 10V11M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        Laporan Persediaan
+                    </div>
+                    <svg id="<?= $id ?>Arrow" class="arrow <?= $openLaporanUmumMenu?'rotate':'' ?>" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div id="<?= $id ?>Menu" class="submenu <?= $openLaporanUmumMenu?'':'hidden' ?>">
+                    <a class="<?= $current=='laporan/kartu_persediaan'?'sub-active':'' ?>" href="<?= base_url('laporan/kartu_persediaan') ?>">Kartu Persediaan</a>
+                    <a class="<?= $current=='laporan/bulanan_persediaan'?'sub-active':'' ?>" href="<?= base_url('laporan/bulanan_persediaan') ?>">Laporan Bulanan</a>
+                    <a class="<?= $current=='laporan/tahunan_persediaan'?'sub-active':'' ?>" href="<?= base_url('laporan/tahunan_persediaan') ?>">Rekap Tahunan</a>
+                </div>
+            </div>
+
             <!-- MASTER DATA — sekarang include Master Kendaraan -->
             <?php $id='master'; ?>
             <div>
@@ -265,17 +291,35 @@ $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
                 </button>
                 <div id="<?= $id ?>Menu" class="submenu <?= $openMasterMenu?'':'hidden' ?>">
                     <a class="<?= $current=='master_kategori'?'sub-active':'' ?>" href="<?= base_url('master_kategori') ?>">Master Kategori</a>
-                    <a class="<?= $current=='kategori_persediaan'?'sub-active':'' ?>" href="<?= base_url('kategori_persediaan') ?>">Master Kategori Barang Persediaan</a>
                     <a class="<?= $current=='sub_kategori'?'sub-active':'' ?>" href="<?= base_url('sub_kategori') ?>">Master Sub Kategori</a>
                     <a class="<?= $current=='barang'?'sub-active':'' ?>" href="<?= base_url('barang') ?>">Master Barang</a>
-                    <a class="<?= $current=='barang_persediaan'?'sub-active':'' ?>" href="<?= base_url('barang_persediaan') ?>">Master Barang Persediaan</a>
-                    <a class="<?= $current=='stok_awal_persediaan'?'sub-active':'' ?>" href="<?= base_url('stok_awal_persediaan') ?>">Master Stok Awal Persediaan</a>
                     <a class="<?= $current=='master_lokasi'?'sub-active':'' ?>" href="<?= base_url('master_lokasi') ?>">Master Lokasi</a>
                     <a class="<?= $current=='master_ruang_rapat'?'sub-active':'' ?>" href="<?= base_url('master_ruang_rapat') ?>">Master Ruang Rapat</a>
                     <a class="<?= $current=='master_pegawai'?'sub-active':'' ?>" href="<?= base_url('master_pegawai') ?>">Master Pegawai</a>
                     <!-- ▼ BARU -->
                     <a class="<?= $current=='master_kendaraan'?'sub-active':'' ?>" href="<?= base_url('master_kendaraan') ?>">Master Kendaraan</a>
                 <a class="<?= $current=='master_bmn'?'sub-active':'' ?>" href="<?= base_url('master_bmn') ?>">Master Peminjaman BMN</a>
+                </div>
+            </div>
+
+            <!-- MASTER PERSEDIAAN -->
+            <?php $id='master_persediaan'; ?>
+            <div>
+                <button onclick="toggleMenu('<?= $id ?>')" class="menu-btn <?= $openMasterPersediaanMenu?'active':'' ?>">
+                    <div class="flex items-center gap-3">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        Master Persediaan
+                    </div>
+                    <svg id="<?= $id ?>Arrow" class="arrow <?= $openMasterPersediaanMenu?'rotate':'' ?>" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div id="<?= $id ?>Menu" class="submenu <?= $openMasterPersediaanMenu?'':'hidden' ?>">
+                    <a class="<?= $current=='kategori_persediaan'?'sub-active':'' ?>" href="<?= base_url('kategori_persediaan') ?>">Master Kategori Barang Persediaan</a>
+                    <a class="<?= $current=='barang_persediaan'?'sub-active':'' ?>" href="<?= base_url('barang_persediaan') ?>">Master Barang Persediaan</a>
+                    <a class="<?= $current=='stok_awal_persediaan'?'sub-active':'' ?>" href="<?= base_url('stok_awal_persediaan') ?>">Master Stok Awal Persediaan</a>
                 </div>
             </div>
 

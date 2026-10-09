@@ -187,6 +187,7 @@
             <!-- REKAP & LAPORAN -->
             <?php
             $openLaporanMenu = in_array($current, ['laporan', 'rekap_zoom', 'rekap_bulanan']);
+            $openLaporanUmumMenu = in_array($current, ['laporan/kartu_persediaan', 'laporan/bulanan_persediaan', 'laporan/tahunan_persediaan']);
             $idL = 'laporan';
             ?>
             <div>
@@ -220,6 +221,42 @@
                        class="flex items-center gap-2 px-3 py-1.5 rounded text-xs
                               <?= $current == 'rekap_bulanan' ? 'text-white bg-[#1f2937]' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white' ?>">
                         Rekap Bulanan
+                    </a>
+                </div>
+            </div>
+            <!-- LAPORAN UMUM -->
+            <?php $idLU = 'laporan_umum'; ?>
+            <div>
+                <button onclick="toggleMenu('<?= $idLU ?>')"
+                        class="flex items-center justify-between w-full px-3 py-2 rounded
+                               <?= $openLaporanUmumMenu ? 'bg-[#111827] text-white' : 'text-gray-300 hover:bg-[#111827]' ?>">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 17v-6m4 6V7m4 10V11M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        Laporan Umum
+                    </div>
+                    <svg id="<?= $idLU ?>Arrow" class="w-4 h-4 transition-transform duration-200 <?= $openLaporanUmumMenu ? 'rotate-180' : '' ?>"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div id="<?= $idLU ?>Menu" class="<?= $openLaporanUmumMenu ? '' : 'hidden' ?> ml-7 mt-1 space-y-1 bg-[#111827] rounded p-1">
+                    <a href="<?= base_url('laporan/kartu_persediaan') ?>"
+                       class="flex items-center gap-2 px-3 py-1.5 rounded text-xs
+                              <?= $current == 'laporan/kartu_persediaan' ? 'text-white bg-[#1f2937]' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white' ?>">
+                        Kartu Persediaan
+                    </a>
+                    <a href="<?= base_url('laporan/bulanan_persediaan') ?>"
+                       class="flex items-center gap-2 px-3 py-1.5 rounded text-xs
+                              <?= $current == 'laporan/bulanan_persediaan' ? 'text-white bg-[#1f2937]' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white' ?>">
+                        Laporan Bulanan
+                    </a>
+                    <a href="<?= base_url('laporan/tahunan_persediaan') ?>"
+                       class="flex items-center gap-2 px-3 py-1.5 rounded text-xs
+                              <?= $current == 'laporan/tahunan_persediaan' ? 'text-white bg-[#1f2937]' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white' ?>">
+                        Rekap Tahunan
                     </a>
                 </div>
             </div>
