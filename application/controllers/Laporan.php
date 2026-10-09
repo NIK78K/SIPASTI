@@ -39,6 +39,578 @@ class Laporan extends CI_Controller {
         $this->load->view('layout/footer');
     }
 
+    public function kartu_persediaan(){
+        $barang_id = $this->input->get('barang_id');
+        $barang_search = trim($this->input->get('barang_search', true) ?: '');
+        $bulan     = $this->input->get('bulan') ?: date('n');
+        $tahun     = $this->input->get('tahun') ?: date('Y');
+
+        $this->load->model(['Transaksi_persediaan_model', 'Barang_persediaan_model', 'Stok_awal_persediaan_model']);
+
+        $barang_list = $this->Barang_persediaan_model->get_all_with_kategori();
+        if ($barang_search !== '') {
+            $barang_list = array_values(array_filter($barang_list, function ($b) use ($barang_search) {
+                $hay = ($b->kode_barang ?? '') . ' ' . ($b->nama_barang ?? '');
+                return stripos($hay, $barang_search) !== false;
+            }));
+        }
+
+        $data = [
+            'barang_id'   => $barang_id,
+            'barang_search' => $barang_search,
+            'bulan'       => (int) $bulan,
+            'tahun'       => (int) $tahun,
+            'barang_list' => $barang_list,
+            'tahun_list'  => $this->Transaksi_persediaan_model->get_tahun_list(),
+            'barang'      => !empty($barang_id) ? $this->Barang_persediaan_model->get_by_id($barang_id) : null,
+            'stok_awal'   => 0,
+            'total_masuk' => 0,
+            'total_keluar' => 0,
+            'rows'        => [],
+            'saldo_akhir' => 0,
+        ];
+
+        if (empty($data['tahun_list']) || !in_array((int) $tahun, array_map('intval', $data['tahun_list']))) {
+            $data['tahun_list'][] = (int) $tahun;
+            rsort($data['tahun_list']);
+        }
+
+        if (!empty($barang_id)) {
+            $sa = $this->db->where('barang_id', $barang_id)
+                           ->where('bulan', (int) $bulan)
+                           ->where('tahun', (int) $tahun)
+                           ->get('stok_awal_persediaan')
+                           ->row();
+            $data['stok_awal'] = $sa ? (int) $sa->jumlah : 0;
+
+            $trx = $this->Transaksi_persediaan_model->get_filtered(null, $barang_id, $bulan, $tahun);
+            if (!is_array($trx)) $trx = [];
+            usort($trx, function ($a, $b) {
+                $ta = strtotime($a->tanggal ?? '') ?: 0;
+                $tb = strtotime($b->tanggal ?? '') ?: 0;
+                if ($ta === $tb) return ((int) ($a->id ?? 0)) - ((int) ($b->id ?? 0));
+                return $ta - $tb;
+            });
+
+            $sisa = (int) $data['stok_awal'];
+            $tot_masuk = 0; $tot_keluar = 0;
+            foreach ($trx as $t) {
+                $jml = (int) ($t->jumlah ?? 0);
+                if (($t->jenis ?? '') === 'masuk') {
+                    $sisa += $jml;
+                    $tot_masuk += $jml;
+                } else {
+                    $sisa -= $jml;
+                    $tot_keluar += $jml;
+                }
+                $t->sisa = $sisa;
+            }
+            $data['rows'] = $trx;
+            $data['total_masuk'] = $tot_masuk;
+            $data['total_keluar'] = $tot_keluar;
+            $data['saldo_akhir'] = $sisa;
+        }
+
+        $this->load->view('layout/header');
+
+        if ($this->session->userdata('role') === 'teknisi') {
+            $this->load->view('layout/sidebar_teknisi');
+        } else {
+            $this->load->view('layout/sidebar');
+        }
+
+        $this->load->view('laporan/kartu_persediaan', $data);
+        $this->load->view('layout/footer');
+    }
+
+    public function bulanan_persediaan(){
+        $bulan       = $this->input->get('bulan') ?: date('n');
+        $tahun       = $this->input->get('tahun') ?: date('Y');
+        $kategori_id = $this->input->get('kategori_id');
+        $kode        = $this->input->get('kode');
+
+        $data = $this->_data_bulanan($bulan, $tahun, $kategori_id, $kode);
+
+        $this->load->view('layout/header');
+
+        if ($this->session->userdata('role') === 'teknisi') {
+            $this->load->view('layout/sidebar_teknisi');
+        } else {
+            $this->load->view('layout/sidebar');
+        }
+
+        $this->load->view('laporan/bulanan_persediaan', $data);
+        $this->load->view('layout/footer');
+    }
+
+    public function tahunan_persediaan(){
+        $tahun = $this->input->get('tahun') ?: date('Y');
+
+        $data = $this->_data_tahunan($tahun);
+
+        $this->load->view('layout/header');
+
+        if ($this->session->userdata('role') === 'teknisi') {
+            $this->load->view('layout/sidebar_teknisi');
+        } else {
+            $this->load->view('layout/sidebar');
+        }
+
+        $this->load->view('laporan/tahunan_persediaan', $data);
+        $this->load->view('layout/footer');
+    }
+
+    private function _data_bulanan($bulan, $tahun, $kategori_id = null, $kode = null){
+        $this->load->model(['Transaksi_persediaan_model', 'Barang_persediaan_model', 'Stok_awal_persediaan_model']);
+
+        $tahun_list = $this->Transaksi_persediaan_model->get_tahun_list();
+        if (empty($tahun_list) || !in_array((int) $tahun, array_map('intval', $tahun_list))) {
+            $tahun_list[] = (int) $tahun;
+            rsort($tahun_list);
+        }
+
+        $sa_map = [];
+        $sa_rows = $this->db->where('bulan', (int) $bulan)
+                            ->where('tahun', (int) $tahun)
+                            ->get('stok_awal_persediaan')
+                            ->result();
+        foreach ($sa_rows as $sa) {
+            $sa_map[$sa->barang_id] = (int) ($sa->jumlah ?? 0);
+        }
+
+        $mut = [];
+        $ag = $this->db->select('barang_id, jenis, SUM(jumlah) AS total', false)
+                       ->from('transaksi_persediaan')
+                       ->where('MONTH(tanggal)', (int) $bulan)
+                       ->where('YEAR(tanggal)', (int) $tahun)
+                       ->group_by(['barang_id', 'jenis'])
+                       ->get()->result();
+        foreach ($ag as $r) {
+            if (($r->jenis ?? '') === 'masuk') {
+                $mut[$r->barang_id]['masuk'] = (int) $r->total;
+            } else {
+                $mut[$r->barang_id]['keluar'] = (int) $r->total;
+            }
+        }
+
+        $rows = [];
+        foreach ($this->Barang_persediaan_model->get_all_with_kategori() as $b) {
+            if (isset($b->status) && $b->status === 'Nonaktif') continue;
+            if (!empty($kategori_id) && (string) ($b->kategori_id ?? '') !== (string) $kategori_id) continue;
+            if (!empty($kode) && stripos($b->kode_barang ?? '', $kode) === false) continue;
+            $awal   = $sa_map[$b->id] ?? 0;
+            $masuk  = $mut[$b->id]['masuk'] ?? 0;
+            $keluar = $mut[$b->id]['keluar'] ?? 0;
+            $akhir  = $awal + $masuk - $keluar;
+            $rows[] = (object) [
+                'kode_barang' => $b->kode_barang ?? '-',
+                'nama_barang' => $b->nama_barang ?? '-',
+                'satuan'      => $b->satuan ?? '-',
+                'stok_awal'   => $awal,
+                'masuk'       => $masuk,
+                'keluar'      => $keluar,
+                'stok_akhir'  => $akhir,
+                'keterangan'  => ($awal === 0 && $masuk === 0 && $keluar === 0 && $akhir === 0) ? 'Habis' : (($awal <= 5 || $akhir <= 5) ? 'Hampir habis' : ''),
+            ];
+        }
+
+        usort($rows, function ($a, $b) {
+            return strnatcasecmp($a->kode_barang ?? '', $b->kode_barang ?? '');
+        });
+
+        return [
+            'bulan'         => (int) $bulan,
+            'tahun'         => (int) $tahun,
+            'kategori_id'   => $kategori_id,
+            'kode'          => $kode,
+            'tahun_list'    => $tahun_list,
+            'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
+            'rows'          => $rows,
+        ];
+    }
+
+    private function _data_tahunan($tahun){
+        $this->load->model(['Transaksi_persediaan_model', 'Barang_persediaan_model']);
+
+        $tahun_list = $this->Transaksi_persediaan_model->get_tahun_list();
+        if (empty($tahun_list) || !in_array((int) $tahun, array_map('intval', $tahun_list))) {
+            $tahun_list[] = (int) $tahun;
+            rsort($tahun_list);
+        }
+
+        $mut = [];
+        $ag = $this->db->select('barang_id, MONTH(tanggal) AS bln, jenis, SUM(jumlah) AS total', false)
+                       ->from('transaksi_persediaan')
+                       ->where('YEAR(tanggal)', (int) $tahun)
+                       ->group_by(['barang_id', 'bln', 'jenis'])
+                       ->get()->result();
+        foreach ($ag as $r) {
+            $mut[$r->barang_id][(int) $r->bln][$r->jenis === 'masuk' ? 'm' : 'k'] = (int) $r->total;
+        }
+
+        $rows = [];
+        foreach ($this->Barang_persediaan_model->get_all_with_kategori() as $b) {
+            if (isset($b->status) && $b->status === 'Nonaktif') continue;
+            $per = [];
+            $tm = 0; $tk = 0;
+            for ($m = 1; $m <= 12; $m++) {
+                $mv = $mut[$b->id][$m]['m'] ?? 0;
+                $kv = $mut[$b->id][$m]['k'] ?? 0;
+                $per[$m] = ['m' => $mv, 'k' => $kv];
+                $tm += $mv; $tk += $kv;
+            }
+            $rows[] = (object) [
+                'kode_barang'   => $b->kode_barang ?? '-',
+                'nama_barang'   => $b->nama_barang ?? '-',
+                'satuan'        => $b->satuan ?? '-',
+                'kategori_kode' => $b->kategori_kode ?? '-',
+                'kategori_nama' => $b->kategori_nama ?? '-',
+                'per_bulan'     => $per,
+                'tot_m'         => $tm,
+                'tot_k'         => $tk,
+            ];
+        }
+
+        usort($rows, function ($a, $b) {
+            return strnatcasecmp($a->kode_barang ?? '', $b->kode_barang ?? '');
+        });
+
+        return [
+            'tahun'      => (int) $tahun,
+            'tahun_list' => $tahun_list,
+            'rows'       => $rows,
+        ];
+    }
+
+    public function export_excel_bulanan(){
+        $bulan       = $this->input->get('bulan') ?: date('n');
+        $tahun       = $this->input->get('tahun') ?: date('Y');
+        $kategori_id = $this->input->get('kategori_id');
+        $kode        = $this->input->get('kode');
+
+        $data = $this->_data_bulanan($bulan, $tahun, $kategori_id, $kode);
+
+        require_once FCPATH . 'vendor/autoload.php';
+
+        $nb = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $periode = ($nb[(int) $data['bulan']] ?? $data['bulan']) . ' ' . $data['tahun'];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $ws = $spreadsheet->getActiveSheet();
+        $ws->setTitle('Bulanan');
+
+        $ws->mergeCells('A1:I1');
+        $ws->setCellValue('A1', 'LAPORAN BULANAN PERSEDIAAN');
+        $ws->mergeCells('A2:I2');
+        $ws->setCellValue('A2', 'Periode: ' . $periode);
+        $ws->getStyle('A1:A2')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 13],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+
+        $headers = ['No', 'Kode Barang', 'Nama Barang', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Stok Akhir', 'Keterangan'];
+        foreach ($headers as $i => $h) {
+            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i + 1);
+            $ws->setCellValue($col . '3', $h);
+        }
+        $ws->getStyle('A3:I3')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '2F75B6']],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ]);
+
+        $row = 4;
+        $no = 1;
+        $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0;
+        if (empty($data['rows'])) {
+            $ws->mergeCells('A' . $row . ':I' . $row);
+            $ws->setCellValue('A' . $row, 'Belum ada data barang pada periode ini.');
+            $row++;
+        } else {
+            foreach ($data['rows'] as $r) {
+                $t_awal += (int) ($r->stok_awal ?? 0);
+                $t_masuk += (int) ($r->masuk ?? 0);
+                $t_keluar += (int) ($r->keluar ?? 0);
+                $t_akhir += (int) ($r->stok_akhir ?? 0);
+                $ws->setCellValue('A' . $row, $no++);
+                $ws->setCellValue('B' . $row, $r->kode_barang ?? '-');
+                $ws->setCellValue('C' . $row, $r->nama_barang ?? '-');
+                $ws->setCellValue('D' . $row, $r->satuan ?? '-');
+                $ws->setCellValue('E' . $row, (int) ($r->stok_awal ?? 0));
+                $ws->setCellValue('F' . $row, (int) ($r->masuk ?? 0));
+                $ws->setCellValue('G' . $row, (int) ($r->keluar ?? 0));
+                $ws->setCellValue('H' . $row, (int) ($r->stok_akhir ?? 0));
+                $ws->setCellValue('I' . $row, $r->keterangan ?? '-');
+                $row++;
+            }
+        }
+
+        $ws->setCellValue('A' . $row, 'Total');
+        $ws->mergeCells('A' . $row . ':D' . $row);
+        $ws->setCellValue('E' . $row, $t_awal);
+        $ws->setCellValue('F' . $row, $t_masuk);
+        $ws->setCellValue('G' . $row, $t_keluar);
+        $ws->setCellValue('H' . $row, $t_akhir);
+        $ws->setCellValue('I' . $row, '-');
+        $ws->getStyle('A' . $row . ':I' . $row)->applyFromArray(['font' => ['bold' => true]]);
+
+        $ws->getStyle('E4:H' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        foreach (range('A', 'I') as $c) {
+            $ws->getColumnDimension($c)->setAutoSize(true);
+        }
+        $ws->freezePane('A4');
+
+        $fname = 'Laporan_Bulanan_Persediaan_' . (int) $data['bulan'] . '_' . (int) $data['tahun'] . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $fname . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: public');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function export_pdf_bulanan(){
+        $bulan       = $this->input->get('bulan') ?: date('n');
+        $tahun       = $this->input->get('tahun') ?: date('Y');
+        $kategori_id = $this->input->get('kategori_id');
+        $kode        = $this->input->get('kode');
+
+        $data = $this->_data_bulanan($bulan, $tahun, $kategori_id, $kode);
+
+        $nb = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $periode = ($nb[(int) $data['bulan']] ?? $data['bulan']) . ' ' . $data['tahun'];
+
+        $html = '<html><head><meta charset="utf-8"><style>'
+            . 'body{font-family:Helvetica,Arial,sans-serif;font-size:10pt;}'
+            . 'h2{margin:0;}p{margin:4px 0 12px;}'
+            . 'table{width:100%;border-collapse:collapse;}'
+            . 'th,td{border:1px solid #555;padding:5px;}'
+            . 'th{background:#eee;}td.num{text-align:right;}'
+            . 'thead{display:table-header-group;}'
+            . '</style></head><body>';
+        $html .= '<h2>Laporan Bulanan Persediaan</h2>';
+        $html .= '<p>Periode: ' . htmlspecialchars($periode) . ' &mdash; Dicetak: ' . htmlspecialchars(date('d M Y H:i')) . '</p>';
+        $html .= '<table><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Barang</th><th>Satuan</th>'
+            . '<th>Stok Awal</th><th>Masuk</th><th>Keluar</th><th>Stok Akhir</th><th>Keterangan</th></tr></thead><tbody>';
+
+        $no = 1;
+        $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0;
+        if (empty($data['rows'])) {
+            $html .= '<tr><td colspan="9" style="text-align:center;">Belum ada data barang pada periode ini.</td></tr>';
+        } else {
+            foreach ($data['rows'] as $r) {
+                $t_awal += (int) ($r->stok_awal ?? 0);
+                $t_masuk += (int) ($r->masuk ?? 0);
+                $t_keluar += (int) ($r->keluar ?? 0);
+                $t_akhir += (int) ($r->stok_akhir ?? 0);
+                $html .= '<tr><td>' . ($no++) . '</td>'
+                    . '<td>' . htmlspecialchars($r->kode_barang ?? '-') . '</td>'
+                    . '<td>' . htmlspecialchars($r->nama_barang ?? '-') . '</td>'
+                    . '<td>' . htmlspecialchars($r->satuan ?? '-') . '</td>'
+                    . '<td class="num">' . number_format((int) ($r->stok_awal ?? 0)) . '</td>'
+                    . '<td class="num">' . number_format((int) ($r->masuk ?? 0)) . '</td>'
+                    . '<td class="num">' . number_format((int) ($r->keluar ?? 0)) . '</td>'
+                    . '<td class="num">' . number_format((int) ($r->stok_akhir ?? 0)) . '</td>'
+                    . '<td>' . htmlspecialchars($r->keterangan ?? '-') . '</td></tr>';
+            }
+        }
+        $html .= '<tr><td colspan="4"><strong>Total</strong></td>'
+            . '<td class="num"><strong>' . number_format($t_awal) . '</strong></td>'
+            . '<td class="num"><strong>' . number_format($t_masuk) . '</strong></td>'
+            . '<td class="num"><strong>' . number_format($t_keluar) . '</strong></td>'
+            . '<td class="num"><strong>' . number_format($t_akhir) . '</strong></td>'
+            . '<td>-</td></tr>';
+        $html .= '</tbody></table></body></html>';
+
+        $this->load->library('pdf');
+        $this->pdf->loadHtml($html);
+        $this->pdf->setPaper('A4', 'landscape');
+        $this->pdf->render();
+        $this->pdf->stream('Laporan_Bulanan_Persediaan_' . (int) $data['bulan'] . '_' . (int) $data['tahun'] . '.pdf', ['Attachment' => 0]);
+        exit;
+    }
+
+    public function export_excel_tahunan(){
+        $tahun = $this->input->get('tahun') ?: date('Y');
+
+        $data = $this->_data_tahunan($tahun);
+
+        require_once FCPATH . 'vendor/autoload.php';
+
+        $nama_bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $ws = $spreadsheet->getActiveSheet();
+        $ws->setTitle('Tahunan');
+
+        $ws->mergeCells('A1:AC1');
+        $ws->setCellValue('A1', 'REKAP TAHUNAN PERSEDIAAN');
+        $ws->mergeCells('A2:AC2');
+        $ws->setCellValue('A2', 'Tahun: ' . $data['tahun']);
+        $ws->getStyle('A1:A2')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 13],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+
+        $ws->setCellValue('A3', 'No');
+        $ws->setCellValue('B3', 'Barang');
+        $ws->setCellValue('C3', 'Satuan');
+        $c = 4;
+        foreach ($nama_bulan as $nama) {
+            $col1 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
+            $col2 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1);
+            $ws->mergeCells($col1 . '3:' . $col2 . '3');
+            $ws->setCellValue($col1 . '3', $nama);
+            $ws->setCellValue($col1 . '4', 'M');
+            $ws->setCellValue($col2 . '4', 'K');
+            $c += 2;
+        }
+        $colT1 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
+        $colT2 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1);
+        $ws->mergeCells($colT1 . '3:' . $colT2 . '3');
+        $ws->setCellValue($colT1 . '3', 'Total');
+        $ws->setCellValue($colT1 . '4', 'M');
+        $ws->setCellValue($colT2 . '4', 'K');
+        $ws->getStyle('A3:' . $colT2 . '4')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '2F75B6']],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ]);
+
+        $row = 5;
+        $no = 1;
+        $t_bln = [];
+        for ($i = 1; $i <= 12; $i++) $t_bln[$i] = ['m' => 0, 'k' => 0];
+        $t_tm = 0; $t_tk = 0;
+        if (empty($data['rows'])) {
+            $ws->mergeCells('A' . $row . ':' . $colT2 . $row);
+            $ws->setCellValue('A' . $row, 'Belum ada data barang pada tahun ini.');
+            $row++;
+        } else {
+            foreach ($data['rows'] as $r) {
+                $t_tm += (int) ($r->tot_m ?? 0);
+                $t_tk += (int) ($r->tot_k ?? 0);
+                $ws->setCellValue('A' . $row, $no++);
+                $ws->setCellValue('B' . $row, ($r->nama_barang ?? '-') . ' [' . ($r->kode_barang ?? '-') . ']');
+                $ws->setCellValue('C' . $row, $r->satuan ?? '-');
+                $c = 4;
+                for ($m = 1; $m <= 12; $m++) {
+                    $mv = (int) ($r->per_bulan[$m]['m'] ?? 0);
+                    $kv = (int) ($r->per_bulan[$m]['k'] ?? 0);
+                    $t_bln[$m]['m'] += $mv;
+                    $t_bln[$m]['k'] += $kv;
+                    $ws->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c) . $row, $mv);
+                    $ws->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1) . $row, $kv);
+                    $c += 2;
+                }
+                $ws->setCellValue($colT1 . $row, (int) ($r->tot_m ?? 0));
+                $ws->setCellValue($colT2 . $row, (int) ($r->tot_k ?? 0));
+                $row++;
+            }
+        }
+
+        $ws->mergeCells('A' . $row . ':C' . $row);
+        $ws->setCellValue('A' . $row, 'Total');
+        $c = 4;
+        for ($m = 1; $m <= 12; $m++) {
+            $ws->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c) . $row, $t_bln[$m]['m']);
+            $ws->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1) . $row, $t_bln[$m]['k']);
+            $c += 2;
+        }
+        $ws->setCellValue($colT1 . $row, $t_tm);
+        $ws->setCellValue($colT2 . $row, $t_tk);
+        $ws->getStyle('A' . $row . ':' . $colT2 . $row)->applyFromArray(['font' => ['bold' => true]]);
+
+        $ws->getStyle('D5:' . $colT2 . $row)->getNumberFormat()->setFormatCode('#,##0');
+        foreach (range(1, $c + 1) as $ci) {
+            $ws->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($ci))->setAutoSize(true);
+        }
+        $ws->freezePane('D5');
+
+        $fname = 'Rekap_Tahunan_Persediaan_' . (int) $data['tahun'] . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $fname . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: public');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function export_pdf_tahunan(){
+        $tahun = $this->input->get('tahun') ?: date('Y');
+
+        $data = $this->_data_tahunan($tahun);
+
+        $nama_bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        $html = '<html><head><meta charset="utf-8"><style>'
+            . 'body{font-family:Helvetica,Arial,sans-serif;font-size:7pt;}'
+            . 'h2{margin:0;}p{margin:4px 0 12px;}'
+            . 'table{width:100%;border-collapse:collapse;}'
+            . 'th,td{border:1px solid #555;padding:3px;}'
+            . 'th{background:#eee;}td.num{text-align:right;}'
+            . 'thead{display:table-header-group;}'
+            . '</style></head><body>';
+        $html .= '<h2>Rekap Tahunan Persediaan</h2>';
+        $html .= '<p>Tahun: ' . htmlspecialchars($data['tahun']) . ' &mdash; Dicetak: ' . htmlspecialchars(date('d M Y H:i')) . '</p>';
+        $html .= '<table><thead><tr><th rowspan="2">No</th><th rowspan="2">Barang</th><th rowspan="2">Satuan</th>';
+        foreach ($nama_bulan as $nama) {
+            $html .= '<th colspan="2">' . $nama . '</th>';
+        }
+        $html .= '<th colspan="2">Total</th></tr><tr>';
+        for ($i = 1; $i <= 12; $i++) {
+            $html .= '<th>M</th><th>K</th>';
+        }
+        $html .= '<th>M</th><th>K</th></tr></thead><tbody>';
+
+        $no = 1;
+        $t_bln = [];
+        for ($i = 1; $i <= 12; $i++) $t_bln[$i] = ['m' => 0, 'k' => 0];
+        $t_tm = 0; $t_tk = 0;
+        if (empty($data['rows'])) {
+            $html .= '<tr><td colspan="29" style="text-align:center;">Belum ada data barang pada tahun ini.</td></tr>';
+        } else {
+            foreach ($data['rows'] as $r) {
+                $t_tm += (int) ($r->tot_m ?? 0);
+                $t_tk += (int) ($r->tot_k ?? 0);
+                $html .= '<tr><td>' . ($no++) . '</td>'
+                    . '<td>' . htmlspecialchars(($r->nama_barang ?? '-') . ' [' . ($r->kode_barang ?? '-') . ']') . '</td>'
+                    . '<td>' . htmlspecialchars($r->satuan ?? '-') . '</td>';
+                for ($m = 1; $m <= 12; $m++) {
+                    $mv = (int) ($r->per_bulan[$m]['m'] ?? 0);
+                    $kv = (int) ($r->per_bulan[$m]['k'] ?? 0);
+                    $t_bln[$m]['m'] += $mv;
+                    $t_bln[$m]['k'] += $kv;
+                    $html .= '<td class="num">' . ($mv > 0 ? number_format($mv) : '-') . '</td>'
+                        . '<td class="num">' . ($kv > 0 ? number_format($kv) : '-') . '</td>';
+                }
+                $html .= '<td class="num"><strong>' . number_format((int) ($r->tot_m ?? 0)) . '</strong></td>'
+                    . '<td class="num"><strong>' . number_format((int) ($r->tot_k ?? 0)) . '</strong></td></tr>';
+            }
+        }
+        $html .= '<tr><td colspan="3"><strong>Total</strong></td>';
+        for ($m = 1; $m <= 12; $m++) {
+            $html .= '<td class="num"><strong>' . number_format($t_bln[$m]['m']) . '</strong></td>'
+                . '<td class="num"><strong>' . number_format($t_bln[$m]['k']) . '</strong></td>';
+        }
+        $html .= '<td class="num"><strong>' . number_format($t_tm) . '</strong></td>'
+            . '<td class="num"><strong>' . number_format($t_tk) . '</strong></td></tr>';
+        $html .= '</tbody></table></body></html>';
+
+        $this->load->library('pdf');
+        $this->pdf->loadHtml($html);
+        $this->pdf->setPaper('A3', 'landscape');
+        $this->pdf->render();
+        $this->pdf->stream('Rekap_Tahunan_Persediaan_' . (int) $data['tahun'] . '.pdf', ['Attachment' => 0]);
+        exit;
+    }
+
     public function ajax_teknisi()
     {
         $tahun   = $this->input->post('tahun') ?? date('Y');
