@@ -484,7 +484,7 @@
     </div>
 
     <!-- ══ ACTION CARDS ══ -->
-    <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-4xl mb-5 z-10">
+    <div class="relative grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-5xl mb-5 z-10">
         <a href="<?= base_url('user_ticket/create_permintaan') ?>"
            class="group relative rounded-2xl p-8 bg-white border border-blue-100/50
                   shadow-[0_8px_30px_rgba(0,0,0,0.12)]
@@ -549,10 +549,39 @@
                 </div>
             </div>
         </a>
-    </div>
 
+        <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+           class="group relative rounded-2xl p-8 bg-white border border-emerald-100/50
+                  shadow-[0_8px_30px_rgba(0,0,0,0.12)]
+                  hover:shadow-[0_20px_50px_rgba(16,185,129,0.25)]
+                  hover:-translate-y-1.5 transition-all duration-300 overflow-hidden flex flex-col h-full">
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-emerald-50/50 via-white to-green-50/50 transition-opacity duration-300"></div>
+            <div class="relative mb-5 inline-flex items-center gap-3">
+                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Persediaan</span>
+            </div>
+            <h3 class="relative text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors duration-300">Permintaan Barang Persediaan</h3>
+            <p class="relative text-sm text-gray-600 leading-relaxed mb-6">
+                Ajukan permintaan barang persediaan kantor seperti
+                <span class="font-semibold text-gray-800">ATK</span>,
+                <span class="font-semibold text-gray-800">toner printer</span>,
+                <span class="font-semibold text-gray-800">kertas</span>,
+                dan <span class="font-semibold text-gray-800">kebutuhan persediaan</span> lainnya.
+            </p>
+            <div class="relative mt-auto flex items-center justify-between pt-5 border-t border-emerald-100">
+                <span class="font-semibold text-emerald-600 group-hover:text-emerald-700">Buat Permintaan</span>
+                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </div>
+        </a>
+    </div>
     <!-- ══ HISTORY BAR ══ -->
-    <div class="relative w-full max-w-4xl mb-6 z-10">
+    <div class="relative w-full max-w-5xl mb-6 z-10">
         <div class="history-bar flex flex-col items-center gap-3 px-5 py-4 text-center">
             <div class="flex items-center gap-2">
                 <svg class="w-5 h-5 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

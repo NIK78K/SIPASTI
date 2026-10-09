@@ -694,12 +694,13 @@ elseif ($kategori_slug === 'permintaan' &&
     ========================= */
 public function get_history_limit($user_id, $limit, $offset)
 {
-    return $this->db
+    $rows = $this->db
         ->select('
             t.*,
             mk.nama_kategori,
             mk.slug as kategori_slug,
             msk.nama_sub_kategori,
+            msk.slug as sub_kategori_slug,
             msk.perlu_jadwal,
             p.nama_barang,
             u.name as nama_teknisi
@@ -715,6 +716,35 @@ public function get_history_limit($user_id, $limit, $offset)
         ->limit($limit, $offset)
         ->get()
         ->result_array();
+
+    // Lampirkan items persediaan per tiket (1 query batch, limit 10 jadi ringan).
+    if (!empty($rows) && $this->db->table_exists('ticket_persediaan_items')) {
+        $ids = array_values(array_unique(array_map(function ($r) {
+            return (int) ($r['id'] ?? 0);
+        }, $rows)));
+        $ids = array_values(array_filter($ids));
+        $map = [];
+        if (!empty($ids)) {
+            $items = $this->db
+                ->select('i.ticket_id, i.barang_id, i.jumlah, i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
+                ->from('ticket_persediaan_items i')
+                ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
+                ->where_in('i.ticket_id', $ids)
+                ->order_by('i.ticket_id', 'ASC')
+                ->order_by('i.id', 'ASC')
+                ->get()
+                ->result_array();
+            foreach ($items as $it) {
+                $map[(int) $it['ticket_id']][] = $it;
+            }
+        }
+        foreach ($rows as &$r) {
+            $r['persediaan_items'] = $map[(int) ($r['id'] ?? 0)] ?? [];
+        }
+        unset($r);
+    }
+
+    return $rows;
 }
 
     public function count_history($user_id)
@@ -826,6 +856,74 @@ public function update_ticket_by_user($ticket_id, $user_id, $data)
 }
 
 /* =========================
+   ITEMS PERSEDIAAN UNTUK EDIT (MILIK USER)
+========================= */
+public function get_persediaan_items_for_edit($ticket_id, $user_id)
+{
+    if (!$this->db->table_exists('ticket_persediaan_items')) return [];
+
+    $t = $this->db
+        ->select('id')
+        ->where('id', (int) $ticket_id)
+        ->where('user_id', $user_id)
+        ->where_in('status', ['Menunggu', 'On Progress'])
+        ->get('tickets')
+        ->row();
+    if (!$t) return [];
+
+    return $this->db
+        ->select('i.barang_id, i.jumlah, i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan, b.status')
+        ->from('ticket_persediaan_items i')
+        ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
+        ->where('i.ticket_id', (int) $ticket_id)
+        ->order_by('i.id', 'ASC')
+        ->get()
+        ->result_array();
+}
+
+/* =========================
+   UPDATE PERSEDIAAN OLEH USER (transaksional)
+   Rebuild jenis_kerusakan format checkout agar parser teknisi/admin tetap jalan.
+   ponytail: ringkasan tanpa baris Judul; judul hanya di kebutuhan. Tambah baris Judul bila parser dukung.
+========================= */
+public function update_persediaan_by_user($ticket_id, $user_id, $ticket_data, $items, $meta)
+{
+    $ringkas = ['[PERMINTAAN BARANG PERSEDIAAN]'];
+    $total   = 0;
+    foreach ($items as $s) {
+        $ringkas[] = '- ' . ($s['kode'] ?? '-') . ' - ' . $s['nama'] . ' x ' . (int) $s['jumlah'] . ' ' . ($s['satuan'] ?? '');
+        $total += (int) $s['jumlah'];
+    }
+    $ringkas[] = '';
+    $ringkas[] = 'Keperluan: ' . ($meta['keperluan'] ?? '');
+    if (!empty($meta['unit_kerja'])) $ringkas[] = 'Unit Kerja: ' . $meta['unit_kerja'];
+    if (!empty($meta['tanggal_dibutuhkan'])) $ringkas[] = 'Tanggal dibutuhkan: ' . $meta['tanggal_dibutuhkan'];
+    $ringkas[] = 'Total: ' . count($items) . ' jenis, ' . $total . ' item';
+    $ringkas[] = 'Catatan: keranjang hanya menandai kebutuhan, stok berkurang saat teknisi menyetujui.';
+    $ticket_data['jenis_kerusakan'] = implode("\n", $ringkas);
+
+    $this->db->trans_start();
+    $this->db
+        ->where('id', (int) $ticket_id)
+        ->where('user_id', $user_id)
+        ->where_in('status', ['Menunggu', 'On Progress'])
+        ->update('tickets', $ticket_data);
+    $this->db->where('ticket_id', (int) $ticket_id)->delete('ticket_persediaan_items');
+    foreach ($items as $s) {
+        $this->db->insert('ticket_persediaan_items', [
+            'ticket_id'            => (int) $ticket_id,
+            'barang_id'            => (int) $s['barang_id'],
+            'jumlah'               => (int) $s['jumlah'],
+            'nama_barang_snapshot' => substr($s['nama'], 0, 150),
+            'satuan_snapshot'      => substr($s['satuan'], 0, 50),
+        ]);
+    }
+    $this->db->trans_complete();
+
+    return $this->db->trans_status();
+}
+
+/* =========================
    AUTO RATING 5 BINTANG (24 JAM)
 ========================= */
 public function auto_rate_expired_tickets($user_id)
@@ -866,6 +964,104 @@ public function get_zoom_ticket_for_upload($ticket_id, $user_id)
         ->where('msk.perlu_jadwal', 1)
         ->get()
         ->row_array();
+}
+
+/* ===============================
+   KATALOG PERSEDIAAN + SISA (user, bulan+tahun kini)
+   Rumus: stok_awal + SUM(masuk) - SUM(keluar), default 0
+================================ */
+public function get_sisa_persediaan($barang_id, $bulan, $tahun)
+{
+    $barang_id = (int) $barang_id;
+    $bulan     = (int) $bulan;
+    $tahun     = (int) $tahun;
+
+    if ($barang_id <= 0) return 0;
+
+    $sa = $this->db
+        ->where('barang_id', $barang_id)
+        ->where('bulan', $bulan)
+        ->where('tahun', $tahun)
+        ->get('stok_awal_persediaan')
+        ->row();
+    $awal = $sa ? (int) $sa->jumlah : 0;
+
+    $ag = $this->db
+        ->select('jenis, COALESCE(SUM(jumlah),0) AS total', false)
+        ->from('transaksi_persediaan')
+        ->where('barang_id', $barang_id)
+        ->where('MONTH(tanggal)', $bulan)
+        ->where('YEAR(tanggal)', $tahun)
+        ->group_by('jenis')
+        ->get()
+        ->result();
+
+    $masuk = 0; $keluar = 0;
+    foreach ($ag as $r) {
+        if (($r->jenis ?? '') === 'masuk') $masuk = (int) $r->total;
+        else $keluar += (int) $r->total;
+    }
+
+    return $awal + $masuk - $keluar;
+}
+
+public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
+{
+    $bulan = $bulan ?: (int) date('n');
+    $tahun = $tahun ?: (int) date('Y');
+
+    $rows = $this->db
+        ->select('b.id, b.kode_barang, b.nama_barang, b.satuan, b.status, b.kategori_id, k.kode AS kategori_kode, k.nama AS kategori_nama')
+        ->from('master_barang_persediaan b')
+        ->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left')
+        ->where('b.status', 'Aktif')
+        ->get()
+        ->result_array();
+
+    usort($rows, function ($a, $b) {
+        return strnatcasecmp($a['kode_barang'] ?? '', $b['kode_barang'] ?? '');
+    });
+
+    foreach ($rows as &$r) {
+        $r['sisa'] = $this->get_sisa_persediaan($r['id'], $bulan, $tahun);
+    }
+    unset($r);
+
+    return $rows;
+}
+
+/* ===============================
+   SUB KATEGORI PERMINTAAN PERSEDIAAN (seed bila belum ada)
+   Prefer slug 'permintaan-persediaan', fallback slug lama.
+================================ */
+public function ensure_persediaan_sub()
+{
+    $sub = $this->db
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-persediaan'])
+        ->row();
+    if ($sub) return $sub;
+
+    $old = $this->db
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-barang-persediaan'])
+        ->row();
+    if ($old) return $old;
+
+    $kat = $this->db
+        ->get_where('master_kategori', ['slug' => 'permintaan'])
+        ->row();
+    if (!$kat) return null;
+
+    $this->db->insert('master_sub_kategori', [
+        'kategori_id'       => $kat->id,
+        'nama_sub_kategori' => 'Permintaan Persediaan',
+        'slug'              => 'permintaan-persediaan',
+        'perlu_jadwal'      => 0,
+        'created_at'        => date('Y-m-d H:i:s'),
+    ]);
+
+    return $this->db
+        ->get_where('master_sub_kategori', ['slug' => 'permintaan-persediaan'])
+        ->row();
 }
 
 /* ===============================

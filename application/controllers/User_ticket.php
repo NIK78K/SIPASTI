@@ -11,7 +11,7 @@ class User_ticket extends CI_Controller {
             !$this->session->userdata('logged_in') ||
             $this->session->userdata('role') !== 'user'
         ) {
-            redirect('index.php/auth/login');
+            redirect('auth/login');
         }
 
         $this->load->model('User_ticket_model');
@@ -31,7 +31,7 @@ public function store()
 
     $this->User_ticket_model->create_ticket();
 
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
 }
 
@@ -68,7 +68,7 @@ public function create_gangguan()
         $this->User_ticket_model->create_ticket();
  
         $this->session->set_flashdata('success', 'Laporan gangguan berhasil dikirim');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
  
@@ -155,7 +155,7 @@ public function create_permintaan()
             if ($konflik > 0) {
                 $this->session->set_flashdata('error',
                     'Ruangan sudah dipesan pada waktu tersebut. Pilih ruangan atau waktu lain.');
-                redirect('index.php/user_ticket/create_permintaan');
+                redirect('user_ticket/create_permintaan');
                 exit;
             }
         }
@@ -181,7 +181,7 @@ public function create_permintaan()
             if ($konflik) {
                 $this->session->set_flashdata('error',
                     'Kendaraan sudah dipinjam pada rentang waktu tersebut. Pilih kendaraan atau waktu lain.');
-                redirect('index.php/user_ticket/create_permintaan');
+                redirect('user_ticket/create_permintaan');
                 exit;
             }
         }
@@ -204,7 +204,7 @@ public function create_permintaan()
             if ($konflik > 0) {
                 $this->session->set_flashdata('error',
                     'Barang BMN sudah dipinjam pada rentang tanggal tersebut. Pilih barang atau tanggal lain.');
-                redirect('index.php/user_ticket/create_permintaan');
+                redirect('user_ticket/create_permintaan');
                 exit;
             }
         }
@@ -213,9 +213,9 @@ public function create_permintaan()
     $result = $this->User_ticket_model->create_ticket();
 
     if ($result === false) {
-        redirect('index.php/user_ticket/create_permintaan');
+        redirect('user_ticket/create_permintaan');
     } else {
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
     }
     exit;
 }
@@ -238,6 +238,291 @@ $data = [
     $this->load->view('layout/header_user');
     $this->load->view('user/create_permintaan', $data);
     $this->load->view('layout/footer_user');
+}
+
+    /* ===============================
+       PERMINTAAN BARANG PERSEDIAAN (katalog + keranjang, tanpa bayar)
+       Keranjang = menandai barang dibutuhkan. Stok berkurang
+       hanya saat teknisi approve manual. Tanpa insert transaksi.
+    =============================== */
+public function create_persediaan()
+{
+    $this->load->model('Barang_persediaan_model');
+
+    $bulan = (int) date('n');
+    $tahun = (int) date('Y');
+
+    $data = [
+        'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
+        'barang_list'   => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
+        'bulan'         => $bulan,
+        'tahun'         => $tahun,
+    ];
+
+    $this->load->view('layout/header_user');
+    $this->load->view('user/create_persediaan', $data);
+    $this->load->view('layout/footer_user');
+}
+
+/* ---------- session cart helpers ---------- */
+private function _cart_persediaan_get()
+{
+    $c = $this->session->userdata('cart_persediaan');
+    return is_array($c) ? $c : [];
+}
+
+private function _cart_persediaan_save($cart)
+{
+    $this->session->set_userdata('cart_persediaan', $cart);
+}
+
+private function _cart_persediaan_json($data)
+{
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
+
+private function _barang_persediaan_aktif($barang_id)
+{
+    return $this->db
+        ->select('b.id, b.kode_barang, b.nama_barang, b.satuan, b.status, b.kategori_id, k.nama AS kategori_nama')
+        ->from('master_barang_persediaan b')
+        ->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left')
+        ->where('b.id', (int) $barang_id)
+        ->where('b.status', 'Aktif')
+        ->get()
+        ->row_array();
+}
+
+private function _cart_persediaan_summary()
+{
+    $cart   = $this->_cart_persediaan_get();
+    $items  = [];
+    $total  = 0;
+    $pruned = false;
+
+    foreach ($cart as $bid => $qty) {
+        $b = $this->db
+            ->select('id, kode_barang, nama_barang, satuan, status')
+            ->where('id', (int) $bid)
+            ->get('master_barang_persediaan')
+            ->row_array();
+        if (!$b) { unset($cart[$bid]); $pruned = true; continue; }
+        $sisa = $this->User_ticket_model->get_sisa_persediaan((int) $bid, (int) date('n'), (int) date('Y'));
+        $items[] = [
+            'barang_id' => (int) $bid,
+            'kode'      => $b['kode_barang'],
+            'nama'      => $b['nama_barang'],
+            'satuan'    => $b['satuan'],
+            'status'    => $b['status'],
+            'sisa'      => (int) $sisa,
+            'qty'       => (int) $qty,
+        ];
+        $total += (int) $qty;
+    }
+
+    if ($pruned) $this->_cart_persediaan_save($cart);
+
+    return ['count' => count($items), 'total_qty' => $total, 'items' => $items];
+}
+
+/* ---------- cart endpoints (AJAX JSON) ---------- */
+public function cart_add()
+{
+    $barang_id = (int) $this->input->post('barang_id');
+    $jumlah    = (int) $this->input->post('jumlah');
+
+    if ($barang_id <= 0) $this->_cart_persediaan_json(['success' => false, 'message' => 'Barang tidak valid.']);
+    if ($jumlah < 1) $this->_cart_persediaan_json(['success' => false, 'message' => 'Jumlah minimal 1.']);
+
+    $b = $this->_barang_persediaan_aktif($barang_id);
+    if (!$b) $this->_cart_persediaan_json(['success' => false, 'message' => 'Barang tidak tersedia.']);
+
+    $sisa = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, (int) date('n'), (int) date('Y'));
+
+    $cart     = $this->_cart_persediaan_get();
+    $existing = isset($cart[$barang_id]) ? (int) $cart[$barang_id] : 0;
+    $final    = $existing + $jumlah;
+    $cart[$barang_id] = $final;
+    $this->_cart_persediaan_save($cart);
+
+    $sum = $this->_cart_persediaan_summary();
+
+    $this->_cart_persediaan_json([
+        'success' => true, 'message' => 'Ditambahkan ke keranjang.',
+        'qty' => $final, 'sisa' => $sisa,
+        'count' => $sum['count'], 'total_qty' => $sum['total_qty'],
+    ]);
+}
+
+public function cart_update()
+{
+    $barang_id = (int) $this->input->post('barang_id');
+    $jumlah    = (int) $this->input->post('jumlah');
+    $cart      = $this->_cart_persediaan_get();
+
+    if ($barang_id <= 0 || !isset($cart[$barang_id])) {
+        $this->_cart_persediaan_json(['success' => false, 'message' => 'Item tidak ada di keranjang.']);
+    }
+
+    if ($jumlah <= 0) {
+        unset($cart[$barang_id]);
+        $this->_cart_persediaan_save($cart);
+        $sum = $this->_cart_persediaan_summary();
+        $this->_cart_persediaan_json([
+            'success' => true, 'message' => 'Item dihapus.',
+            'count' => $sum['count'], 'total_qty' => $sum['total_qty'],
+        ]);
+    }
+
+    $b = $this->_barang_persediaan_aktif($barang_id);
+    if (!$b) $this->_cart_persediaan_json(['success' => false, 'message' => 'Barang tidak tersedia.']);
+
+    $sisa = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, (int) date('n'), (int) date('Y'));
+
+    $cart[$barang_id] = $jumlah;
+    $this->_cart_persediaan_save($cart);
+
+    $sum = $this->_cart_persediaan_summary();
+    $this->_cart_persediaan_json([
+        'success' => true,
+        'message' => 'Jumlah diperbarui.',
+        'qty' => $jumlah, 'sisa' => $sisa,
+        'count' => $sum['count'], 'total_qty' => $sum['total_qty'],
+    ]);
+}
+
+public function cart_remove()
+{
+    $barang_id = (int) $this->input->post('barang_id');
+    $cart      = $this->_cart_persediaan_get();
+
+    if ($barang_id <= 0 || !isset($cart[$barang_id])) {
+        $this->_cart_persediaan_json(['success' => false, 'message' => 'Item tidak ada di keranjang.']);
+    }
+
+    unset($cart[$barang_id]);
+    $this->_cart_persediaan_save($cart);
+    $sum = $this->_cart_persediaan_summary();
+    $this->_cart_persediaan_json([
+        'success' => true, 'message' => 'Item dihapus.',
+        'count' => $sum['count'], 'total_qty' => $sum['total_qty'],
+    ]);
+}
+
+public function cart_clear()
+{
+    $this->session->unset_userdata('cart_persediaan');
+    $this->_cart_persediaan_json(['success' => true, 'message' => 'Keranjang dikosongkan.', 'count' => 0, 'total_qty' => 0]);
+}
+
+public function cart_count()
+{
+    $sum = $this->_cart_persediaan_summary();
+    $this->_cart_persediaan_json($sum);
+}
+
+/* ---------- checkout: 1 tiket Menunggu, tanpa insert transaksi ---------- */
+public function checkout_persediaan()
+{
+    if (!$this->input->post()) {
+        redirect('user_ticket/create_persediaan');
+        exit;
+    }
+
+    $keperluan          = trim($this->input->post('keperluan', true) ?? '');
+    $judul              = trim($this->input->post('judul', true) ?? '');
+    $deskripsi          = trim($this->input->post('deskripsi', true) ?? '');
+    $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
+    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+
+    if ($judul === '' && $keperluan === '') {
+        $this->session->set_flashdata('error', 'Judul/Keperluan wajib diisi.');
+        redirect('user_ticket/create_persediaan');
+        exit;
+    }
+    $judul_final = $judul !== '' ? $judul : $keperluan;
+
+    $cart = $this->_cart_persediaan_get();
+    if (empty($cart)) {
+        $this->session->set_flashdata('error', 'Keranjang masih kosong. Pilih dulu barang yang dibutuhkan.');
+        redirect('user_ticket/create_persediaan');
+        exit;
+    }
+
+    $lines = [];
+    $errors = [];
+    $total_qty = 0;
+    $snap = [];
+
+    foreach ($cart as $bid => $qty) {
+        $qty = (int) $qty;
+        $b = $this->_barang_persediaan_aktif((int) $bid);
+        if (!$b) { $errors[] = 'Barang ID ' . (int) $bid . ' tidak tersedia.'; continue; }
+        if ($qty < 1) { $errors[] = $b['nama_barang'] . ': jumlah tidak valid.'; continue; }
+        $lines[] = '- ' . ($b['kode_barang'] ?? '-') . ' - ' . $b['nama_barang'] . ' x ' . $qty . ' ' . ($b['satuan'] ?? '');
+        $total_qty += $qty;
+        $snap[] = [
+            'barang_id' => (int) $bid,
+            'jumlah'    => $qty,
+            'nama'      => $b['nama_barang'],
+            'satuan'    => $b['satuan'] ?? 'pcs',
+        ];
+    }
+
+    if (!empty($errors)) {
+        $this->session->set_flashdata('error', implode(' ', $errors));
+        redirect('user_ticket/create_persediaan');
+        exit;
+    }
+
+    $kategori_id = $this->User_ticket_model->get_kategori_id_by_slug('permintaan');
+    $sub = $this->User_ticket_model->ensure_persediaan_sub();
+    if (!$kategori_id || !$sub) {
+        $this->session->set_flashdata('error', 'Kategori permintaan barang belum tersedia.');
+        redirect('user_ticket/create_persediaan');
+        exit;
+    }
+
+    $ringkas   = [];
+    $ringkas[] = '[PERMINTAAN BARANG PERSEDIAAN]';
+    $ringkas   = array_merge($ringkas, $lines);
+    $ringkas[] = '';
+    $ringkas[] = 'Keperluan: ' . $keperluan;
+    if ($unit_kerja !== '') $ringkas[] = 'Unit Kerja: ' . $unit_kerja;
+    if ($tanggal_dibutuhkan !== '') $ringkas[] = 'Tanggal dibutuhkan: ' . $tanggal_dibutuhkan;
+    $ringkas[] = 'Total: ' . count($lines) . ' jenis, ' . $total_qty . ' item';
+    $ringkas[] = 'Catatan: keranjang hanya menandai kebutuhan, stok berkurang saat teknisi menyetujui.';
+
+    $this->db->insert('tickets', [
+        'user_id'         => $this->session->userdata('user_id'),
+        'pelapor'         => $this->session->userdata('name'),
+        'kode_tiket'      => 'TKT-' . date('YmdHis'),
+        'kategori_id'     => $kategori_id,
+        'sub_kategori_id' => $sub->id,
+        'jenis_kerusakan' => implode("\n", $ringkas),
+        'kebutuhan'       => substr($judul_final, 0, 255),
+        'status'          => 'Menunggu',
+        'created_at'      => date('Y-m-d H:i:s'),
+    ]);
+    $ticket_id = $this->db->insert_id();
+
+    // Tanpa insert transaksi_persediaan: hanya detail item.
+    foreach ($snap as $s) {
+        $this->db->insert('ticket_persediaan_items', [
+            'ticket_id'            => $ticket_id,
+            'barang_id'            => $s['barang_id'],
+            'jumlah'               => $s['jumlah'],
+            'nama_barang_snapshot' => substr($s['nama'], 0, 150),
+            'satuan_snapshot'      => substr($s['satuan'], 0, 50),
+        ]);
+    }
+
+    $this->session->unset_userdata('cart_persediaan');
+    $this->session->set_flashdata('success', 'Permintaan ' . count($lines) . ' jenis barang berhasil dibuat. Pantau di riwayat tiket.');
+    redirect('user_ticket/history');
+    exit;
 }
 
     /* ===============================
@@ -277,7 +562,7 @@ public function history()
     public function rating($ticket_id)
     {
         if (!$this->input->post('rating')) {
-            redirect('index.php/user_ticket/history');
+            redirect('user_ticket/history');
             exit;
         }
 
@@ -288,7 +573,7 @@ public function history()
             $this->input->post('komentar')
         );
 
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -317,7 +602,13 @@ public function edit_ticket($ticket_id)
 
     if (!$ticket) {
         $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    /* ── Persediaan punya form sendiri agar jenis_kerusakan tak tertimpa form generik ── */
+    if ($this->_is_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_persediaan/' . $ticket_id);
         exit;
     }
 
@@ -349,7 +640,7 @@ public function update_ticket($ticket_id)
 
     if (!$ticket) {
         $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -470,8 +761,220 @@ public function update_ticket($ticket_id)
         $updated ? 'success' : 'error',
         $updated ? 'Tiket berhasil diperbarui.' : 'Tidak ada perubahan yang disimpan.'
     );
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
+}
+
+/* ===============================
+   EDIT PERSEDIAAN (USER) — form sendiri
+=============================== */
+public function edit_persediaan($ticket_id)
+{
+    $user_id = $this->session->userdata('user_id');
+    $ticket  = $this->User_ticket_model->get_ticket_for_edit($ticket_id, $user_id);
+
+    if (!$ticket) {
+        $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    if (!$this->_is_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_ticket/' . $ticket_id);
+        exit;
+    }
+
+    $bulan = (int) date('n');
+    $tahun = (int) date('Y');
+
+    $this->load->model('Barang_persediaan_model');
+
+    $data = [
+        'ticket'        => $ticket,
+        'items'         => $this->User_ticket_model->get_persediaan_items_for_edit($ticket_id, $user_id),
+        'barang_list'   => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
+        'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
+        'parsed'        => $this->_parse_persediaan_ringkas($ticket['jenis_kerusakan'] ?? '', $ticket['kebutuhan'] ?? ''),
+        'bulan'         => $bulan,
+        'tahun'         => $tahun,
+    ];
+
+    $this->load->view('layout/header_user');
+    $this->load->view('user/edit_persediaan', $data);
+    $this->load->view('layout/footer_user');
+}
+
+/* ===============================
+   UPDATE PERSEDIAAN (USER)
+=============================== */
+public function update_persediaan($ticket_id)
+{
+    if (!$this->input->post()) { show_404(); }
+
+    $user_id = $this->session->userdata('user_id');
+    $ticket  = $this->User_ticket_model->get_ticket_for_edit($ticket_id, $user_id);
+
+    if (!$ticket) {
+        $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    if (!$this->_is_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_ticket/' . $ticket_id);
+        exit;
+    }
+
+    $back = 'user_ticket/edit_persediaan/' . $ticket_id;
+
+    $keperluan          = trim($this->input->post('keperluan', true) ?? '');
+    $judul              = trim($this->input->post('judul', true) ?? '');
+    $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
+    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+    $items_post         = $this->input->post('items');
+
+    if ($judul === '' && $keperluan === '') {
+        $this->session->set_flashdata('error', 'Judul/Keperluan wajib diisi.');
+        redirect($back);
+        exit;
+    }
+    $judul_final = $judul !== '' ? $judul : $keperluan;
+
+    if (empty($items_post) || !is_array($items_post)) {
+        $this->session->set_flashdata('error', 'Pilih minimal 1 barang.');
+        redirect($back);
+        exit;
+    }
+
+    $errors   = [];
+    $warnings = [];
+    $snap     = [];
+
+    foreach ($items_post as $bid => $qty) {
+        $qty = (int) $qty;
+        $b = $this->_barang_persediaan_aktif((int) $bid);
+        if (!$b) { $errors[] = 'Barang ID ' . (int) $bid . ' tidak tersedia.'; continue; }
+        if ($qty < 1) { $errors[] = $b['nama_barang'] . ': jumlah tidak valid.'; continue; }
+        $sisa = (int) $this->User_ticket_model->get_sisa_persediaan((int) $bid, (int) date('n'), (int) date('Y'));
+        if ($qty > $sisa) $warnings[] = $b['nama_barang'] . ': minta ' . $qty . ', sisa ' . $sisa;
+        $snap[] = [
+            'barang_id' => (int) $bid,
+            'jumlah'    => $qty,
+            'kode'      => $b['kode_barang'] ?? '-',
+            'nama'      => $b['nama_barang'],
+            'satuan'    => $b['satuan'] ?? 'pcs',
+        ];
+    }
+
+    if (!empty($errors)) {
+        $this->session->set_flashdata('error', implode(' ', $errors));
+        redirect($back);
+        exit;
+    }
+
+    if (empty($snap)) {
+        $this->session->set_flashdata('error', 'Pilih minimal 1 barang.');
+        redirect($back);
+        exit;
+    }
+
+    $ticket_data = ['kebutuhan' => substr($judul_final, 0, 255)];
+
+    /* ── Reset ke Menunggu + lepas teknisi jika sebelumnya On Progress ── */
+    if ($ticket['status'] === 'On Progress') {
+        $ticket_data['status']     = 'Menunggu';
+        $ticket_data['teknisi_id'] = null;
+
+        if (!empty($ticket['teknisi_id'])) {
+            $this->db
+                ->where('id', $ticket['teknisi_id'])
+                ->update('teknisi', ['status' => 'available']);
+        }
+    }
+
+    /* ── FOTO opsional (pola update_ticket) ── */
+    if (!empty($_FILES['foto']['name'])) {
+        $config = [
+            'upload_path'   => FCPATH . 'uploads/tiket/',
+            'allowed_types' => 'jpg|jpeg|png',
+            'encrypt_name'  => true,
+            'max_size'      => 2048
+        ];
+        $this->load->library('upload', $config);
+        if ($this->upload->do_upload('foto')) {
+            if (!empty($ticket['foto'])) {
+                $old = FCPATH . 'uploads/tiket/' . $ticket['foto'];
+                if (file_exists($old)) unlink($old);
+            }
+            $ticket_data['foto'] = $this->upload->data('file_name');
+        }
+    }
+
+    $ok = $this->User_ticket_model->update_persediaan_by_user(
+        $ticket_id, $user_id, $ticket_data, $snap,
+        ['keperluan' => $keperluan, 'unit_kerja' => $unit_kerja, 'tanggal_dibutuhkan' => $tanggal_dibutuhkan]
+    );
+
+    if (!$ok) {
+        $this->session->set_flashdata('error', 'Gagal menyimpan perubahan.');
+        redirect($back);
+        exit;
+    }
+
+    $msg = 'Tiket berhasil diperbarui (' . count($snap) . ' jenis barang).';
+    if (!empty($warnings)) $msg .= ' Peringatan stok: ' . implode('; ', $warnings) . '.';
+    $this->session->set_flashdata('success', $msg);
+    redirect('user_ticket/history');
+    exit;
+}
+
+/* ── Tiket persediaan? sub slug persediaan ATAU punya items ── */
+private function _is_persediaan_ticket($ticket)
+{
+    if (!is_array($ticket) || empty($ticket['id'])) return false;
+
+    if (!empty($ticket['sub_kategori_id'])) {
+        $row = $this->db
+            ->select('slug')
+            ->where('id', (int) $ticket['sub_kategori_id'])
+            ->get('master_sub_kategori')
+            ->row();
+        $slug = $row ? $row->slug : null;
+        if (in_array($slug, ['permintaan-persediaan', 'permintaan-barang-persediaan'], true)) return true;
+    }
+
+    if ($this->db->table_exists('ticket_persediaan_items')) {
+        return $this->db
+            ->where('ticket_id', (int) $ticket['id'])
+            ->count_all_results('ticket_persediaan_items') > 0;
+    }
+
+    return strpos($ticket['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false;
+}
+
+/* ── Parse ringkasan checkout → field form edit ── */
+private function _parse_persediaan_ringkas($jk, $kebutuhan)
+{
+    $out = [
+        'judul'              => trim((string) $kebutuhan),
+        'keperluan'          => '',
+        'unit_kerja'         => '',
+        'tanggal_dibutuhkan' => '',
+        'deskripsi'          => '',
+    ];
+
+    foreach (preg_split("/\r\n|\n/", (string) $jk) as $ln) {
+        if (preg_match('/^Judul:\s*(.*)$/', $ln, $m)) $out['judul'] = trim($m[1]);
+        elseif (preg_match('/^Keperluan:\s*(.*)$/', $ln, $m)) $out['keperluan'] = trim($m[1]);
+        elseif (preg_match('/^Unit Kerja:\s*(.*)$/', $ln, $m)) $out['unit_kerja'] = trim($m[1]);
+        elseif (preg_match('/^Tanggal dibutuhkan:\s*(.*)$/', $ln, $m)) $out['tanggal_dibutuhkan'] = trim($m[1]);
+        elseif (preg_match('/^Deskripsi:\s*(.*)$/', $ln, $m)) $out['deskripsi'] = trim($m[1]);
+    }
+
+    if ($out['keperluan'] === '') $out['keperluan'] = $out['judul'];
+    if ($out['judul'] === '') $out['judul'] = $out['keperluan'];
+
+    return $out;
 }
 public function batalkan($ticket_id)
 {
@@ -485,12 +988,18 @@ public function batalkan($ticket_id)
 
     if (!$ticket) {
         $this->session->set_flashdata('error', 'Tiket tidak dapat dibatalkan.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
     $this->db->where('id', $ticket_id)->where('user_id', $user_id)
              ->update('tickets', ['status' => 'Dibatalkan']);
+
+    // Persediaan: hapus items agar tak orphan (has_items jadi false).
+    if ($this->db->table_exists('ticket_persediaan_items')
+        && strpos($ticket['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false) {
+        $this->db->where('ticket_id', (int) $ticket_id)->delete('ticket_persediaan_items');
+    }
 
     // ✅ SYNC ke tabel peminjaman terkait
     $jk = $ticket['jenis_kerusakan'] ?? '';
@@ -519,7 +1028,7 @@ public function batalkan($ticket_id)
     }
 
     $this->session->set_flashdata('success', 'Tiket berhasil dibatalkan.');
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
 }
 
@@ -542,7 +1051,7 @@ public function hapus_dokumen($ticket_id)
 
     if (!$ticket || empty($ticket['dokumen_peserta'])) {
         $this->session->set_flashdata('error', 'Dokumen tidak ditemukan.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -564,7 +1073,7 @@ public function hapus_dokumen($ticket_id)
     }
 
     $this->session->set_flashdata('success', 'Dokumen peserta berhasil dihapus.');
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
 }
 /* ===============================
@@ -628,7 +1137,7 @@ $r['tersedia'] = ($conflict === 0);
 public function create_gangguan_umum()
 {
     // Redirect ke form gabungan
-    redirect('index.php/user_ticket/create_gangguan');
+    redirect('user_ticket/create_gangguan');
     exit;
 }
 public function get_kendaraan_tersedia()
@@ -720,7 +1229,7 @@ public function upload_dokumen($ticket_id)
     // Khusus ruang rapat (ada ref:peminjaman_id)
     if (!$ticket || strpos($ticket['jenis_kerusakan'] ?? '', '[ref:peminjaman_id=') === false) {
         $this->session->set_flashdata('error', 'Tiket tidak valid untuk unggah dokumen.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -730,7 +1239,7 @@ public function upload_dokumen($ticket_id)
 
     if (!$peminjaman_id) {
         $this->session->set_flashdata('error', 'Referensi peminjaman tidak ditemukan.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -739,7 +1248,7 @@ public function upload_dokumen($ticket_id)
     $jenis = $this->input->post('jenis_dokumen');
     if (!in_array($jenis, $jenis_valid)) {
         $this->session->set_flashdata('error', 'Jenis dokumen tidak valid.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -757,7 +1266,7 @@ public function upload_dokumen($ticket_id)
 
     if (!$this->upload->do_upload('dokumen_peserta')) {
         $this->session->set_flashdata('error', 'Gagal mengunggah: ' . $this->upload->display_errors('', ''));
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -792,7 +1301,7 @@ public function upload_dokumen($ticket_id)
              ->update('tickets', ['dokumen_peserta' => $file_name]);
 
     $this->session->set_flashdata('success', 'Dokumen "' . $jenis . '" berhasil diunggah.');
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
 }
 
@@ -812,7 +1321,7 @@ public function hapus_dokumen_item($doc_id)
 
     if (!$doc) {
         $this->session->set_flashdata('error', 'Dokumen tidak ditemukan.');
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -822,7 +1331,7 @@ public function hapus_dokumen_item($doc_id)
     $this->db->where('id', $doc_id)->delete('dokumen_peminjaman_rapat');
 
     $this->session->set_flashdata('success', 'Dokumen berhasil dihapus.');
-    redirect('index.php/user_ticket/history');
+    redirect('user_ticket/history');
     exit;
 }
 

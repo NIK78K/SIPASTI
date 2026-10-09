@@ -27,6 +27,16 @@ $kategoriBadge = [
 
 $subKategoriBadge = 'bg-slate-100 text-slate-700';
 
+if (!function_exists('status_display_history')) {
+    function status_display_history($t, $statusClass, $statusLabel) {
+    $status = $t['status'] ?? 'Menunggu';
+    return [
+        'badge' => $statusClass[$status] ?? 'bg-slate-100 text-slate-600',
+        'label' => $statusLabel[$status] ?? $status,
+    ];
+    }
+}
+
 $no = isset($page) ? $page + 1 : 1;
 
 $current_page = $current_page ?? 1;
@@ -39,6 +49,87 @@ function getPeminjamanId($jenis_kerusakan) {
         return (int)$m[1];
     }
     return 0;
+}
+
+// Helper: cek apakah tiket adalah tiket persediaan
+// Cek slug sub kategori bila ada, fallback ke nama sub kategori / marker jenis_kerusakan.
+if (!function_exists('isPersediaan')) {
+    function isPersediaan($t) {
+        $slug = strtolower($t['sub_slug'] ?? $t['sub_kategori_slug'] ?? '');
+        if ($slug !== '') return strpos($slug, 'persediaan') !== false;
+        if (strpos(strtolower($t['nama_sub_kategori'] ?? ''), 'persediaan') !== false) return true;
+        return strpos($t['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false;
+    }
+}
+
+// Helper: ringkas "N jenis, M item" bila data items tersedia di row (tanpa query baru).
+// Kembalikan '' bila tak ada data — pemanggil tampilkan minimal badge Persediaan.
+if (!function_exists('persediaan_ringkas')) {
+    function persediaan_ringkas($t) {
+        $arr = null;
+        if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) $arr = $t['persediaan_items'];
+        elseif (!empty($t['items']) && is_array($t['items'])) $arr = $t['items'];
+        if (is_array($arr)) {
+            $n = count($arr);
+            $m = 0;
+            foreach ($arr as $it) $m += (int) ($it['jumlah'] ?? $it['qty'] ?? 0);
+            return $n . ' jenis, ' . $m . ' item';
+        }
+        if (isset($t['n_jenis']) || isset($t['total_jenis']) || isset($t['n_item'])) {
+            $n = (int) ($t['n_jenis'] ?? $t['total_jenis'] ?? $t['n_item'] ?? 0);
+            $m = (int) ($t['n_qty'] ?? $t['total_qty'] ?? $t['total_item'] ?? 0);
+            if ($n > 0 || $m > 0) return $n . ' jenis, ' . $m . ' item';
+        }
+        return '';
+    }
+}
+
+// Helper: daftar "nama x qty" untuk tiket persediaan (max dipakai 3 + sisa).
+// Sumber: $t['persediaan_items'] dari model, fallback $t['items']. Kembalikan [] bila tak ada.
+if (!function_exists('persediaan_nama_list')) {
+    function persediaan_nama_list($t) {
+        $arr = null;
+        if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) $arr = $t['persediaan_items'];
+        elseif (!empty($t['items']) && is_array($t['items'])) $arr = $t['items'];
+        if (!is_array($arr) || empty($arr)) return [];
+        $out = [];
+        foreach ($arr as $it) {
+            $nama = $it['nama_barang_snapshot'] ?? $it['nama_barang'] ?? $it['nama'] ?? '-';
+            $nama = trim((string) $nama) !== '' ? trim((string) $nama) : '-';
+            $qty = (int) ($it['jumlah'] ?? $it['qty'] ?? 0);
+            $out[] = $nama . ' x ' . $qty;
+        }
+        return $out;
+    }
+}
+
+if (!function_exists('persediaan_form_data')) {
+    function persediaan_form_data($t) {
+        $items = [];
+        if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) {
+            foreach ($t['persediaan_items'] as $item) {
+                $items[] = [
+                    'kode'   => $item['kode_barang'] ?? '-',
+                    'nama'   => $item['nama_barang_snapshot'] ?? $item['nama_barang'] ?? '-',
+                    'jumlah' => (int) ($item['jumlah'] ?? 0),
+                    'satuan' => $item['satuan_snapshot'] ?? $item['satuan'] ?? 'pcs',
+                ];
+            }
+        }
+
+        $ringkasan = (string) ($t['jenis_kerusakan'] ?? '');
+        preg_match('/Unit Kerja:\s*(.+)/i', $ringkasan, $unit_match);
+        preg_match('/Tanggal dibutuhkan:\s*(.+)/i', $ringkasan, $tanggal_match);
+
+        return [
+            'kode_tiket'      => $t['kode_tiket'] ?? '-',
+            'tanggal'         => !empty($t['created_at']) ? date('d M Y', strtotime($t['created_at'])) : '-',
+            'tanggal_butuh'   => trim($tanggal_match[1] ?? '') ?: '-',
+            'unit_kerja'      => trim($unit_match[1] ?? '') ?: '-',
+            'pemohon'         => $t['pelapor'] ?? $t['nama_user'] ?? $t['user_name'] ?? '-',
+            'items'           => $items,
+        ];
+    }
 }
 
 // Helper: cek apakah tiket adalah tiket ruang rapat
@@ -135,8 +226,9 @@ foreach (($tickets ?? []) as $t) {
         <?php else: foreach ($tickets as $t): ?>
         <?php
             $status        = $t['status'] ?? 'Menunggu';
-            $badge         = $statusClass[$status] ?? 'bg-slate-100 text-slate-600';
-            $label         = $statusLabel[$status] ?? $status;
+            $disp          = status_display_history($t, $statusClass, $statusLabel);
+            $badge         = $disp['badge'];
+            $label         = $disp['label'];
             $slugKategori  = $t['kategori_slug'] ?? null;
             $namaKategori  = $t['nama_kategori'] ?? '-';
             $kategoriClass = $kategoriBadge[$slugKategori] ?? 'bg-slate-100 text-slate-600';
@@ -169,11 +261,15 @@ foreach (($tickets ?? []) as $t) {
             ]), ENT_QUOTES) : '';
 
             $ada_catatan  = !empty($t['layanan_catatan']) || !empty($t['layanan_file']);
+            $is_persediaan_row = isPersediaan($t);
+            $persediaan_data = $is_persediaan_row ? persediaan_form_data($t) : null;
+            if ($is_persediaan_row && !empty($persediaan_data['items'])) $ada_catatan = true;
             $catatan_data = $ada_catatan ? htmlspecialchars(json_encode([
                 'kode_tiket'      => $t['kode_tiket'],
                 'nama_teknisi'    => $t['nama_teknisi'] ?? '-',
                 'layanan_catatan' => $t['layanan_catatan'] ?? '',
                 'layanan_file'    => $t['layanan_file'] ?? '',
+                'persediaan'      => $persediaan_data,
             ]), ENT_QUOTES) : '';
         ?>
         <tr class="hover:bg-blue-50/60 transition">
@@ -208,7 +304,15 @@ foreach (($tickets ?? []) as $t) {
             </td>
 
             <td class="px-3 py-3 text-slate-700 text-[11px]">
+                <?php $is_persediaan_row = isPersediaan($t); ?>
+                <?php $nama_list_row = $is_persediaan_row ? persediaan_nama_list($t) : []; ?>
+                <?php if ($is_persediaan_row && !empty($nama_list_row)): ?>
+                <span title="<?= htmlspecialchars(implode(', ', $nama_list_row)) ?>">
+                    <?= htmlspecialchars($nama_list_row[0]) ?><?php if (count($nama_list_row) > 1): ?>, <?= htmlspecialchars($nama_list_row[1]) ?><?php endif; ?><?php if (count($nama_list_row) > 2): ?>, <?= htmlspecialchars($nama_list_row[2]) ?><?php endif; ?><?php if (count($nama_list_row) > 3): ?> +<?= count($nama_list_row) - 3 ?> lainnya<?php endif; ?>
+                </span>
+                <?php else: ?>
                 <?= !empty($t['nama_barang']) ? (strlen($t['nama_barang']) > 20 ? substr($t['nama_barang'], 0, 20) . '...' : $t['nama_barang']) : '-' ?>
+                <?php endif ?>
             </td>
 
             <td class="px-3 py-3 text-slate-500 text-[10px]">
@@ -222,7 +326,7 @@ foreach (($tickets ?? []) as $t) {
             </td>
 
             <td class="px-3 py-3">
-                <?php if (in_array($status, ['On Progress', 'Selesai', 'Dibatalkan']) && !empty($t['nama_teknisi'])): ?>
+                <?php if (!empty($t['nama_teknisi']) && in_array($status, ['Menunggu', 'On Progress', 'Selesai', 'Dibatalkan'])): ?>
                     <div class="flex items-center gap-1.5">
                         <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                             <span class="text-blue-600 font-semibold text-[10px]"><?= strtoupper(substr($t['nama_teknisi'], 0, 1)) ?></span>
@@ -285,7 +389,7 @@ foreach (($tickets ?? []) as $t) {
             <!-- CATATAN TEKNISI -->
             <td class="px-3 py-3 text-center text-[10px]">
                 <?php if ($ada_catatan): ?>
-                    <button onclick="openCatatanModal(<?= $catatan_data ?>)"
+                    <button onclick="<?= $is_persediaan_row ? 'openPersediaanModal('.$catatan_data.')' : 'openCatatanModal('.$catatan_data.')' ?>"
                             class="inline-flex items-center gap-1 px-2 py-1 rounded-full
                                    bg-purple-100 text-purple-700 hover:bg-purple-200
                                    border border-purple-300 text-[10px] font-semibold transition">
@@ -326,7 +430,8 @@ foreach (($tickets ?? []) as $t) {
             <td class="px-3 py-3 text-center">
                 <div class="flex flex-col gap-1 items-center">
                     <?php if (in_array($status, ['Menunggu', 'On Progress'])): ?>
-                        <a href="<?= base_url('user_ticket/edit_ticket/'.$t['id']) ?>"
+                        <?php $edit_url_persediaan = isPersediaan($t); ?>
+                        <a href="<?= base_url(($edit_url_persediaan ? 'user_ticket/edit_persediaan/' : 'user_ticket/edit_ticket/').$t['id']) ?>"
                            class="inline-flex items-center gap-1 px-3 py-1 rounded-full
                                   bg-blue-100 text-blue-700 hover:bg-blue-200
                                   border border-blue-300 text-[10px] font-semibold transition">
@@ -387,8 +492,9 @@ foreach (($tickets ?? []) as $t) {
     $mobileNo = isset($page) ? $page + 1 : 1;
     foreach ($tickets as $t):
         $status        = $t['status'] ?? 'Menunggu';
-        $badge         = $statusClass[$status] ?? 'bg-slate-100 text-slate-600';
-        $label         = $statusLabel[$status] ?? $status;
+        $disp          = status_display_history($t, $statusClass, $statusLabel);
+        $badge         = $disp['badge'];
+        $label         = $disp['label'];
         $slugKategori  = $t['kategori_slug'] ?? null;
         $namaKategori  = $t['nama_kategori'] ?? '-';
         $kategoriClass = $kategoriBadge[$slugKategori] ?? 'bg-slate-100 text-slate-600';
@@ -418,11 +524,15 @@ foreach (($tickets ?? []) as $t) {
         ]), ENT_QUOTES) : '';
 
         $ada_catatan_mob  = !empty($t['layanan_catatan']) || !empty($t['layanan_file']);
+        $is_persediaan_mob = isPersediaan($t);
+        $persediaan_data_mob = $is_persediaan_mob ? persediaan_form_data($t) : null;
+        if ($is_persediaan_mob && !empty($persediaan_data_mob['items'])) $ada_catatan_mob = true;
         $catatan_data_mob = $ada_catatan_mob ? htmlspecialchars(json_encode([
             'kode_tiket'      => $t['kode_tiket'],
             'nama_teknisi'    => $t['nama_teknisi'] ?? '-',
             'layanan_catatan' => $t['layanan_catatan'] ?? '',
             'layanan_file'    => $t['layanan_file'] ?? '',
+            'persediaan'      => $persediaan_data_mob,
         ]), ENT_QUOTES) : '';
     ?>
 
@@ -468,7 +578,15 @@ foreach (($tickets ?? []) as $t) {
 
             <div class="flex items-start">
                 <span class="text-xs text-slate-500 w-24 flex-shrink-0">Perangkat:</span>
+                <?php $is_persediaan_mob = isPersediaan($t); ?>
+                <?php $nama_list_mob = $is_persediaan_mob ? persediaan_nama_list($t) : []; ?>
+                <?php if ($is_persediaan_mob && !empty($nama_list_mob)): ?>
+                <span class="text-xs text-slate-700" title="<?= htmlspecialchars(implode(', ', $nama_list_mob)) ?>">
+                    <?= htmlspecialchars($nama_list_mob[0]) ?><?php if (count($nama_list_mob) > 1): ?>, <?= htmlspecialchars($nama_list_mob[1]) ?><?php endif; ?><?php if (count($nama_list_mob) > 2): ?>, <?= htmlspecialchars($nama_list_mob[2]) ?><?php endif; ?><?php if (count($nama_list_mob) > 3): ?> +<?= count($nama_list_mob) - 3 ?> lainnya<?php endif; ?>
+                </span>
+                <?php else: ?>
                 <span class="text-xs text-slate-700"><?= $t['nama_barang'] ?? '-' ?></span>
+                <?php endif ?>
             </div>
 
             <div class="flex items-start">
@@ -478,7 +596,7 @@ foreach (($tickets ?? []) as $t) {
                 </span>
             </div>
 
-            <?php if (in_array($status, ['On Progress', 'Selesai', 'Dibatalkan']) && !empty($t['nama_teknisi'])): ?>
+            <?php if (!empty($t['nama_teknisi']) && in_array($status, ['Menunggu', 'On Progress', 'Selesai', 'Dibatalkan'])): ?>
             <div class="flex items-start">
                 <span class="text-xs text-slate-500 w-24 flex-shrink-0">Teknisi:</span>
                 <div class="flex items-center gap-2">
@@ -531,7 +649,7 @@ foreach (($tickets ?? []) as $t) {
             <?php if ($ada_catatan_mob): ?>
             <div class="flex items-start">
                 <span class="text-xs text-slate-500 w-24 flex-shrink-0">Catatan:</span>
-                <button onclick="openCatatanModal(<?= $catatan_data_mob ?>)"
+                <button onclick="<?= $is_persediaan_mob ? 'openPersediaanModal('.$catatan_data_mob.')' : 'openCatatanModal('.$catatan_data_mob.')' ?>"
                         class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold
                                bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300 transition">
                     Lihat Catatan
@@ -563,7 +681,8 @@ foreach (($tickets ?? []) as $t) {
 
         <?php if (in_array($status, ['Menunggu', 'On Progress'])): ?>
             <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
-                <a href="<?= base_url('user_ticket/edit_ticket/'.$t['id']) ?>"
+                <?php $edit_url_persediaan_mob = isPersediaan($t); ?>
+                <a href="<?= base_url(($edit_url_persediaan_mob ? 'user_ticket/edit_persediaan/' : 'user_ticket/edit_ticket/').$t['id']) ?>"
                    class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl
                           bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition">
                     Edit Tiket
@@ -820,6 +939,148 @@ foreach (($tickets ?? []) as $t) {
 
 
 <!-- ============================================================
+     MODAL FORM PERMINTAAN PERSEDIAAN
+============================================================ -->
+<div id="persediaanModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4 py-6">
+    <div style="width:100%;max-width:760px;background:#fff;border-radius:16px;overflow:hidden;
+                border:0.5px solid rgba(0,0,0,0.08);box-shadow:0 20px 60px rgba(0,0,0,0.2);
+                display:flex;flex-direction:column;max-height:calc(100vh - 48px);">
+        <div style="background:#7c3aed;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
+                <div>
+                    <p style="margin:0;font-size:15px;font-weight:700;color:#fff;">Form Persetujuan Permintaan Persediaan</p>
+                    <p style="margin:2px 0 0;font-size:11px;color:rgba(255,255,255,0.7);" id="pm_kode"></p>
+                </div>
+            </div>
+            <button onclick="closePersediaanModal()"
+                    style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div id="pmPrintSheet" aria-hidden="true">
+            <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
+            <div class="pm-print-meta"><strong id="print_faktur"></strong></div>
+            <div class="pm-print-meta"><strong id="print_tanggal"></strong></div>
+            <div class="pm-print-meta"><strong id="print_unit"></strong></div>
+            <table class="pm-print-table">
+                <thead>
+                    <tr>
+                        <th>NO</th>
+                        <th>Kode barang</th>
+                        <th>NAMA BARANG</th>
+                        <th>Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody id="print_items"></tbody>
+            </table>
+            <div id="print_catatan_wrap" style="margin-top:8px;font-size:16px;">
+                <div><strong>Catatan Teknisi</strong> <span id="print_catatan_teknisi"></span></div>
+                <div id="print_catatan_text" style="white-space:pre-line;"></div>
+                <div id="print_file_row">Lampiran: <span id="print_file_name"></span></div>
+            </div>
+            <div class="pm-print-signature" style="display:flex;justify-content:flex-end;">
+                <div style="min-width:180px;text-align:center;">
+                    <div>Pemohon</div>
+                    <strong id="print_pemohon" style="display:block;margin-top:48px;"></strong>
+                </div>
+            </div>
+        </div>
+        <div style="padding:20px 22px;overflow-y:auto;flex:1;">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;">
+                <div class="pm-meta"><span>NO FAKTUR</span><strong id="pm_faktur"></strong></div>
+                <div class="pm-meta"><span>TANGGAL</span><strong id="pm_tanggal"></strong></div>
+                <div class="pm-meta"><span>TIM KERJA</span><strong id="pm_unit"></strong></div>
+                <div class="pm-meta"><span>TANGGAL DIBUTUHKAN</span><strong id="pm_tanggal_butuh"></strong></div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;min-width:520px;font-size:12px;">
+                    <thead>
+                        <tr style="background:#f5f3ff;color:#5b21b6;">
+                            <th style="padding:10px 12px;text-align:center;border:1px solid #ddd6fe;width:52px;">NO</th>
+                            <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">KODE BARANG</th>
+                            <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">NAMA BARANG</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">JUMLAH</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pm_items"></tbody>
+                </table>
+            </div>
+            <div id="pm_catatan_wrap" style="margin-top:16px;background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;">
+                <p style="margin:0 0 8px;font-size:10px;font-weight:700;letter-spacing:.06em;color:#94a3b8;text-transform:uppercase;">Catatan Teknisi <span id="pm_catatan_teknisi" style="color:#64748b;font-weight:600;"></span></p>
+                <p id="pm_catatan_text" style="margin:0;font-size:13px;color:#1e293b;line-height:1.7;white-space:pre-line;"></p>
+                <p id="pm_catatan_empty" style="display:none;margin:0;font-size:12px;color:#94a3b8;">Belum ada catatan teknisi</p>
+                <a id="pm_file_link" href="#" target="_blank" style="display:none;margin-top:10px;align-items:center;gap:10px;background:#f5f3ff;border:0.5px solid #c4b5fd;border-radius:10px;padding:10px 12px;text-decoration:none;">
+                    <span style="font-size:12px;font-weight:600;color:#6d28d9;">Unduh / Lihat File</span>
+                    <span id="pm_file_name" style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+                </a>
+            </div>
+            <div style="margin-top:22px;display:flex;justify-content:space-between;">
+                <div style="min-width:180px;text-align:center;color:#475569;font-size:12px;">
+                    <p style="margin:0 0 42px;">Petugas / Teknisi</p>
+                    <strong id="pm_teknisi" style="color:#1e293b;"></strong>
+                </div>
+                <div style="min-width:180px;text-align:center;color:#475569;font-size:12px;">
+                    <p style="margin:0 0 42px;">Pemohon</p>
+                    <strong id="pm_pemohon" style="color:#1e293b;"></strong>
+                </div>
+            </div>
+        </div>
+        <div style="padding:14px 22px 20px;flex-shrink:0;border-top:0.5px solid #f1f5f9;">
+            <div style="display:flex;gap:10px;">
+                <button onclick="exportPersediaanPdf()"
+                        style="flex:1;padding:10px;border-radius:10px;border:0;background:#7c3aed;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                    Export PDF
+                </button>
+                <button onclick="closePersediaanModal()"
+                        style="flex:1;padding:10px;border-radius:10px;border:0.5px solid #e2e8f0;background:transparent;font-size:13px;color:#64748b;cursor:pointer;font-family:inherit;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pm-meta { background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:10px;padding:10px 14px; }
+.pm-meta span { display:block;font-size:9px;font-weight:700;letter-spacing:.06em;color:#94a3b8;margin-bottom:4px; }
+.pm-meta strong { display:block;font-size:12px;color:#1e293b;word-break:break-word; }
+@media print {
+    @page { size:A4 landscape; margin:0; }
+    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
+    body * { visibility:hidden !important; }
+    #persediaanModal, #persediaanModal > div, #pmPrintSheet, #pmPrintSheet * {
+        visibility:visible !important;
+    }
+    #persediaanModal { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; }
+    #persediaanModal > div { display:block !important; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border:0 !important; box-shadow:none !important; border-radius:0 !important; }
+    #persediaanModal > div > *:not(#pmPrintSheet) { display:none !important; }
+    #pmPrintSheet { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
+    #pmPrintSheet, #pmPrintSheet * { page-break-inside:avoid !important; }
+    #pmPrintSheet .pm-print-signature { page-break-inside:avoid !important; }
+}
+.pm-print-sheet { display:none; }
+.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; text-align:center; }
+.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
+.pm-print-meta span { display:inline-block; width:105px; }
+.pm-print-meta strong { font-weight:400; }
+.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
+.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
+.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
+.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
+.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
+.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
+@media screen {
+    #pmPrintSheet { display:none; }
+}
+</style>
+
+
+<!-- ============================================================
      MODAL CATATAN TEKNISI
 ============================================================ -->
 <div id="catatanModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 px-4 py-6">
@@ -1069,6 +1330,90 @@ foreach (($tickets ?? []) as $t) {
             try { document.execCommand('copy'); onOk(); } catch(e) {}
             document.body.removeChild(t);
         }
+    };
+
+    /* ============ FORM PERMINTAAN PERSEDIAAN ============ */
+    window.openPersediaanModal = function(data) {
+        var form = data.persediaan || {};
+        document.getElementById('pm_kode').textContent = form.kode_tiket || data.kode_tiket || '-';
+        document.getElementById('pm_faktur').textContent = form.kode_tiket || data.kode_tiket || '-';
+        document.getElementById('pm_tanggal').textContent = form.tanggal || '-';
+        document.getElementById('pm_unit').textContent = form.unit_kerja || '-';
+        document.getElementById('pm_tanggal_butuh').textContent = form.tanggal_butuh || '-';
+        document.getElementById('pm_pemohon').textContent = form.pemohon || '-';
+        document.getElementById('pm_teknisi').textContent = data.nama_teknisi || '-';
+        document.getElementById('print_faktur').textContent = form.kode_tiket || data.kode_tiket || '-';
+        document.getElementById('print_tanggal').textContent = form.tanggal || '-';
+        document.getElementById('print_unit').textContent = form.unit_kerja || '-';
+        document.getElementById('print_pemohon').textContent = form.pemohon || '-';
+
+        var rows = document.getElementById('pm_items');
+        var printRows = document.getElementById('print_items');
+        rows.innerHTML = '';
+        printRows.innerHTML = '';
+        var items = Array.isArray(form.items) ? form.items : [];
+        if (!items.length) {
+            rows.innerHTML = '<tr><td colspan="4" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
+        } else {
+            items.forEach(function(item, index) {
+                var row = document.createElement('tr');
+                row.style.background = index % 2 ? '#fafafa' : '#fff';
+                [
+                    { value: index + 1, align: 'center' },
+                    { value: item.kode || '-', align: 'left' },
+                    { value: item.nama || '-', align: 'left' },
+                    { value: (item.jumlah || 0) + ' ' + (item.satuan || 'pcs'), align: 'right' }
+                ].forEach(function(cell) {
+                    var td = document.createElement('td');
+                    td.textContent = cell.value;
+                    td.style.cssText = 'padding:9px 12px;border:1px solid #e2e8f0;color:#334155;text-align:' + cell.align + ';';
+                    row.appendChild(td);
+                });
+                rows.appendChild(row);
+            });
+        }
+        for (var printIndex = 0; printIndex < Math.max(items.length, 6); printIndex++) {
+            var printItem = items[printIndex] || {};
+            var printRow = document.createElement('tr');
+            [printIndex + 1, printItem.kode || '', printItem.nama || '', printItem.jumlah ? printItem.jumlah + ' ' + (printItem.satuan || 'pcs') : '']
+                .forEach(function(value) {
+                    var cell = document.createElement('td');
+                    cell.textContent = value;
+                    printRow.appendChild(cell);
+                });
+            printRows.appendChild(printRow);
+        }
+
+        var adaCatatanPm = !!(data.layanan_catatan && data.layanan_catatan.trim());
+        var adaFilePm = !!(data.layanan_file && data.layanan_file.trim());
+        document.getElementById('pm_catatan_teknisi').textContent = data.nama_teknisi ? '- ' + data.nama_teknisi : '';
+        document.getElementById('pm_catatan_text').textContent = adaCatatanPm ? data.layanan_catatan : '';
+        document.getElementById('pm_catatan_text').style.display = adaCatatanPm ? 'block' : 'none';
+        document.getElementById('pm_catatan_empty').style.display = adaCatatanPm ? 'none' : 'block';
+        var pmFileLink = document.getElementById('pm_file_link');
+        pmFileLink.style.display = adaFilePm ? 'flex' : 'none';
+        if (adaFilePm) {
+            pmFileLink.href = '<?= base_url("uploads/layanan/") ?>' + data.layanan_file;
+            document.getElementById('pm_file_name').textContent = data.layanan_file;
+        }
+        document.getElementById('print_catatan_teknisi').textContent = data.nama_teknisi ? '- ' + data.nama_teknisi : '';
+        document.getElementById('print_catatan_text').textContent = adaCatatanPm ? data.layanan_catatan : 'Belum ada catatan teknisi';
+        document.getElementById('print_file_row').style.display = adaFilePm ? 'block' : 'none';
+        if (adaFilePm) document.getElementById('print_file_name').textContent = data.layanan_file;
+
+        var modal = document.getElementById('persediaanModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closePersediaanModal = function() {
+        var modal = document.getElementById('persediaanModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
+    window.exportPersediaanPdf = function() {
+        window.print();
     };
 
     /* ============ CATATAN TEKNISI ============ */
