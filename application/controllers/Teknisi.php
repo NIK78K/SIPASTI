@@ -52,7 +52,7 @@ class Teknisi extends CI_Controller {
             ->where('id', $user_id)
             ->update('users', ['role' => 'teknisi']);
 
-        redirect('index.php/teknisi');
+        redirect('teknisi');
     }
 
     $data['users'] = $this->User_model->get_telegram_users();
@@ -93,7 +93,7 @@ public function update($id)
     }
 
     $this->Teknisi_model->delete($id);
-    redirect('index.php/teknisi');
+    redirect('teknisi');
 }
 
 public function tiket_aktif($teknisi_id)

@@ -138,7 +138,7 @@ class Perangkat_dihapus extends CI_Controller {
             $this->session->set_flashdata('error', 'Data tidak ditemukan');
         }
         
-        redirect('index.php/perangkat_dihapus');
+        redirect('perangkat_dihapus');
     }
 
     /* =======================

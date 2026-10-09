@@ -34,7 +34,7 @@ class Admin extends CI_Controller {
             ]);
             
             $this->session->set_flashdata('success', 'Admin berhasil ditambahkan!');
-            redirect('index.php/admin');
+            redirect('admin');
         }
 
         // PENTING: Load view create dengan data users
@@ -53,7 +53,7 @@ class Admin extends CI_Controller {
             
             if (!$user) {
                 $this->session->set_flashdata('error', 'User tidak ditemukan!');
-                redirect('index.php/admin');
+                redirect('admin');
             }
             
             $this->Admin_model->update($user_id, [
@@ -61,7 +61,7 @@ class Admin extends CI_Controller {
             ]);
             
             $this->session->set_flashdata('success', $user['name'] . ' berhasil dipromosikan menjadi ' . $new_role . '!');
-            redirect('index.php/admin');
+            redirect('admin');
         }
     }
 
@@ -113,6 +113,6 @@ class Admin extends CI_Controller {
     {
         $this->Admin_model->delete($id);
         $this->session->set_flashdata('success', 'Admin berhasil dihapus!');
-        redirect('index.php/admin');
+        redirect('admin');
     }
 }

@@ -11,7 +11,7 @@ class Dashboard extends MY_Controller
             !$this->session->userdata('logged_in') ||
             !in_array($this->session->userdata('role'), ['admin','teknisi'])
         ) {
-            redirect('index.php/auth/login');
+            redirect('auth/login');
         }
         $this->load->helper('route');
         $this->load->model('Dashboard_model');

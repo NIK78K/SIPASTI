@@ -13,7 +13,7 @@ class Rekap_inventory extends CI_Controller {
         parent::__construct();
         
         if (!$this->session->userdata('logged_in')) {
-            redirect('index.php/auth/login');
+            redirect('auth/login');
             exit;
         }
         

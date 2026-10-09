@@ -11,7 +11,7 @@
         <div id="createUserAlert" class="hidden rounded-lg p-3 mb-3 text-sm"></div>
 
         <form id="createUserForm"
-              action="<?= site_url('index.php/user/store') ?>"
+              action="<?= site_url('user/store') ?>"
               method="post"
               autocomplete="off"
               class="space-y-2.5">
@@ -193,7 +193,7 @@ function checkEmailAvailability(email) {
     </svg>`;
     icon.classList.remove('hidden');
 
-    fetch('<?= site_url('index.php/user/check_email') ?>?email=' + encodeURIComponent(email))
+    fetch('<?= site_url('user/check_email') ?>?email=' + encodeURIComponent(email))
         .then(r => r.json())
         .then(data => {
             if (data.exists) {

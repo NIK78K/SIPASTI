@@ -49,13 +49,13 @@ class Auth extends CI_Controller {
 
             if (!$user) {
                 $this->session->set_flashdata('error', 'Email atau password salah');
-                redirect('index.php/auth/login');
+                redirect('auth/login');
                 return;
             }
 
             if ($user['is_verified'] == 0) {
                 $this->session->set_flashdata('error', 'Akun belum diverifikasi. Silakan cek email.');
-                redirect('index.php/auth/login');
+                redirect('auth/login');
                 return;
             }
 
@@ -87,26 +87,26 @@ class Auth extends CI_Controller {
 
             if ($this->input->post('password') !== $this->input->post('password2')) {
                 $this->session->set_flashdata('error', 'Password tidak sama');
-                redirect('index.php/auth/register');
+                redirect('auth/register');
                 return;
             }
 
             if (!preg_match('/^[0-9]{18}$/', $this->input->post('nip'))) {
                 $this->session->set_flashdata('error', 'NIP harus 18 digit angka');
-                redirect('index.php/auth/register');
+                redirect('auth/register');
                 return;
             }
 
             if (!preg_match('/^08[0-9]{8,11}$/', $this->input->post('hp'))) {
                 $this->session->set_flashdata('error', 'No WhatsApp tidak valid');
-                redirect('index.php/auth/register');
+                redirect('auth/register');
                 return;
             }
 
             $email = $this->input->post('email', TRUE);
             if ($this->db->where('email', $email)->get('users')->row()) {
                 $this->session->set_flashdata('error', 'Email sudah terdaftar');
-                redirect('index.php/auth/register');
+                redirect('auth/register');
                 return;
             }
 
@@ -140,7 +140,7 @@ class Auth extends CI_Controller {
             if ($this->db->trans_status() === FALSE) {
                 $this->db->trans_rollback();
                 $this->session->set_flashdata('error', 'Registrasi gagal, coba lagi');
-                redirect('index.php/auth/register');
+                redirect('auth/register');
                 return;
             }
 
@@ -188,7 +188,7 @@ class Auth extends CI_Controller {
                 'info',
                 'Kode verifikasi sedang dikirim ke email Anda. Jika belum muncul dalam 2 menit, gunakan tombol Kirim Ulang.'
             );
-            redirect('index.php/auth/verify_code');
+            redirect('auth/verify_code');
             return;
         }
 
@@ -199,7 +199,7 @@ class Auth extends CI_Controller {
     public function verify_code()
     {
         if (!$this->session->userdata('verify_email')) {
-            redirect('index.php/auth/register');
+            redirect('auth/register');
             return;
         }
 
@@ -217,7 +217,7 @@ class Auth extends CI_Controller {
 
             if (!$user) {
                 $this->session->set_flashdata('error', 'Kode verifikasi salah atau kadaluarsa');
-                redirect('index.php/auth/verify_code');
+                redirect('auth/verify_code');
                 return;
             }
 
@@ -229,7 +229,7 @@ class Auth extends CI_Controller {
 
             $this->session->unset_userdata('verify_email');
             $this->session->set_flashdata('success', 'Akun berhasil diverifikasi. Silakan login.');
-            redirect('index.php/auth/login');
+            redirect('auth/login');
             return;
         }
 
@@ -240,7 +240,7 @@ class Auth extends CI_Controller {
     public function resend_verify_code()
     {
         if (!$this->session->userdata('verify_email')) {
-            redirect('index.php/auth/register');
+            redirect('auth/register');
             return;
         }
 
@@ -248,13 +248,13 @@ class Auth extends CI_Controller {
         $user  = $this->db->where('email', $email)->get('users')->row();
 
         if (!$user) {
-            redirect('index.php/auth/register');
+            redirect('auth/register');
             return;
         }
 
         if ($user->verification_expired && strtotime($user->verification_expired) > time()) {
             $this->session->set_flashdata('error', 'Kode masih berlaku, silakan cek email atau folder Spam');
-            redirect('index.php/auth/verify_code');
+            redirect('auth/verify_code');
             return;
         }
 
@@ -278,7 +278,7 @@ class Auth extends CI_Controller {
         );
 
         $this->session->set_flashdata('success', 'Kode baru sedang dikirim ke email Anda');
-        redirect('index.php/auth/verify_code');
+        redirect('auth/verify_code');
     }
 
     /* ===================== VERIFY TOKEN (lama) ===================== */
@@ -294,14 +294,14 @@ class Auth extends CI_Controller {
         ]);
 
         $this->session->set_flashdata('success', 'Email berhasil diverifikasi. Silakan login.');
-        redirect('index.php/auth/login');
+        redirect('auth/login');
     }
 
     /* ===================== LOGOUT ===================== */
     public function logout()
     {
         $this->session->sess_destroy();
-        redirect('index.php/auth/login');
+        redirect('auth/login');
         exit;
     }
 
@@ -314,7 +314,7 @@ class Auth extends CI_Controller {
     public function send_reset_code()
     {
         if (!$this->input->post()) {
-            redirect('index.php/auth/forgot_password');
+            redirect('auth/forgot_password');
             return;
         }
 
@@ -323,7 +323,7 @@ class Auth extends CI_Controller {
 
         if (!$user) {
             $this->session->set_flashdata('error', 'Akun tidak terdaftar. Silakan registrasi terlebih dahulu.');
-            redirect('index.php/auth/login');
+            redirect('auth/login');
             return;
         }
 
@@ -349,7 +349,7 @@ class Auth extends CI_Controller {
 
         $this->session->set_userdata('reset_email', $email);
         $this->session->set_flashdata('info', 'Kode reset sedang dikirim ke email Anda.');
-        redirect('index.php/auth/reset_password');
+        redirect('auth/reset_password');
     }
 
     /* ===================== RESET PASSWORD ===================== */
@@ -361,7 +361,7 @@ class Auth extends CI_Controller {
     public function update_password()
     {
         if (!$this->session->userdata('reset_email')) {
-            redirect('index.php/auth/forgot_password');
+            redirect('auth/forgot_password');
             return;
         }
 
@@ -378,7 +378,7 @@ class Auth extends CI_Controller {
 
         if (!$user) {
             $this->session->set_flashdata('error', 'Kode salah atau sudah kadaluarsa');
-            redirect('index.php/auth/reset_password');
+            redirect('auth/reset_password');
             return;
         }
 
@@ -390,13 +390,13 @@ class Auth extends CI_Controller {
 
         $this->session->unset_userdata('reset_email');
         $this->session->set_flashdata('success', 'Password berhasil direset. Silakan login.');
-        redirect('index.php/auth/login');
+        redirect('auth/login');
     }
 
     public function resend_reset_code()
     {
         if (!$this->session->userdata('reset_email')) {
-            redirect('index.php/auth/forgot_password');
+            redirect('auth/forgot_password');
             return;
         }
 
@@ -404,13 +404,13 @@ class Auth extends CI_Controller {
         $user  = $this->db->where('email', $email)->get('users')->row();
 
         if (!$user) {
-            redirect('index.php/auth/forgot_password');
+            redirect('auth/forgot_password');
             return;
         }
 
         if ($user->reset_expired && strtotime($user->reset_expired) > time()) {
             $this->session->set_flashdata('error', 'Kode masih berlaku, silakan cek email');
-            redirect('index.php/auth/reset_password');
+            redirect('auth/reset_password');
             return;
         }
 
@@ -433,7 +433,7 @@ class Auth extends CI_Controller {
         );
 
         $this->session->set_flashdata('success', 'Kode baru sedang dikirim ke email Anda');
-        redirect('index.php/auth/reset_password');
+        redirect('auth/reset_password');
     }
 
     /* ===================== REDIRECT ROLE ===================== */
@@ -441,9 +441,9 @@ private function _redirect_by_role()
 {
     switch ($this->session->userdata('role')) {
         case 'superadmin':
-        case 'admin':    redirect('index.php/dashboard');      break;
-        case 'teknisi':  redirect('index.php/teknisi_panel');  break;
-        default:         redirect('index.php/user/dashboard'); break;
+        case 'admin':    redirect('dashboard');      break;
+        case 'teknisi':  redirect('teknisi_panel');  break;
+        default:         redirect('user/dashboard'); break;
     }
     exit;
 }
@@ -451,14 +451,14 @@ private function _redirect_by_role()
    public function switch_role()
 {
     if (!$this->session->userdata('logged_in')) {
-        redirect('index.php/auth/login'); exit;
+        redirect('auth/login'); exit;
     }
 
     $target_role = $this->input->post('role');
     $user_id     = $this->session->userdata('user_id');
 
     $user = $this->db->where('id', $user_id)->get('users')->row_array();
-    if (!$user) { redirect('index.php/auth/login'); exit; }
+    if (!$user) { redirect('auth/login'); exit; }
 
     // Kumpulkan semua role yang boleh dimiliki user ini
     $base_role   = $user['role'];           // role utama (e.g. 'admin')

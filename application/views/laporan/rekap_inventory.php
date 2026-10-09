@@ -410,8 +410,8 @@ function loadRekap() {
 
     var qs = 'jenis=' + jenis + '&kondisi=' + kondisi + '&tahun=' + tahun;
 
-    document.getElementById('btnExcel').href = "<?= site_url('index.php/rekap_inventory/export_excel') ?>?" + qs;
-    document.getElementById('btnPdf').href   = "<?= site_url('index.php/rekap_inventory/export_pdf') ?>?"   + qs;
+    document.getElementById('btnExcel').href = "<?= site_url('rekap_inventory/export_excel') ?>?" + qs;
+    document.getElementById('btnPdf').href   = "<?= site_url('rekap_inventory/export_pdf') ?>?"   + qs;
 
     /* loading state */
     document.getElementById('rekapTbody').innerHTML =
@@ -421,7 +421,7 @@ function loadRekap() {
     document.getElementById('paginationBox').style.display = 'none';
     document.getElementById('tableInfo').style.display     = 'none';
 
-    fetch("<?= site_url('index.php/rekap_inventory/ajax_rekap') ?>", {
+    fetch("<?= site_url('rekap_inventory/ajax_rekap') ?>", {
         method : 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body   : qs

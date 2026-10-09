@@ -9,7 +9,7 @@ class History extends CI_Controller {
 
         // 🔐 AMANKAN AKSES
         if (!$this->session->userdata('logged_in')) {
-            redirect('index.php/auth/login');
+            redirect('auth/login');
             exit;
         }
 

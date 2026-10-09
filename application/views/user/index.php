@@ -232,7 +232,7 @@ $paginated_users = array_slice($users, $offset, $items_per_page);
                 </svg>
             </button>
 
-            <form action="<?= site_url('index.php/user/delete/' . $u['id']) ?>"
+            <form action="<?= site_url('user/delete/' . $u['id']) ?>"
                   method="post"
                   onsubmit="return confirmDelete(event, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
                   class="inline">
@@ -327,9 +327,9 @@ const ALL_USERS = <?= json_encode(array_map(function($u) {
 }, $users), JSON_UNESCAPED_UNICODE) ?>;
 
 const SITE_URL     = '<?= site_url() ?>';
-const DELETE_URL   = '<?= site_url('index.php/user/delete/') ?>';
-const TOGGLE_URL   = '<?= site_url('index.php/user/toggle_status/') ?>';
-const TICKET_URL   = '<?= site_url('index.php/user/tickets/') ?>';
+const DELETE_URL   = '<?= site_url('user/delete/') ?>';
+const TOGGLE_URL   = '<?= site_url('user/toggle_status/') ?>';
+const TICKET_URL   = '<?= site_url('user/tickets/') ?>';
 const EDIT_URL     = '<?= base_url('user/edit/') ?>';
 const ITEMS_PER_PAGE = 10;
 </script>

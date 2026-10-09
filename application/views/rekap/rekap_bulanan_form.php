@@ -487,7 +487,7 @@ function loadData() {
     document.getElementById('periodeText').innerText = namaBulan + ' ' + tahun;
     setLoading(true);
 
-    fetch("<?= site_url('index.php/rekap_bulanan/ajax_rekap') ?>", {
+    fetch("<?= site_url('rekap_bulanan/ajax_rekap') ?>", {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: `bulan=${bulan}&tahun=${tahun}`

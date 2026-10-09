@@ -9,7 +9,7 @@ class Rekap extends CI_Controller {
         $this->load->model('Rekap_model');
 
         if (!in_array($this->session->userdata('role'), ['admin','superadmin','pimpinan'])) {
-            redirect('index.php/dashboard');
+            redirect('dashboard');
             exit;
         }
     }

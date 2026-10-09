@@ -487,7 +487,7 @@ public function update($id)
         } else {
             $upload_error = $this->upload->display_errors('', '');
             $this->session->set_flashdata('error', 'Gagal upload foto: ' . $upload_error);
-            redirect('index.php/inventory/edit/' . $id);
+            redirect('inventory/edit/' . $id);
             return;
         }
     }
@@ -558,7 +558,7 @@ public function update($id)
     $this->db->trans_complete();
  
     $this->session->set_flashdata('success', 'Data perangkat berhasil diperbarui');
-    redirect('index.php/inventory');
+    redirect('inventory');
 }
 
 public function history_ajax($id)
@@ -584,7 +584,7 @@ public function import_process()
 {
     if (!isset($_FILES['file_excel'])) {
         $this->session->set_flashdata('error', 'File tidak ditemukan');
-        redirect('index.php/inventory/import');
+        redirect('inventory/import');
         return;
     }
 
@@ -704,7 +704,7 @@ $perangkat = [
         $this->session->set_flashdata('error', 'Error: ' . $e->getMessage());
     }
 
-    redirect('index.php/inventory/import');
+    redirect('inventory/import');
 }
 
 private function parseDate($date)
@@ -1171,7 +1171,7 @@ public function export_process()
     }
     
     $this->Inventory_model->delete($id);
-    redirect('index.php/inventory');
+    redirect('inventory');
 }
 
     // ===============================================

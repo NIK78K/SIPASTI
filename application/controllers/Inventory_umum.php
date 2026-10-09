@@ -62,7 +62,7 @@ $data['rusak_berat'] = $kondisiCount['Rusak Berat'];
     public function delete($id)
     {
         $this->Inventory_umum_model->delete($id);
-        redirect('index.php/inventory_umum');
+        redirect('inventory_umum');
     }
 
     /* =======================

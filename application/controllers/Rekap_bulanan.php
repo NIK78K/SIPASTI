@@ -18,7 +18,7 @@ class Rekap_bulanan extends MY_Controller {
         parent::__construct();
        if (!in_array($this->session->userdata('role'), ['admin', 'superadmin', 'teknisi'])) {
     $this->session->set_flashdata('error', 'Akses ditolak');
-    redirect('index.php/dashboard');
+    redirect('dashboard');
 }
     }
 

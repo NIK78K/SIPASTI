@@ -329,7 +329,7 @@ function loadTiket() {
     }
     tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center lp-page-sub animate-pulse">Memuat data...</td></tr>'
 
-    fetch("<?= site_url('index.php/laporan/ajax_tiket_detail') ?>", {
+    fetch("<?= site_url('laporan/ajax_tiket_detail') ?>", {
         method : 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body   : 'start=' + startEl.value + '&end=' + endEl.value
@@ -779,7 +779,7 @@ function loadTeknisi() {
     const bulan  = document.getElementById('filter_bulan_teknisi').value
     const userId = document.getElementById('filter_nama_teknisi').value
 
-    fetch("<?= site_url('index.php/laporan/ajax_teknisi') ?>", {
+    fetch("<?= site_url('laporan/ajax_teknisi') ?>", {
         method : 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
         body   : 'tahun='+tahun+'&bulan='+bulan+'&user_id='+userId
@@ -1032,7 +1032,7 @@ function loadSaran() {
     document.getElementById('kpi-avg').textContent   = '-'
     document.getElementById('kpi-puas').textContent  = '-'
 
-    fetch("<?= site_url('index.php/laporan/ajax_saran') ?>", {
+    fetch("<?= site_url('laporan/ajax_saran') ?>", {
         method : 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
         body   : 'start='+saranStart.value+'&end='+saranEnd.value+'&rating='+saranRating.value
@@ -1097,8 +1097,8 @@ setTimeout(loadSaran, 100)
 <!-- ══════════════════════════════ EXPORT LINK HANDLER ══════════════════════════════ -->
 <script>
 (function () {
-    var BASE_EXCEL = "<?= site_url('index.php/laporan/export_excel_range') ?>";
-    var BASE_PDF   = "<?= site_url('index.php/laporan/export_pdf_range') ?>";
+    var BASE_EXCEL = "<?= site_url('laporan/export_excel_range') ?>";
+    var BASE_PDF   = "<?= site_url('laporan/export_pdf_range') ?>";
     var VIEW       = "<?= $view ?>";
 
     function buildUrl(base, extra) {

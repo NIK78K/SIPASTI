@@ -584,7 +584,7 @@ public function upload_dok_multi()
 
     if (!$peminjaman_id || !in_array($jenis, $jenis_valid)) {
         $this->session->set_flashdata('error', 'Data tidak valid.');
-        redirect('index.php/ruang_rapat');
+        redirect('ruang_rapat');
         exit;
     }
 
@@ -601,7 +601,7 @@ public function upload_dok_multi()
 
     if (!$this->upload->do_upload('dokumen_peserta')) {
         $this->session->set_flashdata('error', 'Gagal upload: ' . $this->upload->display_errors('', ''));
-        redirect('index.php/ruang_rapat');
+        redirect('ruang_rapat');
         exit;
     }
 
@@ -631,7 +631,7 @@ public function upload_dok_multi()
     ]);
 
     $this->session->set_flashdata('success', 'Dokumen "' . $jenis . '" berhasil diunggah.');
-    redirect('index.php/ruang_rapat');
+    redirect('ruang_rapat');
     exit;
 }
 
@@ -644,7 +644,7 @@ public function hapus_dok_item($doc_id)
         $this->db->where('id', $doc_id)->delete('dokumen_peminjaman_rapat');
     }
     $this->session->set_flashdata('success', 'Dokumen berhasil dihapus.');
-    redirect('index.php/ruang_rapat');
+    redirect('ruang_rapat');
     exit;
 }
 

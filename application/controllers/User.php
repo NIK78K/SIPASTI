@@ -36,7 +36,7 @@ class User extends MY_Controller {
 
     public function history()
     {
-        redirect('index.php/user_ticket/history');
+        redirect('user_ticket/history');
         exit;
     }
 
@@ -47,7 +47,7 @@ class User extends MY_Controller {
         $exists = $this->db->where('email', $email)->count_all_results('users');
         if ($exists > 0) {
             $this->session->set_flashdata('error', 'Email <strong>' . htmlspecialchars($email) . '</strong> sudah terdaftar!');
-            redirect('index.php/user');
+            redirect('user');
             exit;
         }
 
@@ -87,14 +87,14 @@ class User extends MY_Controller {
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
             $this->session->set_flashdata('error', 'Gagal menyimpan data, coba lagi.');
-            redirect('index.php/user');
+            redirect('user');
             exit;
         }
 
         $this->db->trans_commit();
 
         $this->session->set_flashdata('success', 'Pengguna <strong>' . htmlspecialchars($user_data['name']) . '</strong> berhasil ditambahkan!');
-        redirect('index.php/user');
+        redirect('user');
         exit;
     }
 
@@ -195,7 +195,7 @@ class User extends MY_Controller {
         $this->db->where('user_id', $id)->delete('user_profiles');
         $this->db->where('id', $id)->delete('users');
         $this->session->set_flashdata('success', 'Pengguna berhasil dihapus.');
-        redirect('index.php/user');
+        redirect('user');
         exit;
     }
 
@@ -217,12 +217,12 @@ class User extends MY_Controller {
     public function profile()
     {
         $user_id = $this->session->userdata('user_id');
-        if (!$user_id) { redirect('index.php/auth/login'); exit; }
+        if (!$user_id) { redirect('auth/login'); exit; }
 
         $user = $this->db->where('id', $user_id)->get('users')->row_array();
         if (!$user) {
             $this->session->set_flashdata('error', 'Data user tidak ditemukan');
-            redirect('index.php/user/dashboard'); exit;
+            redirect('user/dashboard'); exit;
         }
 
         if ($this->input->post()) {
@@ -230,7 +230,7 @@ class User extends MY_Controller {
             $email_exists = $this->db->where('email', $new_email)->where('id !=', $user_id)->count_all_results('users');
             if ($email_exists > 0) {
                 $this->session->set_flashdata('error', 'Email sudah digunakan akun lain!');
-                redirect('index.php/user/profile'); exit;
+                redirect('user/profile'); exit;
             }
 
             $data = ['name' => $this->input->post('name', true), 'email' => $new_email];
@@ -240,11 +240,11 @@ class User extends MY_Controller {
             if ($new_password) {
                 if (!$old_password) {
                     $this->session->set_flashdata('error', 'Password lama wajib diisi');
-                    redirect('index.php/user/profile'); exit;
+                    redirect('user/profile'); exit;
                 }
                 if (md5($old_password) !== $user['password']) {
                     $this->session->set_flashdata('error', 'Password lama salah');
-                    redirect('index.php/user/profile'); exit;
+                    redirect('user/profile'); exit;
                 }
                 $data['password'] = md5($new_password);
             }
@@ -267,14 +267,14 @@ class User extends MY_Controller {
                     }
                 } else {
                     $this->session->set_flashdata('error', 'Upload gagal: ' . $this->upload->display_errors('', ''));
-                    redirect('index.php/user/profile'); exit;
+                    redirect('user/profile'); exit;
                 }
             }
 
             $this->db->where('id', $user_id)->update('users', $data);
             $this->session->set_userdata(['name' => $data['name'], 'email' => $data['email']]);
             $this->session->set_flashdata('success', 'Profil berhasil diperbarui');
-            redirect('index.php/user/profile'); exit;
+            redirect('user/profile'); exit;
         }
 
         $data['user'] = $user;
@@ -306,7 +306,7 @@ class User extends MY_Controller {
         $this->session->sess_destroy();
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
         $this->output->set_header('Pragma: no-cache');
-        redirect('index.php/auth/login');
+        redirect('auth/login');
         exit;
     }
 

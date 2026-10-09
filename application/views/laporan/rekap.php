@@ -447,8 +447,8 @@ function loadRekap() {
             : bulanTxt + ' ' + ys;
 
     var qs = 'bulan=' + bulan + '&tahun_start=' + ys + '&tahun_end=' + ye;
-    document.getElementById('btnExcel').href = "<?= site_url('index.php/rekap/export_excel') ?>?" + qs;
-    document.getElementById('btnPdf').href   = "<?= site_url('index.php/rekap/export_pdf') ?>?"   + qs;
+    document.getElementById('btnExcel').href = "<?= site_url('rekap/export_excel') ?>?" + qs;
+    document.getElementById('btnPdf').href   = "<?= site_url('rekap/export_pdf') ?>?"   + qs;
 
     document.getElementById('tbodyRekap').innerHTML =
         '<tr><td colspan="8" class="px-5 py-14 text-center header-subtitle">' +
@@ -458,7 +458,7 @@ function loadRekap() {
     document.getElementById('paginationBox').style.display = 'none';
     document.getElementById('tableInfo').style.display = 'none';
 
-    fetch("<?= site_url('index.php/rekap/ajax_rekap') ?>", {
+    fetch("<?= site_url('rekap/ajax_rekap') ?>", {
         method : 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body   : qs
