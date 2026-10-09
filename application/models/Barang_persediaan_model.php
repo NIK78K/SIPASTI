@@ -6,7 +6,7 @@ class Barang_persediaan_model extends CI_Model {
     private $table = 'master_barang_persediaan';
 
     public function get_all_with_kategori() {
-        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama');
+        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
         $this->db->from($this->table . ' b');
         $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
         $this->db->order_by('k.kode', 'ASC');
@@ -15,11 +15,29 @@ class Barang_persediaan_model extends CI_Model {
     }
 
     public function get_by_id($id) {
-        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama');
+        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
         $this->db->from($this->table . ' b');
         $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
         $this->db->where('b.id', $id);
         return $this->db->get()->row();
+    }
+
+    public function get_kategori_grouped() {
+        $this->db->select('k.id, k.kode, k.nama, k.deskripsi, COUNT(b.id) AS jumlah_barang');
+        $this->db->from('master_kategori_persediaan k');
+        $this->db->join('master_barang_persediaan b', 'b.kategori_id = k.id', 'left');
+        $this->db->group_by('k.id');
+        $this->db->order_by('k.kode', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function get_by_kategori($kategori_id) {
+        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
+        $this->db->from($this->table . ' b');
+        $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
+        $this->db->where('b.kategori_id', $kategori_id);
+        $this->db->order_by('b.nama_barang', 'ASC');
+        return $this->db->get()->result();
     }
 
     public function insert($data) {

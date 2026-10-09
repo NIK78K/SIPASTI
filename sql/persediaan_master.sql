@@ -316,6 +316,7 @@ CREATE TABLE IF NOT EXISTS `transaksi_persediaan` (
   `jumlah` INT NOT NULL DEFAULT 0,
   `uraian` VARCHAR(255) DEFAULT NULL,
   `penerima_sumber` VARCHAR(100) DEFAULT NULL,
+  `no_dokumen` VARCHAR(100) DEFAULT NULL,
   `user_id` INT DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT current_timestamp(),
   `updated_at` TIMESTAMP DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -325,6 +326,24 @@ CREATE TABLE IF NOT EXISTS `transaksi_persediaan` (
   CONSTRAINT `fk_transaksi_barang` FOREIGN KEY (`barang_id`) REFERENCES `master_barang_persediaan` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_transaksi_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 005a: tambah kolom no_dokumen ke transaksi_persediaan (run sekali, idempoten)
+-- MySQL tidak dukung IF NOT EXISTS untuk ADD COLUMN, jadi pakai guard INFORMATION_SCHEMA.
+-- DB existing: cukup re-import file ini, atau manual:
+-- ALTER TABLE `transaksi_persediaan` ADD COLUMN `no_dokumen` VARCHAR(100) NULL AFTER `penerima_sumber`;
+SET @col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaksi_persediaan'
+    AND COLUMN_NAME = 'no_dokumen'
+);
+SET @alter_sql := IF(@col_exists = 0,
+  'ALTER TABLE `transaksi_persediaan` ADD COLUMN `no_dokumen` VARCHAR(100) NULL AFTER `penerima_sumber`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 INSERT INTO `transaksi_persediaan` (`barang_id`,`jenis`,`tanggal`,`jumlah`,`uraian`,`penerima_sumber`,`user_id`)
 SELECT m.`id`, 'masuk', '2026-01-29', 36, 'Gusmela (AZKO Living World Pekanbaru)', 'Gudang', (SELECT `id` FROM `users` WHERE `email`='admin@gmail.com' LIMIT 1)
@@ -851,4 +870,95 @@ SELECT m.`id`, 'keluar', '2026-01-27', 3, 'Umum', 'Umum', (SELECT `id` FROM `use
 FROM `master_barang_persediaan` m
 WHERE m.`nama_barang`='Kertas Padi'
 AND NOT EXISTS (SELECT 1 FROM `transaksi_persediaan` t JOIN `master_barang_persediaan` b ON b.`id`=t.`barang_id` WHERE b.`nama_barang`='Kertas Padi' AND t.`jenis`='keluar' AND t.`tanggal`='2026-01-27' AND t.`jumlah`=3 AND t.`uraian`='Umum' AND t.`penerima_sumber`='Umum');
+
+-- 006: sub kategori permintaan barang persediaan (tiket user -> teknisi proses manual)
+-- Idempoten: hanya insert bila slug belum ada. Ikut kategori slug 'permintaan'.
+INSERT INTO `master_sub_kategori` (`kategori_id`, `nama_sub_kategori`, `slug`, `perlu_jadwal`, `created_at`)
+SELECT k.`id`, 'Permintaan Barang Persediaan', 'permintaan-barang-persediaan', 0, NOW()
+FROM `master_kategori` k
+WHERE k.`slug` = 'permintaan'
+AND NOT EXISTS (SELECT 1 FROM `master_sub_kategori` s WHERE s.`slug` = 'permintaan-barang-persediaan');
+
+-- 007: alur permintaan barang persediaan end-to-end (idempoten, re-import aman)
+-- (a) seed sub kategori slug 'permintaan-persediaan' (kategori 'permintaan', perlu_jadwal 0)
+INSERT INTO `master_sub_kategori` (`kategori_id`, `nama_sub_kategori`, `slug`, `perlu_jadwal`, `created_at`)
+SELECT k.`id`, 'Permintaan Persediaan', 'permintaan-persediaan', 0, NOW()
+FROM `master_kategori` k
+WHERE k.`slug` = 'permintaan'
+AND NOT EXISTS (SELECT 1 FROM `master_sub_kategori` s WHERE s.`slug` = 'permintaan-persediaan');
+
+-- (b) keranjang cadangan/future (session cart tetap dipakai, tabel ini cadangan)
+CREATE TABLE IF NOT EXISTS `keranjang_persediaan` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) DEFAULT NULL,
+  `barang_id` INT(11) NOT NULL,
+  `jumlah` INT(11) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+  `updated_at` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_barang` (`user_id`, `barang_id`),
+  KEY `barang_id` (`barang_id`),
+  CONSTRAINT `fk_keranjang_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_keranjang_barang` FOREIGN KEY (`barang_id`) REFERENCES `master_barang_persediaan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (c) detail per item permintaan persediaan per tiket
+CREATE TABLE IF NOT EXISTS `ticket_persediaan_items` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `ticket_id` INT(11) NOT NULL,
+  `barang_id` INT(11) NOT NULL,
+  `jumlah` INT(11) NOT NULL DEFAULT 1,
+  `nama_barang_snapshot` VARCHAR(150) DEFAULT NULL,
+  `satuan_snapshot` VARCHAR(50) DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ticket_id` (`ticket_id`),
+  KEY `barang_id` (`barang_id`),
+  CONSTRAINT `fk_tpi_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tpi_barang` FOREIGN KEY (`barang_id`) REFERENCES `master_barang_persediaan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- (d) taut tiket di transaksi_persediaan (guard INFORMATION_SCHEMA, pola 005a)
+SET @col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaksi_persediaan'
+    AND COLUMN_NAME = 'ticket_id'
+);
+SET @alter_sql := IF(@col_exists = 0,
+  'ALTER TABLE `transaksi_persediaan` ADD COLUMN `ticket_id` INT NULL AFTER `user_id`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+SET @fk_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaksi_persediaan'
+    AND CONSTRAINT_NAME = 'fk_transaksi_ticket'
+);
+SET @alter_sql := IF(@fk_exists = 0,
+  'ALTER TABLE `transaksi_persediaan` ADD CONSTRAINT `fk_transaksi_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- (e) ACC teknisi per item: jumlah_disetujui INT NULL (guard INFORMATION_SCHEMA, pola 005a)
+-- NULL=belum ACC, default ikut jumlah saat ACC.
+SET @col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ticket_persediaan_items'
+    AND COLUMN_NAME = 'jumlah_disetujui'
+);
+SET @alter_sql := IF(@col_exists = 0,
+  'ALTER TABLE `ticket_persediaan_items` ADD COLUMN `jumlah_disetujui` INT NULL AFTER `jumlah`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 

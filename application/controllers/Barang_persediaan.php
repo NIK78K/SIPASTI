@@ -18,6 +18,7 @@ class Barang_persediaan extends CI_Controller {
     public function index() {
         $data['barang'] = $this->Barang_persediaan_model->get_all_with_kategori();
         $data['kategori_list'] = $this->Kategori_persediaan_model->get_all();
+        $data['kategori'] = $this->Barang_persediaan_model->get_kategori_grouped();
 
         $this->load->view('layout/header', $data);
         $this->load->view('layout/sidebar');
@@ -33,6 +34,15 @@ class Barang_persediaan extends CI_Controller {
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Data barang tidak ditemukan!']);
         }
+    }
+
+    public function get_by_kategori($id) {
+        header('Content-Type: application/json');
+        if (empty($id) || !is_numeric($id)) {
+            echo json_encode(['status' => 'error', 'message' => 'ID kategori tidak valid!']);
+            return;
+        }
+        echo json_encode($this->Barang_persediaan_model->get_by_kategori($id));
     }
 
     public function tambah() {
