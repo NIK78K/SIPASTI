@@ -6,6 +6,35 @@
     Catat dan pantau barang masuk & keluar persediaan
 </p>
 
+<!-- ================= FLOW RESTOCK DARI TIKET (stok_habis) ================= -->
+<?php $flowTicketId = isset($prefill_ticket_id) && $prefill_ticket_id ? (int)$prefill_ticket_id : (int)$this->input->get('ticket_id', true); ?>
+<?php if (!empty($flowTicketId)): ?>
+<div id="ticketFlowBanner" class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+    <div class="flow-title text-sm font-semibold text-amber-300 mb-1">⚠ Stok kurang untuk Tiket #<?= $flowTicketId ?> — Input Barang Masuk</div>
+    <?php if (!empty($prefill_items)): ?>
+    <p class="flow-text text-xs text-amber-200/80 mb-3">Input Barang Masuk untuk tiap item kurang di bawah, satu per satu (jumlah sudah diisi sesuai kebutuhan tiket, boleh disesuaikan).</p>
+    <div class="space-y-2">
+        <?php foreach ($prefill_items as $fi): ?>
+        <?php $fiNama = $fi['nama_barang_snapshot'] ?: ($fi['nama_barang'] ?? ('ID ' . ($fi['barang_id'] ?? '-'))); ?>
+        <div class="flow-item flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-black/20 px-3 py-2 text-sm">
+            <span class="flow-text text-amber-100/90"><?= htmlspecialchars($fiNama) ?> x<?= (int)($fi['jumlah'] ?? 0) ?> <span class="opacity-70">(sisa <?= (int)($fi['sisa'] ?? 0) ?>)</span></span>
+            <?php if (!empty($fi['kurang'])): ?>
+            <button type="button" onclick="openMasukPrefill(<?= (int)($fi['barang_id'] ?? 0) ?>, <?= (int)($fi['jumlah'] ?? 0) ?>)"
+                    class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">Input</button>
+            <?php else: ?>
+            <span class="shrink-0 text-xs text-emerald-400 font-semibold">Stok cukup</span>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php else: ?>
+    <p class="flow-text text-xs text-amber-200/80">Data item tiket tidak tersedia (ticket_id=<?= $flowTicketId ?>). Catat barang masuk manual lewat tombol Barang Masuk, lalu kembali ambil tiket.</p>
+    <?php endif; ?>
+    <a href="<?= base_url('teknisi_panel') ?>" class="flow-back inline-block mt-3 text-xs font-semibold text-emerald-400 hover:text-emerald-300">← Kembali ke Dashboard Teknisi</a>
+</div>
+<script type="application/json" id="ticketFlowData"><?= json_encode(['ticket_id' => $flowTicketId, 'items' => array_map(function ($x) { return ['barang_id' => (int)($x['barang_id'] ?? 0), 'jumlah' => (int)($x['jumlah'] ?? 0), 'kurang' => !empty($x['kurang'])]; }, (isset($prefill_items) && is_array($prefill_items) ? $prefill_items : []))], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
+<?php endif; ?>
+
 <!-- ================= SUMMARY ================= -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-sm">
 
@@ -101,12 +130,27 @@
                 <option value="masuk" class="bg-slate-800 text-white" <?= ($filter['jenis'] ?? '') === 'masuk' ? 'selected' : '' ?>>masuk</option>
                 <option value="keluar" class="bg-slate-800 text-white" <?= ($filter['jenis'] ?? '') === 'keluar' ? 'selected' : '' ?>>keluar</option>
             </select>
-            <select id="f_barang" name="barang_id" onchange="queueTransaksi()" class="bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-gray-200 hover:border-cyan-500/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
-                <option value="" class="bg-slate-800 text-slate-400">Semua</option>
-                <?php foreach($barang_list as $brg): ?>
-                    <option value="<?= $brg->id ?>" class="bg-slate-800 text-white" <?= (string)($filter['barang_id'] ?? '') === (string)$brg->id ? 'selected' : '' ?>><?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?></option>
-                <?php endforeach; ?>
-            </select>
+            <div class="relative" id="barangDropWrap">
+                <button type="button" id="f_barang_btn" class="bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-gray-200 hover:border-cyan-500/50 focus:border-cyan-500 transition-all max-w-[280px] w-full flex items-center gap-2">
+                    <span id="f_barang_label" class="flex-1 text-left truncate">Semua</span>
+                    <svg class="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <input type="hidden" id="f_barang" name="barang_id" value="<?= htmlspecialchars($filter['barang_id'] ?? '') ?>">
+                <div id="f_barang_drop" class="hidden absolute z-50 mt-1 w-[300px] rounded-lg border border-slate-700/50 bg-slate-800 shadow-xl overflow-hidden">
+                    <div class="p-2 border-b border-slate-700/50">
+                        <input type="search" id="f_barang_search" placeholder="Cari barang..." autocomplete="off"
+                               class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none">
+                    </div>
+                    <div id="f_barang_list" class="max-h-[260px] overflow-y-auto py-1">
+                        <button type="button" data-value="" data-label="Semua" class="f-barang-opt w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-700/60">Semua</button>
+                        <?php foreach($barang_list as $brg): ?>
+                            <button type="button" data-value="<?= $brg->id ?>" data-label="<?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?>" class="f-barang-opt w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-slate-700/60"><?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
             <select id="f_bulan" name="bulan" onchange="queueTransaksi()" class="bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-gray-200 hover:border-cyan-500/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
                 <option value="" class="bg-slate-800 text-slate-400">Semua</option>
                 <?php $nama_bulan = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember']; ?>
@@ -133,6 +177,7 @@
                         <th class="px-4 py-3 text-left">Nama Barang</th>
                         <th class="px-4 py-3 text-left">Jumlah</th>
                         <th class="px-4 py-3 text-left">Uraian</th>
+                        <th class="px-4 py-3 text-left">No. Dokumen</th>
                         <th class="px-4 py-3 text-left">Penerima/Sumber</th>
                         <th class="px-4 py-3 text-left">Aksi</th>
                     </tr>
@@ -140,7 +185,7 @@
                 <tbody id="tbodyTransaksi" class="divide-y divide-slate-800/30">
                     <?php if (empty($transaksi)): ?>
                     <tr>
-                        <td colspan="9" class="px-6 py-10 text-center">
+                        <td colspan="10" class="px-6 py-10 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <div class="w-12 h-12 bg-gray-800/50 rounded-full flex items-center justify-center">
                                     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,6 +239,7 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-gray-200"><?= htmlspecialchars($t->uraian ?? '-') ?></td>
+                        <td class="px-4 py-3 font-mono text-gray-200"><?= htmlspecialchars($t->no_dokumen ?? '-') ?></td>
                         <td class="px-4 py-3 text-gray-200"><?= htmlspecialchars($t->penerima_sumber ?? '-') ?></td>
                         <td class="px-4 py-3">
                             <div class="flex gap-1.5">
@@ -221,7 +267,7 @@
 
 <!-- Modal Tambah/Edit Transaksi -->
 <div id="modalBarang" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-20">
-    <div class="theme-card rounded-lg shadow-xl w-full max-w-lg border" onclick="event.stopPropagation()">
+    <div class="theme-card rounded-lg shadow-xl w-full max-w-2xl border max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
         <div id="modalHeader" class="bg-blue-600 px-5 py-4 flex items-center justify-between rounded-t-lg transition-colors">
             <h3 id="modalTitle" class="text-lg font-semibold text-white">Tambah Transaksi</h3>
             <button onclick="tutupModal()" class="text-white/80 hover:text-white transition">
@@ -231,10 +277,11 @@
             </button>
         </div>
 
-        <form id="formBarang" class="p-5 space-y-4">
+        <form id="formBarang" class="p-5">
             <input type="hidden" id="barang_id" name="id">
 
-            <div>
+            <div class="grid md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
                 <label class="block text-sm font-medium header-subtitle mb-1.5">
                     Barang <span class="text-red-400">*</span>
                 </label>
@@ -247,7 +294,6 @@
                 </select>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium header-subtitle mb-1.5">
                         Jenis <span id="jenisBadge" class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium border align-middle bg-emerald-900/40 text-emerald-400 border-emerald-800/40">masuk</span>
@@ -266,7 +312,6 @@
                     <input type="date" id="tanggal" name="tanggal" required value="<?= date('Y-m-d') ?>"
                            class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
                 </div>
-            </div>
 
             <div>
                 <label class="block text-sm font-medium header-subtitle mb-1.5">
@@ -275,6 +320,15 @@
                 <input type="number" id="jumlah" name="jumlah" required min="0" step="any"
                        class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
                        placeholder="Contoh: 10">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    No. Dokumen <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium border align-middle bg-slate-700/40 text-slate-300 border-slate-600/40">Opsional</span>
+                </label>
+                <input type="text" id="no_dokumen" name="no_dokumen" maxlength="100"
+                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       placeholder="Opsional - mis. BAST-001/2026">
             </div>
 
             <div>
@@ -291,7 +345,7 @@
                        placeholder="Opsional">
             </div>
 
-            <div class="flex gap-2 pt-3 border-t border-slate-700">
+            <div class="md:col-span-2 flex gap-2 pt-3 border-t border-slate-700">
                 <button type="button" onclick="tutupModal()"
                         class="flex-1 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 transition">
                     Batal
@@ -300,6 +354,7 @@
                         class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition transform hover:scale-105 active:scale-95">
                     Simpan
                 </button>
+            </div>
             </div>
         </form>
     </div>
@@ -314,6 +369,11 @@ html.light input, html.light select {
     color: var(--text-primary) !important;
     border-color: rgba(203, 213, 225, 0.8) !important;
 }
+html.light #ticketFlowBanner { background-color: #fffbeb !important; border-color: #f59e0b !important; }
+html.light #ticketFlowBanner .flow-title { color: #92400e !important; }
+html.light #ticketFlowBanner .flow-text { color: #78350f !important; }
+html.light #ticketFlowBanner .flow-item { background-color: #ffffff !important; border-color: #fcd34d !important; }
+html.light #ticketFlowBanner .flow-back { color: #047857 !important; }
 .trx-table-wrap { min-height: 320px; }
 #tbodyTransaksi tr td { height: 53px; }
 .trx-dot { width: 8px; height: 8px; border-radius: 9999px; border: 2px solid rgba(103,232,249,.3); border-top-color: #67e8f9; animation: trx-spin .7s linear infinite; display: inline-block; }
@@ -344,7 +404,7 @@ function esc(s) {
 }
 
 function emptyRow() {
-    return '<tr><td colspan="9" class="px-6 py-10 text-center"><div class="flex flex-col items-center gap-3"><div class="w-12 h-12 bg-gray-800/50 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><div class="text-gray-500">Belum ada data transaksi</div></div></td></tr>';
+    return '<tr><td colspan="10" class="px-6 py-10 text-center"><div class="flex flex-col items-center gap-3"><div class="w-12 h-12 bg-gray-800/50 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><div class="text-gray-500">Belum ada data transaksi</div></div></td></tr>';
 }
 
 function rowHtml(t, no) {
@@ -361,6 +421,7 @@ function rowHtml(t, no) {
         + '<td class="px-4 py-3"><div class="font-medium text-gray-200">' + esc(t.nama_barang ?? '-') + '</div></td>'
         + '<td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-1 bg-slate-500/10 rounded-lg ring-1 ring-slate-500/20 text-gray-200 font-semibold text-xs whitespace-nowrap">' + esc(t.jumlah) + ' ' + esc(t.satuan ?? '') + '</span></td>'
         + '<td class="px-4 py-3 text-gray-200">' + esc(t.uraian ?? '-') + '</td>'
+        + '<td class="px-4 py-3 font-mono text-gray-200">' + esc(t.no_dokumen ?? '-') + '</td>'
         + '<td class="px-4 py-3 text-gray-200">' + esc(t.penerima_sumber ?? '-') + '</td>'
         + '<td class="px-4 py-3"><div class="flex gap-1.5">'
         + '<button onclick="editTransaksi(' + t.id + ')" class="p-2 bg-amber-900/40 hover:bg-amber-800/50 text-amber-400 rounded transition-all duration-200 shadow-sm border border-amber-800/30 transform hover:scale-110" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>'
@@ -379,8 +440,8 @@ function setFilterLoading(on) {
 
 function skeletonRows() {
     var cells = '';
-    var widths = ['28px', '90px', '70px', '70px', '130px', '80px', '120px', '110px', '64px'];
-    for (var c = 0; c < 9; c++) cells += '<td class="px-4 py-3"><div class="trx-shimmer" style="height:16px;width:' + widths[c] + ';max-width:100%"></div></td>';
+    var widths = ['28px', '90px', '70px', '70px', '130px', '80px', '120px', '110px', '110px', '64px'];
+    for (var c = 0; c < 10; c++) cells += '<td class="px-4 py-3"><div class="trx-shimmer" style="height:16px;width:' + widths[c] + ';max-width:100%"></div></td>';
     var html = '';
     for (var r = 0; r < 4; r++) html += '<tr>' + cells + '</tr>';
     return html;
@@ -452,6 +513,7 @@ function tambahTransaksi(jenis) {
     document.getElementById('modalTitle').textContent = jenis === 'masuk' ? 'Tambah Barang Masuk' : 'Tambah Barang Keluar';
     document.getElementById('formBarang').reset();
     document.getElementById('barang_id').value = '';
+    document.getElementById('no_dokumen').value = '';
     document.getElementById('tanggal').value = '<?= date('Y-m-d') ?>';
     setJenisMode(jenis, true);
     document.getElementById('modalBarang').classList.remove('hidden');
@@ -475,6 +537,7 @@ function editTransaksi(id) {
         document.getElementById('jumlah').value = d.jumlah;
         document.getElementById('uraian').value = d.uraian || '';
         document.getElementById('penerima_sumber').value = d.penerima_sumber || '';
+        document.getElementById('no_dokumen').value = d.no_dokumen || '';
         document.getElementById('modalBarang').classList.remove('hidden');
     });
 }
@@ -496,14 +559,38 @@ document.getElementById('formBarang').addEventListener('submit', function(e) {
     .then(data => {
         if (data.status === 'success') {
             const c = getSwalColors();
-            Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 1500, ...c })
-            .then(() => { tutupModal(); loadTransaksi(); });
+            if (!editMode && window.ticketFlow && window.ticketFlow.active) {
+                const back = '<?= base_url("teknisi_panel") ?>';
+                Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message + ' Kembali ke dashboard teknisi?', showCancelButton: true, confirmButtonText: 'Kembali ke Tiket', cancelButtonText: 'Tetap di sini', confirmButtonColor: '#059669', ...c })
+                .then((r) => { tutupModal(); loadTransaksi(); if (r.isConfirmed) window.location.href = back; });
+            } else {
+                Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 1500, ...c })
+                .then(() => { tutupModal(); loadTransaksi(); });
+            }
         } else {
             const c = getSwalColors();
             Swal.fire({ icon: 'error', title: 'Gagal!', text: data.message, ...c });
         }
     });
 });
+
+// ── Flow restock dari tiket: prefill modal barang masuk per item kurang ──
+window.ticketFlow = { active: false, ticketId: 0 };
+function openMasukPrefill(barangId, qty) {
+    editMode = false;
+    if (typeof tambahTransaksi === 'function') tambahTransaksi('masuk');
+    else document.getElementById('modalBarang').classList.remove('hidden');
+    if (barangId) document.getElementById('trx_barang_id').value = String(barangId);
+    if (qty > 0) document.getElementById('jumlah').value = qty;
+}
+(function initTicketFlow() {
+    var prefill = null;
+    try { prefill = JSON.parse(document.getElementById('ticketFlowData').textContent || 'null'); } catch (e) { prefill = null; }
+    if (!prefill || !prefill.ticket_id) return;
+    window.ticketFlow = { active: true, ticketId: prefill.ticket_id };
+    var kurang = (prefill.items || []).filter(function (it) { return it.kurang; });
+    if (kurang.length) setTimeout(function () { openMasukPrefill(kurang[0].barang_id, kurang[0].jumlah); }, 400);
+})();
 
 function hapusTransaksi(id, nama) {
     const colors = getSwalColors();
@@ -533,6 +620,46 @@ function hapusTransaksi(id, nama) {
 function tutupModal() {
     document.getElementById('modalBarang').classList.add('hidden');
 }
+
+(function () {
+    var btn = document.getElementById('f_barang_btn');
+    var drop = document.getElementById('f_barang_drop');
+    var s = document.getElementById('f_barang_search');
+    var hidden = document.getElementById('f_barang');
+    var label = document.getElementById('f_barang_label');
+    var wrap = document.getElementById('barangDropWrap');
+    if (!btn || !drop || !s || !hidden || !label) return;
+    function syncLabel() {
+        var cur = drop.querySelector('.f-barang-opt[data-value="' + hidden.value + '"]');
+        label.textContent = cur ? cur.getAttribute('data-label') : 'Semua';
+    }
+    syncLabel();
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        drop.classList.toggle('hidden');
+        if (!drop.classList.contains('hidden')) { s.value = ''; filterOpts(''); s.focus(); }
+    });
+    document.addEventListener('click', function (e) {
+        if (wrap && !wrap.contains(e.target)) drop.classList.add('hidden');
+    });
+    function filterOpts(q) {
+        q = (q || '').toLowerCase();
+        var opts = drop.querySelectorAll('.f-barang-opt');
+        for (var i = 0; i < opts.length; i++) {
+            var t = (opts[i].textContent || '').toLowerCase();
+            opts[i].style.display = (!q || opts[i].getAttribute('data-value') === '' || t.indexOf(q) !== -1) ? '' : 'none';
+        }
+    }
+    s.addEventListener('input', function () { filterOpts(s.value); });
+    drop.querySelectorAll('.f-barang-opt').forEach(function (o) {
+        o.addEventListener('click', function () {
+            hidden.value = o.getAttribute('data-value');
+            syncLabel();
+            drop.classList.add('hidden');
+            queueTransaksi();
+        });
+    });
+})();
 
 document.getElementById('modalBarang').addEventListener('click', function(e) {
     if (e.target === this) tutupModal();

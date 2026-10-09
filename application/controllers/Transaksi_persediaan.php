@@ -45,6 +45,26 @@ class Transaksi_persediaan extends CI_Controller {
             'bulan'     => $bulan ?: '',
             'tahun'     => $tahun ?: '',
         ];
+        $data['prefill_ticket_id'] = null;
+        $data['prefill_items'] = [];
+        $ticket_id = (int) $this->input->get('ticket_id', true);
+        if ($ticket_id > 0 && $this->Transaksi_persediaan_model->has_items($ticket_id)) {
+            $this->load->model('User_ticket_model');
+            $b = (int) date('n');
+            $y = (int) date('Y');
+            $deficient_ids = [];
+            $this->load->model('Teknisi_model');
+            foreach ($this->Teknisi_model->check_stok_ticket($ticket_id) as $d) {
+                $deficient_ids[(int) $d['barang_id']] = true;
+            }
+            foreach ($this->Transaksi_persediaan_model->get_items($ticket_id) as $it) {
+                $sisa = $this->User_ticket_model->get_sisa_persediaan((int) $it['barang_id'], $b, $y);
+                $it['sisa'] = (int) $sisa;
+                $it['kurang'] = isset($deficient_ids[(int) $it['barang_id']]);
+                $data['prefill_items'][] = $it;
+            }
+            $data['prefill_ticket_id'] = $ticket_id;
+        }
 
         $this->load->view('layout/header');
         $this->load->view('layout/sidebar_teknisi');
@@ -86,6 +106,7 @@ class Transaksi_persediaan extends CI_Controller {
         $this->form_validation->set_rules('jumlah', 'Jumlah', 'required|numeric|greater_than_equal_to[0]');
         $this->form_validation->set_rules('uraian', 'Uraian', 'trim|max_length[255]');
         $this->form_validation->set_rules('penerima_sumber', 'Penerima/Sumber', 'trim|max_length[100]');
+        $this->form_validation->set_rules('no_dokumen', 'No. Dokumen', 'trim|max_length[100]');
 
         if ($this->form_validation->run() == FALSE) {
             echo json_encode(['status' => 'error', 'message' => strip_tags(validation_errors())]);
@@ -105,6 +126,7 @@ class Transaksi_persediaan extends CI_Controller {
             'jumlah'          => $this->input->post('jumlah', true),
             'uraian'          => trim($this->input->post('uraian', true) ?: '') ?: NULL,
             'penerima_sumber' => trim($this->input->post('penerima_sumber', true) ?: '') ?: NULL,
+            'no_dokumen'      => trim($this->input->post('no_dokumen', true) ?: '') ?: NULL,
             'user_id'         => $this->session->userdata('user_id'),
         ]);
 
@@ -123,6 +145,7 @@ class Transaksi_persediaan extends CI_Controller {
         $this->form_validation->set_rules('jumlah', 'Jumlah', 'required|numeric|greater_than_equal_to[0]');
         $this->form_validation->set_rules('uraian', 'Uraian', 'trim|max_length[255]');
         $this->form_validation->set_rules('penerima_sumber', 'Penerima/Sumber', 'trim|max_length[100]');
+        $this->form_validation->set_rules('no_dokumen', 'No. Dokumen', 'trim|max_length[100]');
 
         if ($this->form_validation->run() == FALSE) {
             echo json_encode(['status' => 'error', 'message' => strip_tags(validation_errors())]);
@@ -149,6 +172,7 @@ class Transaksi_persediaan extends CI_Controller {
             'jumlah'          => $this->input->post('jumlah', true),
             'uraian'          => trim($this->input->post('uraian', true) ?: '') ?: NULL,
             'penerima_sumber' => trim($this->input->post('penerima_sumber', true) ?: '') ?: NULL,
+            'no_dokumen'      => trim($this->input->post('no_dokumen', true) ?: '') ?: NULL,
         ]);
 
         echo json_encode($ok
