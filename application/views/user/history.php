@@ -103,6 +103,32 @@ if (!function_exists('persediaan_nama_list')) {
     }
 }
 
+// Helper: daftar ACC teknisi untuk tiket persediaan.
+// Tiap entri: ['nama','diminta','acc']. Kembalikan [] bila non-persediaan,
+// tak ada data, kolom belum ada, atau semua jumlah_disetujui masih NULL.
+if (!function_exists('persediaan_acc_list')) {
+    function persediaan_acc_list($t) {
+        $arr = null;
+        if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) $arr = $t['persediaan_items'];
+        elseif (!empty($t['items']) && is_array($t['items'])) $arr = $t['items'];
+        if (!is_array($arr) || empty($arr)) return [];
+        $out = [];
+        foreach ($arr as $it) {
+            if (!array_key_exists('jumlah_disetujui', $it)) return [];
+            $raw = $it['jumlah_disetujui'];
+            if ($raw === null || $raw === '') continue;
+            $nama = $it['nama_barang_snapshot'] ?? $it['nama_barang'] ?? $it['nama'] ?? '-';
+            $nama = trim((string) $nama) !== '' ? trim((string) $nama) : '-';
+            $out[] = [
+                'nama'    => $nama,
+                'diminta' => (int) ($it['jumlah'] ?? $it['qty'] ?? 0),
+                'acc'     => (int) $raw,
+            ];
+        }
+        return $out;
+    }
+}
+
 if (!function_exists('persediaan_form_data')) {
     function persediaan_form_data($t) {
         $items = [];
@@ -113,6 +139,8 @@ if (!function_exists('persediaan_form_data')) {
                     'nama'   => $item['nama_barang_snapshot'] ?? $item['nama_barang'] ?? '-',
                     'jumlah' => (int) ($item['jumlah'] ?? 0),
                     'satuan' => $item['satuan_snapshot'] ?? $item['satuan'] ?? 'pcs',
+                    'disetujui' => (array_key_exists('jumlah_disetujui', $item) && $item['jumlah_disetujui'] !== null && $item['jumlah_disetujui'] !== '')
+                        ? (int) $item['jumlah_disetujui'] : null,
                 ];
             }
         }
@@ -972,6 +1000,7 @@ foreach (($tickets ?? []) as $t) {
                         <th>Kode barang</th>
                         <th>NAMA BARANG</th>
                         <th>Jumlah</th>
+                        <th>ACC</th>
                     </tr>
                 </thead>
                 <tbody id="print_items"></tbody>
@@ -1003,6 +1032,7 @@ foreach (($tickets ?? []) as $t) {
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">KODE BARANG</th>
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">NAMA BARANG</th>
                             <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">JUMLAH</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">ACC</th>
                         </tr>
                     </thead>
                     <tbody id="pm_items"></tbody>
@@ -1070,8 +1100,9 @@ foreach (($tickets ?? []) as $t) {
 .pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
 .pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
 .pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
-.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
-.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:36%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:20%; }
+.pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width:15%; }
 .pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
 .pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
 @media screen {
@@ -1353,16 +1384,19 @@ foreach (($tickets ?? []) as $t) {
         printRows.innerHTML = '';
         var items = Array.isArray(form.items) ? form.items : [];
         if (!items.length) {
-            rows.innerHTML = '<tr><td colspan="4" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
+            rows.innerHTML = '<tr><td colspan="5" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
         } else {
             items.forEach(function(item, index) {
                 var row = document.createElement('tr');
                 row.style.background = index % 2 ? '#fafafa' : '#fff';
+                var accText = (item.disetujui !== null && item.disetujui !== undefined && item.disetujui !== '')
+                    ? item.disetujui + ' ' + (item.satuan || 'pcs') : '-';
                 [
                     { value: index + 1, align: 'center' },
                     { value: item.kode || '-', align: 'left' },
                     { value: item.nama || '-', align: 'left' },
-                    { value: (item.jumlah || 0) + ' ' + (item.satuan || 'pcs'), align: 'right' }
+                    { value: (item.jumlah || 0) + ' ' + (item.satuan || 'pcs'), align: 'right' },
+                    { value: accText, align: 'right' }
                 ].forEach(function(cell) {
                     var td = document.createElement('td');
                     td.textContent = cell.value;
@@ -1375,7 +1409,9 @@ foreach (($tickets ?? []) as $t) {
         for (var printIndex = 0; printIndex < Math.max(items.length, 6); printIndex++) {
             var printItem = items[printIndex] || {};
             var printRow = document.createElement('tr');
-            [printIndex + 1, printItem.kode || '', printItem.nama || '', printItem.jumlah ? printItem.jumlah + ' ' + (printItem.satuan || 'pcs') : '']
+            var printAcc = (printItem.disetujui !== null && printItem.disetujui !== undefined && printItem.disetujui !== '' && printItem.jumlah)
+                ? printItem.disetujui + ' ' + (printItem.satuan || 'pcs') : '';
+            [printIndex + 1, printItem.kode || '', printItem.nama || '', printItem.jumlah ? printItem.jumlah + ' ' + (printItem.satuan || 'pcs') : '', printAcc]
                 .forEach(function(value) {
                     var cell = document.createElement('td');
                     cell.textContent = value;

@@ -725,8 +725,9 @@ public function get_history_limit($user_id, $limit, $offset)
         $ids = array_values(array_filter($ids));
         $map = [];
         if (!empty($ids)) {
+            $hasAcc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
             $items = $this->db
-                ->select('i.ticket_id, i.barang_id, i.jumlah, i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
+                ->select('i.ticket_id, i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ', i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
                 ->from('ticket_persediaan_items i')
                 ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
                 ->where_in('i.ticket_id', $ids)
