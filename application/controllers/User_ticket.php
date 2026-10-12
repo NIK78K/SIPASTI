@@ -359,10 +359,13 @@ public function cart_add()
     if (!$b) $this->_cart_persediaan_json(['success' => false, 'message' => 'Barang tidak tersedia.']);
 
     $sisa = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, (int) date('n'), (int) date('Y'));
+    if ($sisa <= 0) $this->_cart_persediaan_json(['success' => false, 'message' => 'Stok barang habis, tidak bisa ditambahkan ke keranjang.']);
 
     $cart     = $this->_cart_persediaan_get();
     $existing = isset($cart[$barang_id]) ? (int) $cart[$barang_id] : 0;
     $final    = $existing + $jumlah;
+    if ($final < 1) $this->_cart_persediaan_json(['success' => false, 'message' => 'Jumlah minimal 1.']);
+    if ($final > $sisa) $this->_cart_persediaan_json(['success' => false, 'message' => 'Stok tersisa ' . $sisa . ', kurangi jumlahnya.']);
     $cart[$barang_id] = $final;
     $this->_cart_persediaan_save($cart);
 
@@ -399,6 +402,9 @@ public function cart_update()
     if (!$b) $this->_cart_persediaan_json(['success' => false, 'message' => 'Barang tidak tersedia.']);
 
     $sisa = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, (int) date('n'), (int) date('Y'));
+    if ($sisa <= 0) $this->_cart_persediaan_json(['success' => false, 'message' => 'Stok barang habis, tidak bisa ditambahkan ke keranjang.']);
+
+    if ($jumlah > $sisa) $this->_cart_persediaan_json(['success' => false, 'message' => 'Stok tersisa ' . $sisa . ', kurangi jumlahnya.']);
 
     $cart[$barang_id] = $jumlah;
     $this->_cart_persediaan_save($cart);
@@ -489,6 +495,9 @@ public function checkout_persediaan()
         $b = $this->_barang_persediaan_aktif((int) $bid);
         if (!$b) { $errors[] = 'Barang ID ' . (int) $bid . ' tidak tersedia.'; continue; }
         if ($qty < 1) { $errors[] = $b['nama_barang'] . ': jumlah tidak valid.'; continue; }
+        $sisa_co = (int) $this->User_ticket_model->get_sisa_persediaan((int) $bid, (int) date('n'), (int) date('Y'));
+        if ($sisa_co <= 0) { $errors[] = $b['nama_barang'] . ': stok habis, tidak bisa diminta.'; continue; }
+        if ($qty > $sisa_co) { $errors[] = $b['nama_barang'] . ': stok tersisa ' . $sisa_co . ', kurangi jumlahnya.'; continue; }
         $lines[] = '- ' . ($b['kode_barang'] ?? '-') . ' - ' . $b['nama_barang'] . ' x ' . $qty . ' ' . ($b['satuan'] ?? '');
         $total_qty += $qty;
         $snap[] = [
