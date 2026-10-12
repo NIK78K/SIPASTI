@@ -175,10 +175,10 @@
                 <label for="kode_barang" class="block text-sm font-medium header-subtitle mb-1.5">
                     Kode Barang <span class="text-red-400">*</span>
                 </label>
-                <input type="text" id="kode_barang" name="kode_barang" required maxlength="50"
+                <input type="text" id="kode_barang" name="kode_barang" readonly maxlength="50"
                        class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
-                       placeholder="Contoh: ATK-01-002">
-                <p class="text-xs header-subtitle">Format contoh ATK-01-002, wajib diisi dan unik.</p>
+                       placeholder="Otomatis dari kategori">
+                <p class="text-xs header-subtitle">Terisi otomatis saat kategori dipilih.</p>
             </div>
             </div>
 
@@ -442,10 +442,23 @@ function tambahBarang() {
     document.getElementById('modalTitle').textContent = 'Tambah Barang';
     document.getElementById('formBarang').reset();
     document.getElementById('barang_id').value = '';
+    document.getElementById('kode_barang').value = '';
     document.getElementById('satuan').value = 'pcs';
     document.getElementById('status').value = 'Aktif';
     document.getElementById('modalBarang').classList.remove('hidden');
 }
+
+document.getElementById('kategori_id').addEventListener('change', function() {
+    if (editMode) return;
+    var kodeEl = document.getElementById('kode_barang');
+    var kid = this.value;
+    if (!kid) { kodeEl.value = ''; return; }
+    kodeEl.value = '...';
+    fetch('<?= base_url("barang_persediaan/next_kode/") ?>' + kid)
+    .then(r => r.json())
+    .then(d => { kodeEl.value = (d && d.status === 'success' && d.kode) ? d.kode : ''; })
+    .catch(() => { kodeEl.value = ''; });
+});
 
 function editBarang(id) {
     fetch('<?= base_url("barang_persediaan/get/") ?>' + id)

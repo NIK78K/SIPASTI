@@ -70,4 +70,42 @@ class Barang_persediaan_model extends CI_Model {
         if ($except_id) $this->db->where('id !=', $except_id);
         return $this->db->get($this->table)->num_rows() > 0;
     }
+
+    public function next_kode($kategori_id, $except_id = NULL) {
+        $this->db->select('k.kode AS kategori_kode');
+        $this->db->from('master_kategori_persediaan k');
+        $this->db->where('k.id', $kategori_id);
+        $kat = $this->db->get()->row();
+        if (!$kat || empty($kat->kategori_kode)) return NULL;
+        $prefix = trim($kat->kategori_kode) . '-';
+
+        $this->db->select('b.kode_barang');
+        $this->db->from($this->table . ' b');
+        $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
+        $this->db->where('b.kategori_id', $kategori_id);
+        $this->db->like('b.kode_barang', $prefix, 'after');
+        if ($except_id) $this->db->where('b.id !=', $except_id);
+        $rows = $this->db->get()->result();
+
+        $max = 0;
+        $lengths = [];
+        foreach ($rows as $r) {
+            $kb = isset($r->kode_barang) ? $r->kode_barang : '';
+            if (strpos($kb, $prefix) !== 0) continue;
+            $suffix = substr($kb, strlen($prefix));
+            if ($suffix === '' || !ctype_digit($suffix)) continue;
+            $n = (int) $suffix;
+            if ($n > $max) $max = $n;
+            $lengths[] = strlen($suffix);
+        }
+
+        $next = $max + 1;
+        if (!empty($lengths) && count(array_unique($lengths)) === 1) {
+            $len = $lengths[0];
+            $num = str_pad((string) $next, $len, '0', STR_PAD_LEFT);
+        } else {
+            $num = (string) $next;
+        }
+        return $prefix . $num;
+    }
 }
