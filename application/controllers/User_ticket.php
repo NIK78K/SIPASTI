@@ -451,6 +451,15 @@ public function checkout_persediaan()
         exit;
     }
 
+    if ($tanggal_dibutuhkan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+            redirect('user_ticket/create_persediaan');
+            exit;
+        }
+    }
+
     $lines = [];
     $errors = [];
     $total_qty = 0;
@@ -839,6 +848,15 @@ public function update_persediaan($ticket_id)
         exit;
     }
     $judul_final = $judul !== '' ? $judul : $keperluan;
+
+    if ($tanggal_dibutuhkan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+            redirect($back);
+            exit;
+        }
+    }
 
     if (empty($items_post) || !is_array($items_post)) {
         $this->session->set_flashdata('error', 'Pilih minimal 1 barang.');

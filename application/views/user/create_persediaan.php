@@ -153,7 +153,7 @@
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal dibutuhkan</label>
-                <input name="tanggal_dibutuhkan" type="date"
+                <input name="tanggal_dibutuhkan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
                     class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
             </div>
         </div>
@@ -530,6 +530,15 @@ function validCheckout() {
     if (!document.getElementById('fKeperluan').value.trim()) {
         Swal.fire({ icon: 'warning', title: 'Keperluan wajib diisi', text: 'Tulis keperluan permintaan barang.' });
         return false;
+    }
+    var tglEl = document.getElementById('fTanggalButuh');
+    if (tglEl && tglEl.value) {
+        var now = new Date();
+        var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        if (tglEl.value < today) {
+            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal dibutuhkan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
+            return false;
+        }
     }
     return true;
 }
