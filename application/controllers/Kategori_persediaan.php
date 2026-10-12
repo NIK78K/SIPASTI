@@ -72,24 +72,27 @@ class Kategori_persediaan extends CI_Controller {
         ]);
     }
 
-    /* ================= EDIT (HALAMAN TERPISAH) ================= */
+    /* ================= EDIT (STUB -> MODAL DI MASTER BARANG) ================= */
     public function edit($id)
     {
-        $data['kategori'] = $this->Kategori_persediaan_model->get_by_id($id);
+        redirect('kategori_persediaan');
+    }
 
-        if (!$data['kategori']) {
-            show_404();
+    /* ================= GET (AJAX MODAL) ================= */
+    public function get($id) {
+        header('Content-Type: application/json');
+        $kategori = $this->Kategori_persediaan_model->get_by_id($id);
+        if ($kategori) {
+            echo json_encode($kategori);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Data kategori tidak ditemukan!']);
         }
-
-        $this->load->view('layout/header');
-        $this->load->view('layout/sidebar');
-        $this->load->view('admin/kategori_persediaan/edit', $data);
-        $this->load->view('layout/footer');
     }
 
     /* ================= UPDATE (AJAX) ================= */
     public function update($id)
     {
+        header('Content-Type: application/json');
         $kode = trim($this->input->post('kode', TRUE));
         $nama = trim($this->input->post('nama', TRUE));
         $deskripsi = trim($this->input->post('deskripsi', TRUE));

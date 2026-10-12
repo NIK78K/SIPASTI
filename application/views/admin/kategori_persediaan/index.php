@@ -61,26 +61,44 @@
             Buat kategori barang persediaan baru
         </p>
 
-        <input type="text" id="addKode"
-               placeholder="Contoh: ATK-15"
-               class="w-full px-4 py-3 rounded-xl mb-3
-                      bg-slate-800/80 border border-slate-700/50
-                      text-white focus:outline-none
-                      focus:ring-2 focus:ring-blue-500 transition-all">
+        <div class="mb-3">
+            <label for="addKode" class="block text-sm font-medium header-subtitle mb-1.5">
+                Kode Kategori <span class="text-red-400">*</span>
+            </label>
+            <input type="text" id="addKode"
+                   placeholder="Contoh: ATK-15"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Format contoh ATK-15, wajib diisi dan unik.</p>
+        </div>
 
-        <input type="text" id="addNama"
-               placeholder="Contoh: Kertas Foto"
-               class="w-full px-4 py-3 rounded-xl mb-3
-                      bg-slate-800/80 border border-slate-700/50
-                      text-white focus:outline-none
-                      focus:ring-2 focus:ring-blue-500 transition-all">
+        <div class="mb-3">
+            <label for="addNama" class="block text-sm font-medium header-subtitle mb-1.5">
+                Nama Kategori <span class="text-red-400">*</span>
+            </label>
+            <input type="text" id="addNama"
+                   placeholder="Contoh: Kertas Foto"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Nama lengkap kategori, contoh: Kertas Foto.</p>
+        </div>
 
-        <input type="text" id="addDeskripsi"
-               placeholder="Deskripsi (opsional)"
-               class="w-full px-4 py-3 rounded-xl
-                      bg-slate-800/80 border border-slate-700/50
-                      text-white focus:outline-none
-                      focus:ring-2 focus:ring-blue-500 transition-all">
+        <div>
+            <label for="addDeskripsi" class="block text-sm font-medium header-subtitle mb-1.5">
+                Deskripsi <span class="header-subtitle font-normal">(opsional)</span>
+            </label>
+            <input type="text" id="addDeskripsi"
+                   placeholder="Contoh: Kertas foto glossy ukuran A4"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Isi singkat peruntukan kategori, boleh dikosongkan.</p>
+        </div>
 
         <div class="flex justify-end gap-3 mt-6">
             <button onclick="closeAddModal()"
@@ -88,6 +106,78 @@
                 Batal
             </button>
             <button onclick="storeKategori()"
+                class="px-5 py-2 rounded-lg
+                       bg-blue-600 hover:bg-blue-700
+                       text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
+                Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL EDIT ================= -->
+<div id="editModal"
+     class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur
+            flex items-center justify-center">
+
+    <div class="theme-card w-full max-w-md
+                rounded-2xl border
+                p-6 shadow-2xl">
+
+        <h3 class="text-lg font-semibold header-title mb-1">
+            Edit Kategori
+        </h3>
+        <p class="text-sm header-subtitle mb-5">
+            Ubah data kategori lalu simpan
+        </p>
+
+        <input type="hidden" id="editId">
+
+        <div class="mb-3">
+            <label for="editKode" class="block text-sm font-medium header-subtitle mb-1.5">
+                Kode Kategori <span class="text-red-400">*</span>
+            </label>
+            <input type="text" id="editKode"
+                   placeholder="Contoh: ATK-15"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Format contoh ATK-15, wajib diisi dan unik.</p>
+        </div>
+
+        <div class="mb-3">
+            <label for="editNama" class="block text-sm font-medium header-subtitle mb-1.5">
+                Nama Kategori <span class="text-red-400">*</span>
+            </label>
+            <input type="text" id="editNama"
+                   placeholder="Contoh: Kertas Foto"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Nama lengkap kategori, contoh: Kertas Foto.</p>
+        </div>
+
+        <div>
+            <label for="editDeskripsi" class="block text-sm font-medium header-subtitle mb-1.5">
+                Deskripsi <span class="header-subtitle font-normal">(opsional)</span>
+            </label>
+            <input type="text" id="editDeskripsi"
+                   placeholder="Contoh: Kertas foto glossy ukuran A4"
+                   class="w-full px-4 py-3 rounded-xl mb-1
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
+            <p class="text-xs header-subtitle">Isi singkat peruntukan kategori, boleh dikosongkan.</p>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="closeEditModal()"
+                class="px-4 py-2 header-subtitle hover:text-white transition-colors">
+                Batal
+            </button>
+            <button onclick="updateKategori()"
                 class="px-5 py-2 rounded-lg
                        bg-blue-600 hover:bg-blue-700
                        text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
@@ -115,6 +205,8 @@ function showModal(el){ el.classList.remove('hidden'); el.classList.add('flex');
 function hideModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
 function openAddModal(){ showModal(document.getElementById('addModal')); }
 function closeAddModal(){ hideModal(document.getElementById('addModal')); }
+function openEditModal(){ showModal(document.getElementById('editModal')); }
+function closeEditModal(){ hideModal(document.getElementById('editModal')); }
 
 function escHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -155,16 +247,17 @@ function loadKategori(){
                     </div>
 
                     <div class="flex justify-end gap-2">
-                        <a href="<?= base_url('kategori_persediaan/edit/') ?>${k.id}"
+                        <button onclick="editKategori(${k.id})"
                             class="w-9 h-9 flex items-center justify-center
                                    rounded-lg bg-yellow-500/15
-                                   text-yellow-400 hover:bg-yellow-500/25 transition-all transform hover:scale-110">
+                                   text-yellow-400 hover:bg-yellow-500/25 transition-all transform hover:scale-110"
+                            title="Edit kategori">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                  stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                                       d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
                             </svg>
-                        </a>
+                        </button>
 
                         <button onclick="hapusKategori(${k.id})"
                             class="w-9 h-9 flex items-center justify-center
@@ -217,6 +310,68 @@ function storeKategori(){
     });
 }
 
+function editKategori(id){
+    fetch(baseUrl+'get/'+id)
+    .then(r=>r.json())
+    .then(d=>{
+        const colors = getSwalColors();
+        if(d.status==='error' || !d.id){
+            return Swal.fire({
+                title: 'Gagal',
+                text: d.message || 'Data kategori tidak ditemukan',
+                icon: 'error',
+                ...colors
+            });
+        }
+        editId.value = d.id;
+        editKode.value = d.kode || '';
+        editNama.value = d.nama || '';
+        editDeskripsi.value = d.deskripsi || '';
+        openEditModal();
+    })
+    .catch(()=>{
+        const colors = getSwalColors();
+        Swal.fire({
+            title: 'Gagal',
+            text: 'Tidak dapat memuat data kategori',
+            icon: 'error',
+            ...colors
+        });
+    });
+}
+
+function updateKategori(){
+    if(!editKode.value.trim() || !editNama.value.trim()) {
+        const colors = getSwalColors();
+        return Swal.fire({
+            title: 'Oops',
+            text: 'Kode dan nama wajib diisi',
+            icon: 'warning',
+            ...colors
+        });
+    }
+
+    fetch(baseUrl+'update/'+editId.value,{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'kode='+encodeURIComponent(editKode.value)
+            +'&nama='+encodeURIComponent(editNama.value)
+            +'&deskripsi='+encodeURIComponent(editDeskripsi.value)
+    }).then(r=>r.json()).then(r=>{
+        const colors = getSwalColors();
+        if(r.status==='success'){
+            closeEditModal();
+            loadKategori();
+        }
+        Swal.fire({
+            title: r.status==='success'?'Berhasil':'Gagal',
+            text: r.message,
+            icon: r.status,
+            ...colors
+        });
+    });
+}
+
 function hapusKategori(id){
     const colors = getSwalColors();
     Swal.fire({
@@ -247,6 +402,18 @@ function hapusKategori(id){
 }
 
 document.addEventListener('DOMContentLoaded',loadKategori);
+
+document.getElementById('addModal').addEventListener('click', function(e){
+    if(e.target === this) closeAddModal();
+});
+
+document.getElementById('editModal').addEventListener('click', function(e){
+    if(e.target === this) closeEditModal();
+});
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeAddModal(); closeEditModal(); }
+});
 </script>
 
 <style>
@@ -260,9 +427,12 @@ html.light .hover\:bg-slate-800\/50:hover {
     background: rgba(248, 250, 252, 0.6) !important;
 }
 
-html.light #addModal {
+html.light #addModal,
+html.light #editModal {
     background: rgba(0, 0, 0, 0.4) !important;
 }
+
+html.light input::placeholder { color: #94a3b8 !important; }
 
 .swal2-popup {
     background-color: var(--bg-card) !important;
