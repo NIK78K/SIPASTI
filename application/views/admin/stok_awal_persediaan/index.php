@@ -80,73 +80,76 @@
 </div>
 
 <!-- Modal Tambah/Edit Stok Awal -->
-<div id="modalBarang" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-20">
-    <div class="theme-card rounded-lg shadow-xl w-full max-w-lg border" onclick="event.stopPropagation()">
-        <div class="bg-blue-600 px-5 py-4 flex items-center justify-between">
-            <h3 id="modalTitle" class="text-lg font-semibold text-white">Tambah Stok Awal</h3>
-            <button onclick="tutupModal()" class="text-white/80 hover:text-white transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
+<div id="modalBarang" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
+    <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
+        <h3 id="modalTitle" class="text-lg font-semibold header-title mb-1">Tambah Stok Awal</h3>
+        <p id="modalSubtitle" class="text-sm header-subtitle mb-5">Isi stok awal barang per periode bulan dan tahun</p>
 
-        <form id="formBarang" class="p-5 space-y-4">
+        <form id="formBarang" class="space-y-4 overflow-y-auto flex-1 min-h-0">
             <input type="hidden" id="barang_id" name="id">
 
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                <label for="stok_barang_id" class="block text-sm font-medium header-subtitle mb-1.5">
                     Barang <span class="text-red-400">*</span>
                 </label>
                 <select id="stok_barang_id" name="barang_id" required
-                        class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                     <option value="" class="bg-slate-800 text-slate-400">-- Pilih Barang --</option>
                     <?php foreach($barang_list as $brg): ?>
                         <option value="<?= $brg->id ?>" class="bg-slate-800 text-white"><?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <p class="text-xs header-subtitle">Pilih barang persediaan, wajib diisi.</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    <label for="bulan" class="block text-sm font-medium header-subtitle mb-1.5">
                         Bulan <span class="text-red-400">*</span>
                     </label>
                     <input type="number" id="bulan" name="bulan" required min="1" max="12" value="<?= date('n') ?>"
-                           class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                           placeholder="Contoh: 1"
+                           class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <p class="text-xs header-subtitle">Angka 1-12 sesuai bulan periode.</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    <label for="tahun" class="block text-sm font-medium header-subtitle mb-1.5">
                         Tahun <span class="text-red-400">*</span>
                     </label>
                     <input type="number" id="tahun" name="tahun" required min="2000" max="2100" value="<?= date('Y') ?>"
-                           class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                           placeholder="Contoh: 2026"
+                           class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <p class="text-xs header-subtitle">Tahun periode, contoh: 2026.</p>
                 </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
-                    Jumlah <span class="text-red-400">*</span>
-                </label>
-                <input type="number" id="jumlah" name="jumlah" required min="0" step="any"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
-                       placeholder="Contoh: 100">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="jumlah" class="block text-sm font-medium header-subtitle mb-1.5">
+                        Jumlah <span class="text-red-400">*</span>
+                    </label>
+                    <input type="number" id="jumlah" name="jumlah" required min="0" step="any"
+                           class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                           placeholder="Contoh: 100">
+                    <p class="text-xs header-subtitle">Jumlah awal minimal 0.</p>
+                </div>
+
+                <div>
+                    <label for="keterangan" class="block text-sm font-medium header-subtitle mb-1.5">Keterangan <span class="header-subtitle font-normal">(opsional)</span></label>
+                    <input type="text" id="keterangan" name="keterangan" maxlength="255"
+                           class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                           placeholder="Contoh: Stok awal Januari gudang utama">
+                    <p class="text-xs header-subtitle">Keterangan tambahan, boleh dikosongkan.</p>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">Keterangan</label>
-                <input type="text" id="keterangan" name="keterangan" maxlength="255"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
-                       placeholder="Opsional">
-            </div>
-
-            <div class="flex gap-2 pt-3 border-t border-slate-700">
+            <div class="flex justify-end gap-3 mt-6">
                 <button type="button" onclick="tutupModal()"
-                        class="flex-1 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 transition">
+                        class="px-4 py-2 header-subtitle hover:text-white transition-colors">
                     Batal
                 </button>
                 <button type="submit"
-                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition transform hover:scale-105 active:scale-95">
+                        class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
                     Simpan
                 </button>
             </div>
@@ -196,6 +199,16 @@ html.light input, html.light select {
     color: var(--text-primary) !important;
     border-color: rgba(203, 213, 225, 0.8) !important;
 }
+
+html.light .hover\:bg-slate-800\/50:hover {
+    background: rgba(248, 250, 252, 0.6) !important;
+}
+
+html.light #modalBarang {
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+html.light input::placeholder { color: #94a3b8 !important; }
 </style>
 
 <script>
@@ -235,6 +248,7 @@ $(document).ready(function() {
 function tambahStok() {
     editMode = false;
     document.getElementById('modalTitle').textContent = 'Tambah Stok Awal';
+    document.getElementById('modalSubtitle').textContent = 'Isi stok awal barang per periode bulan dan tahun';
     document.getElementById('formBarang').reset();
     document.getElementById('barang_id').value = '';
     document.getElementById('modalBarang').classList.remove('hidden');
@@ -250,6 +264,7 @@ function editStok(id) {
         }
         editMode = true;
         document.getElementById('modalTitle').textContent = 'Edit Stok Awal';
+        document.getElementById('modalSubtitle').textContent = 'Ubah stok awal barang lalu simpan';
         document.getElementById('barang_id').value = d.id;
         document.getElementById('stok_barang_id').value = d.barang_id;
         document.getElementById('bulan').value = d.bulan;

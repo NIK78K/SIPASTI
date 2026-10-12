@@ -91,15 +91,15 @@
                 <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem]"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
                 <p class="text-[11px] text-slate-500"><?= htmlspecialchars(($b['kategori_kode'] ?? '') . ($b['kategori_nama'] ? ' • ' . $b['kategori_nama'] : '')) ?> &bull; per <?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></p>
                 <div class="mt-auto pt-2 flex items-center gap-2">
-                    <div class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden">
-                        <button type="button" onclick="stepQty(<?= (int) $b['id'] ?>, -1)"
+                    <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none">
+                        <button type="button" onclick="cardStep(<?= (int) $b['id'] ?>, -1)"
                             class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">−</button>
-                        <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1"
+                        <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
                             class="w-11 h-9 text-center text-sm font-bold text-gray-800 border-x-2 border-gray-200 focus:outline-none">
-                        <button type="button" onclick="stepQty(<?= (int) $b['id'] ?>, 1)"
+                        <button type="button" onclick="cardStep(<?= (int) $b['id'] ?>, 1)"
                             class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">+</button>
                     </div>
-                    <button type="button" onclick="cartAdd(<?= (int) $b['id'] ?>)"
+                    <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="cartAdd(<?= (int) $b['id'] ?>)"
                         class="flex-1 h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95">
                         + Keranjang
                     </button>
@@ -429,12 +429,26 @@ function goPage(p) {
     document.getElementById('katalogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function stepQty(id, d) {
+function cartQty(id) {
+    var found = 0;
+    (cartData.items || []).forEach(function (it) { if (String(it.barang_id) === String(id)) found = it.qty; });
+    return found;
+}
+
+function cardStep(id, d) {
     var inp = document.getElementById('qty-' + id);
     if (!inp) return;
-    var v = (parseInt(inp.value || '0', 10) || 0) + d;
-    if (v < 0) v = 0;
+    var v = (parseInt(inp.value || '1', 10) || 1) + d;
+    if (v < 1) v = 1;
     inp.value = v;
+}
+
+function cardInput(id, v) {
+    var inp = document.getElementById('qty-' + id);
+    if (!inp) return;
+    var n = parseInt(v, 10) || 1;
+    if (n < 1) n = 1;
+    inp.value = n;
 }
 
 function postJSON(url, body) {
@@ -450,7 +464,8 @@ function cartAdd(id) {
         Swal.fire({ icon: 'warning', title: 'Jumlah masih 0', text: 'Naikkan dulu jumlah barang yang dibutuhkan.' });
         return;
     }
-    postJSON("<?= base_url('user_ticket/cart_add') ?>", { barang_id: id, jumlah: q })
+    var isUpdate = cartQty(id) > 0;
+    postJSON(isUpdate ? "<?= base_url('user_ticket/cart_update') ?>" : "<?= base_url('user_ticket/cart_add') ?>", { barang_id: id, jumlah: q })
         .then(function (res) {
             refreshCart();
             if (res.success) Swal.fire({ icon: 'success', title: 'Masuk keranjang', text: res.message, timer: 1500, showConfirmButton: false });
@@ -491,7 +506,20 @@ function refreshCart() {
             badge.classList.toggle('inline-flex', res.total_qty > 0);
             document.getElementById('cartTotalLabel').textContent = (res.count || 0) + ' jenis • ' + (res.total_qty || 0) + ' item';
             renderCartItems(res.items || []);
+            syncCards(res.items || []);
         });
+}
+
+function syncCards(items) {
+    var map = {};
+    (items || []).forEach(function (it) { map[String(it.barang_id)] = it.qty; });
+    document.querySelectorAll('[id^="stepper-"]').forEach(function (el) {
+        var id = el.id.replace('stepper-', '');
+        var has = (map[id] || 0) >= 1;
+        el.style.display = has ? '' : 'none';
+        var inp = document.getElementById('qty-' + id);
+        if (inp) inp.value = has ? map[id] : 1;
+    });
 }
 
 function renderCartItems(items) {
