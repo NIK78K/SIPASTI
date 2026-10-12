@@ -148,8 +148,13 @@
         <div class="grid grid-cols-2 gap-3">
             <div>
                 <label class="text-xs font-bold text-gray-700">Unit kerja</label>
-                <input name="unit_kerja" type="text" placeholder="cth: IPDS"
-                    class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
+                <select name="unit_kerja"
+                    class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
+                    <option value="">-- Pilih unit kerja --</option>
+                    <?php foreach (($unit_kerja_list ?? []) as $uk): ?>
+                        <option value="<?= htmlspecialchars($uk) ?>" <?= (string)($unit_kerja_default ?? '') === (string)$uk ? 'selected' : '' ?>><?= htmlspecialchars($uk) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal dibutuhkan</label>

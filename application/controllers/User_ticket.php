@@ -252,11 +252,30 @@ public function create_persediaan()
     $bulan = (int) date('n');
     $tahun = (int) date('Y');
 
+    $unit_kerja_list = $this->db
+        ->select('unit_kerja')
+        ->where('unit_kerja IS NOT NULL', null, false)
+        ->where("TRIM(unit_kerja) <> ''", null, false)
+        ->group_by('unit_kerja')
+        ->order_by('unit_kerja', 'ASC')
+        ->get('user_profiles')
+        ->result_array();
+    $unit_kerja_list = array_values(array_filter(array_map(function ($r) {
+        return trim($r['unit_kerja'] ?? '');
+    }, $unit_kerja_list)));
+    $unit_kerja_default = trim($this->db
+        ->select('unit_kerja')
+        ->where('user_id', $this->session->userdata('user_id'))
+        ->get('user_profiles')
+        ->row('unit_kerja') ?? '');
+
     $data = [
         'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
         'barang_list'   => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
         'bulan'         => $bulan,
         'tahun'         => $tahun,
+        'unit_kerja_list'    => $unit_kerja_list,
+        'unit_kerja_default' => $unit_kerja_default,
     ];
 
     $this->load->view('layout/header_user');
