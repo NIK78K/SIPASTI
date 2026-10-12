@@ -109,7 +109,7 @@
                                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                         </svg>
                     </button>
-                    <a href="<?= base_url('kategori_persediaan/edit/' . $kat->id) ?>"
+                    <button type="button" onclick="openKategoriEdit(<?= $kat->id ?>)"
                         class="w-9 h-9 flex items-center justify-center
                                rounded-lg bg-yellow-500/15
                                text-yellow-400 hover:bg-yellow-500/25 transition-all transform hover:scale-110"
@@ -119,7 +119,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
                         </svg>
-                    </a>
+                    </button>
                     <button onclick="hapusKategori(<?= $kat->id ?>, '<?= addslashes($kat->nama) ?>')"
                         class="w-9 h-9 flex items-center justify-center
                                rounded-lg bg-red-500/15
@@ -148,73 +148,76 @@
 </div>
 
 <!-- Modal Tambah/Edit Barang -->
-<div id="modalBarang" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-20">
-    <div class="theme-card rounded-lg shadow-xl w-full max-w-lg border" onclick="event.stopPropagation()">
-        <div class="bg-blue-600 px-5 py-4 flex items-center justify-between">
-            <h3 id="modalTitle" class="text-lg font-semibold text-white">Tambah Barang</h3>
-            <button onclick="tutupModal()" class="text-white/80 hover:text-white transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
+<div id="modalBarang" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
+    <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
+        <h3 id="modalTitle" class="text-lg font-semibold header-title mb-1">Tambah Barang</h3>
+        <p class="text-sm header-subtitle mb-5">Lengkapi data barang lalu simpan</p>
 
-        <form id="formBarang" class="p-5 space-y-4">
+        <form id="formBarang" class="space-y-4 overflow-y-auto flex-1 min-h-0">
             <input type="hidden" id="barang_id" name="id">
 
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                <label for="kategori_id" class="block text-sm font-medium header-subtitle mb-1.5">
                     Kategori <span class="text-red-400">*</span>
                 </label>
                 <select id="kategori_id" name="kategori_id" required
-                        class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                     <option value="" class="bg-slate-800 text-slate-400">-- Pilih Kategori --</option>
                     <?php foreach($kategori_list as $kat): ?>
                         <option value="<?= $kat->id ?>" class="bg-slate-800 text-white"><?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <p class="text-xs header-subtitle">Pilih kategori induk barang, wajib diisi.</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                <label for="kode_barang" class="block text-sm font-medium header-subtitle mb-1.5">
                     Kode Barang <span class="text-red-400">*</span>
                 </label>
                 <input type="text" id="kode_barang" name="kode_barang" required maxlength="50"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all font-mono"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                        placeholder="Contoh: ATK-01-002">
+                <p class="text-xs header-subtitle">Format contoh ATK-01-002, wajib diisi dan unik.</p>
+            </div>
             </div>
 
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                <label for="nama_barang" class="block text-sm font-medium header-subtitle mb-1.5">
                     Nama Barang <span class="text-red-400">*</span>
                 </label>
                 <input type="text" id="nama_barang" name="nama_barang" required
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="Contoh: Kertas HVS A4 80gr">
+                <p class="text-xs header-subtitle">Nama lengkap barang, contoh: Kertas HVS A4 80gr.</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">Satuan</label>
+                <label for="satuan" class="block text-sm font-medium header-subtitle mb-1.5">Satuan</label>
                 <input type="text" id="satuan" name="satuan"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="pcs" value="pcs">
+                <p class="text-xs header-subtitle">Satuan jumlah barang, contoh: pcs, rim, atau box.</p>
+            </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">Status</label>
-                <select id="status" name="status" class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                <label for="status" class="block text-sm font-medium header-subtitle mb-1.5">Status</label>
+                <select id="status" name="status" class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                     <option value="Aktif" class="bg-slate-800 text-white">Aktif</option>
                     <option value="Nonaktif" class="bg-slate-800 text-white">Nonaktif</option>
                 </select>
+                <p class="text-xs header-subtitle">Aktif bisa dipakai transaksi, Nonaktif disembunyikan.</p>
             </div>
 
-            <div class="flex gap-2 pt-3 border-t border-slate-700">
+            <div class="flex justify-end gap-3 mt-6">
                 <button type="button" onclick="tutupModal()"
-                        class="flex-1 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 transition">
+                        class="px-4 py-2 header-subtitle hover:text-white transition-colors">
                     Batal
                 </button>
                 <button type="submit"
-                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition transform hover:scale-105 active:scale-95">
+                        class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
                     Simpan
                 </button>
             </div>
@@ -223,21 +226,12 @@
 </div>
 
 <!-- Modal Lihat Barang per Kategori -->
-<div id="modalLihat" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-20">
-    <div class="theme-card rounded-lg shadow-xl w-full max-w-3xl border flex flex-col max-h-[85vh]" onclick="event.stopPropagation()">
-        <div class="bg-blue-600 px-5 py-4 flex items-center justify-between flex-shrink-0 rounded-t-lg">
-            <div>
-                <h3 id="lihatJudul" class="text-lg font-semibold text-white">Detail Kategori</h3>
-                <p id="lihatSubdeskripsi" class="text-sm text-white/80 mt-0.5"></p>
-            </div>
-            <button onclick="tutupLihat()" class="text-white/80 hover:text-white transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
+<div id="modalLihat" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
+    <div class="theme-card w-full max-w-3xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden" onclick="event.stopPropagation()">
+        <h3 id="lihatJudul" class="text-lg font-semibold header-title mb-1">Detail Kategori</h3>
+        <p id="lihatSubdeskripsi" class="text-sm header-subtitle mb-5"></p>
 
-        <div class="p-5 overflow-y-auto flex-1 min-h-0">
+        <div class="overflow-y-auto flex-1 min-h-0">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-slate-900/95 z-10">
@@ -255,12 +249,65 @@
             </div>
         </div>
 
-        <div class="p-5 pt-4 border-t border-slate-700 flex-shrink-0">
+        <div class="flex justify-end gap-3 mt-6 flex-shrink-0">
             <button type="button" onclick="tutupLihat()"
-                    class="w-full px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 transition">
+                    class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
                 Tutup
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Modal Edit Kategori -->
+<div id="modalEditKategori" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
+    <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
+        <h3 class="text-lg font-semibold header-title mb-1">Edit Kategori</h3>
+        <p class="text-sm header-subtitle mb-5">Ubah data kategori lalu simpan</p>
+
+        <form id="formEditKategori" class="space-y-4 overflow-y-auto flex-1 min-h-0" onsubmit="event.preventDefault(); submitKategoriEdit();">
+            <input type="hidden" id="edit_kategori_id" name="id">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label for="edit_kategori_kode" class="block text-sm font-medium header-subtitle mb-1.5">
+                    Kode Kategori <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="edit_kategori_kode" name="kode" required maxlength="50"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                       placeholder="Contoh: ATK-01">
+                <p class="text-xs header-subtitle">Kode unik kategori, wajib diisi.</p>
+            </div>
+
+            <div>
+                <label for="edit_kategori_nama" class="block text-sm font-medium header-subtitle mb-1.5">
+                    Nama Kategori <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="edit_kategori_nama" name="nama" required
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       placeholder="Contoh: Alat Tulis Kantor">
+                <p class="text-xs header-subtitle">Nama lengkap kategori, wajib diisi.</p>
+            </div>
+            </div>
+
+            <div>
+                <label for="edit_kategori_deskripsi" class="block text-sm font-medium header-subtitle mb-1.5">Deskripsi</label>
+                <textarea id="edit_kategori_deskripsi" name="deskripsi" rows="3"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       placeholder="Contoh: Kategori ATK & kebutuhan rumah tangga kantor"></textarea>
+                <p class="text-xs header-subtitle">Keterangan tambahan kategori, boleh kosong.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="tutupKategoriEdit()"
+                        class="px-4 py-2 header-subtitle hover:text-white transition-colors">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all transform hover:scale-105 active:scale-95">
+                    Simpan
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -281,15 +328,23 @@
 .barang-page-btn:hover { background: rgba(30, 41, 59, 0.9); color: #e2e8f0; }
 .barang-page-btn.active { background: #2563eb; border-color: #3b82f6; color: #fff; font-weight: 600; }
 .barang-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-html.light input, html.light select {
+html.light input, html.light select, html.light textarea {
     background: rgba(255, 255, 255, 0.95) !important;
     color: var(--text-primary) !important;
     border-color: rgba(203, 213, 225, 0.8) !important;
 }
-html.light input::placeholder { color: #94a3b8 !important; }
+
 html.light .hover\:bg-slate-800\/50:hover {
     background: rgba(248, 250, 252, 0.6) !important;
 }
+
+html.light #modalBarang,
+html.light #modalLihat,
+html.light #modalEditKategori {
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+html.light input::placeholder, html.light textarea::placeholder { color: #94a3b8 !important; }
 </style>
 
 <script>
@@ -567,6 +622,53 @@ function tutupLihat() {
     lihatKategoriId = null;
 }
 
+function openKategoriEdit(id) {
+    fetch('<?= base_url("kategori_persediaan/get/") ?>' + id)
+    .then(r => r.json())
+    .then(d => {
+        if (d && d.status === 'error') {
+            const c = getSwalColors();
+            return Swal.fire({ icon: 'error', title: 'Gagal!', text: d.message, ...c });
+        }
+        document.getElementById('edit_kategori_id').value = d.id;
+        document.getElementById('edit_kategori_kode').value = d.kode || '';
+        document.getElementById('edit_kategori_nama').value = d.nama || '';
+        document.getElementById('edit_kategori_deskripsi').value = d.deskripsi || '';
+        document.getElementById('modalEditKategori').classList.remove('hidden');
+    })
+    .catch(() => {
+        const c = getSwalColors();
+        Swal.fire({ icon: 'error', title: 'Gagal!', text: 'Tidak dapat memuat data kategori.', ...c });
+    });
+}
+
+function submitKategoriEdit() {
+    const id = document.getElementById('edit_kategori_id').value;
+    const formData = new FormData(document.getElementById('formEditKategori'));
+    const colors = getSwalColors();
+    Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading(), ...colors });
+
+    fetch('<?= base_url("kategori_persediaan/update/") ?>' + id, { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+        const c = getSwalColors();
+        if (data.status === 'success') {
+            Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 1500, ...c })
+            .then(() => location.reload());
+        } else {
+            Swal.fire({ icon: 'error', title: 'Gagal!', text: data.message, ...c });
+        }
+    })
+    .catch(() => {
+        const c = getSwalColors();
+        Swal.fire({ icon: 'error', title: 'Gagal!', text: 'Tidak dapat menyimpan kategori.', ...c });
+    });
+}
+
+function tutupKategoriEdit() {
+    document.getElementById('modalEditKategori').classList.add('hidden');
+}
+
 document.getElementById('modalBarang').addEventListener('click', function(e) {
     if (e.target === this) tutupModal();
 });
@@ -575,7 +677,11 @@ document.getElementById('modalLihat').addEventListener('click', function(e) {
     if (e.target === this) tutupLihat();
 });
 
+document.getElementById('modalEditKategori').addEventListener('click', function(e) {
+    if (e.target === this) tutupKategoriEdit();
+});
+
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { tutupModal(); tutupLihat(); }
+    if (e.key === 'Escape') { tutupModal(); tutupLihat(); tutupKategoriEdit(); }
 });
 </script>
