@@ -1703,14 +1703,6 @@ foreach ($tickets_my as $t):
         </span>
     </div>
 <?php $judul = _parse_ticket_title_view($t['jenis_kerusakan'], $t['nama_kategori'] ?? ''); ?>
-<?php $itemsAvailable = _persediaan_ringkas_view($this, $t['id'] ?? 0); ?>
-<?php if (!empty($itemsAvailable)): ?>
-<div class="mb-3">
-    <span class="stok-kurang-badge px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-md text-[10px] font-semibold border border-amber-500/30" title="Tiket persediaan — stok hanya info, tidak menghambat Ambil atau Selesaikan">
-        Stok hanya info — ACC 0 sampai diminta
-    </span>
-</div>
-<?php endif; ?>
 <?php if ($judul): ?>
     <div class="text-[10px] text-cyan-400 truncate mt-0.5 max-w-[160px]" title="<?= htmlspecialchars($judul) ?>">
         📋 <?= htmlspecialchars($judul) ?>
