@@ -869,7 +869,7 @@ html.light #modal-persediaan-container .text-emerald-400 { color: #059669 !impor
             );
             ?>
 
-            <button onclick='showDetailModal(<?= json_encode($detailAvail, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'
+            <button onclick='showDetailModal(<?= json_encode($detailAvail, JSON_HEX_APOS | JSON_HEX_QUOT) ?>, {hideDisetujui:true})'
                     class="w-full px-4 py-2.5 rounded-xl text-sm bg-slate-700/50 hover:bg-slate-600
                            text-white border border-slate-600 hover:border-slate-500 transition-all duration-200">
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1075,22 +1075,10 @@ foreach ($tickets_my as $t):
                 </svg>
                 Detail
             </button>
-            <?php if ($isPersediaanProgress): ?>
-            <button onclick="bukaModalAcc(<?= $t['id'] ?>, '<?= htmlspecialchars($t['kode_tiket'] ?? '', ENT_QUOTES) ?>', this)"
-                    data-acc='<?= json_encode($detailProgress['persediaan_acc_items'] ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'
-                    data-mode="edit"
-                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-emerald-600/20 hover:bg-emerald-500/40
-                           text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-400
-                           transition-all duration-200 flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Ubah ACC
-            </button>
-            <p class="text-[11px] header-subtitle leading-relaxed text-center">Atur jumlah disetujui 0 sampai diminta. Selesaikan memakai jumlah yang disetujui.</p>
-            <?php endif; ?>
-<button onclick="bukaEditTiket(<?= $t['id'] ?>)"
+<button onclick="bukaEditTiket(<?= $t['id'] ?>, this)"
+        data-acc='<?= json_encode($detailProgress['persediaan_acc_items'] ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'
+        data-kode="<?= htmlspecialchars($t['kode_tiket'] ?? '', ENT_QUOTES) ?>"
+        data-persediaan="<?= $isPersediaanProgress ? '1' : '0' ?>"
         class="w-full px-4 py-2.5 rounded-xl text-sm bg-amber-600/30 hover:bg-amber-500/50
                text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-400
                transition-all duration-200 flex items-center justify-center gap-2">
@@ -2295,6 +2283,21 @@ foreach ($tickets_my as $t):
 
 </div>
 
+                <!-- ACC persediaan (hanya tiket persediaan dalam pengerjaan) -->
+                <div id="editAccSection" class="hidden bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 space-y-2">
+                    <button type="button" onclick="bukaModalAccFromEdit()"
+                            class="w-full px-4 py-2.5 rounded-xl text-sm bg-emerald-600/20 hover:bg-emerald-500/40
+                                   text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-400
+                                   transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Ubah ACC
+                    </button>
+                    <p class="text-[11px] header-subtitle leading-relaxed text-center">Atur jumlah disetujui 0 sampai diminta.</p>
+                </div>
+
                 <!-- Peringatan -->
                 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 leading-relaxed">
                     ℹ️ Perubahan tersimpan langsung. <strong>Email tidak dikirim ulang</strong> ke pelapor.
@@ -2427,13 +2430,13 @@ foreach ($tickets_my as $t):
                                 <th class="pb-2 pr-3 font-semibold">Kode</th>
                                 <th class="pb-2 pr-3 font-semibold">Nama Barang</th>
                                 <th class="pb-2 font-semibold text-right">Diminta</th>
-                                <th class="pb-2 font-semibold text-right">Disetujui</th>
+                                <th id="th-persetujuan-teknisi" class="pb-2 font-semibold text-right">Disetujui</th>
                             </tr>
                         </thead>
                         <tbody id="modal-persediaan-items"></tbody>
                     </table>
                 </div>
-                <p class="header-subtitle text-xs mt-3">Disetujui mengikuti jumlah diminta bila belum diubah. Selesaikan memakai jumlah yang disetujui. Unduh PDF bila perlu arsip atau serah terima.</p>
+                <p id="modal-persediaan-note" class="header-subtitle text-xs mt-3">Disetujui mengikuti jumlah diminta bila belum diubah. Selesaikan memakai jumlah yang disetujui. Unduh PDF bila perlu arsip atau serah terima.</p>
                 <div class="flex justify-between mt-4 text-center">
                     <div class="flex-1">
                         <div class="header-subtitle text-xs">Petugas / Teknisi</div>
@@ -3090,8 +3093,10 @@ function bukaModalAcc(id, kode, src, mode) {
 }
 
 function tutupModalAcc() {
-    document.getElementById('modalAccPersediaan').classList.add('hidden');
-    document.body.style.overflow = 'auto';
+    var m = document.getElementById('modalAccPersediaan');
+    if (m) { m.classList.add('hidden'); m.style.zIndex = ''; }
+    var editOpen = document.getElementById('modalEditTiket') && !document.getElementById('modalEditTiket').classList.contains('hidden');
+    document.body.style.overflow = editOpen ? 'hidden' : 'auto';
     _accTicketId = null;
 }
 
@@ -3420,7 +3425,8 @@ document.getElementById('modalEditZoom').addEventListener('click', function (e) 
 // ================================================================
 // MODAL DETAIL
 // ================================================================
-function showDetailModal(ticket) {
+function showDetailModal(ticket, opts) {
+    const hideDisetujui = !!(opts && opts.hideDisetujui);
     const modal = document.getElementById('modalDetail');
     document.getElementById('modal-kode').textContent = ticket.kode_tiket || '-';
 
@@ -3481,7 +3487,7 @@ document.getElementById('modal-jenis-kerusakan').textContent = cleanJK || 'Tidak
         lampiranContainer.classList.remove('hidden');
     } else { lampiranContainer.classList.add('hidden'); }
 
-    renderPersediaanTeknisi(ticket);
+    renderPersediaanTeknisi(ticket, hideDisetujui);
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -3504,7 +3510,7 @@ function _tknParsePersediaanFallback(jk) {
     return out;
 }
 
-function renderPersediaanTeknisi(ticket) {
+function renderPersediaanTeknisi(ticket, hideDisetujui) {
     const container = document.getElementById('modal-persediaan-container');
     const tbody = document.getElementById('modal-persediaan-items');
     const isP = !!(ticket && ticket.is_persediaan);
@@ -3514,6 +3520,11 @@ function renderPersediaanTeknisi(ticket) {
         _tknPersediaanCache = { ticket: null, items: [] };
         return;
     }
+    const hide = !!hideDisetujui;
+    const thAcc = document.getElementById('th-persetujuan-teknisi');
+    if (thAcc) thAcc.style.display = hide ? 'none' : '';
+    const noteAcc = document.getElementById('modal-persediaan-note');
+    if (noteAcc) noteAcc.style.display = hide ? 'none' : '';
     // Sumber utama: paket ACC (ada diminta + disetujui + sisa); fallback ke full lalu parse teks.
     let raw = Array.isArray(ticket.persediaan_acc_items) && ticket.persediaan_acc_items.length
         ? ticket.persediaan_acc_items.map(function (a) {
@@ -3529,7 +3540,7 @@ function renderPersediaanTeknisi(ticket) {
     _tknPersediaanCache = { ticket: ticket, items: items };
     tbody.innerHTML = '';
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="header-subtitle text-xs text-center py-4">Data barang tidak tersedia</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + (hide ? '4' : '5') + '" class="header-subtitle text-xs text-center py-4">Data barang tidak tersedia</td></tr>';
     } else {
         items.forEach(function (it, idx) {
             const kode = it.kode_barang || '-';
@@ -3545,11 +3556,11 @@ function renderPersediaanTeknisi(ticket) {
                 + '<td class="py-2 pr-3 font-mono text-xs header-title"></td>'
                 + '<td class="py-2 pr-3 text-xs header-title"></td>'
                 + '<td class="py-2 text-right text-xs header-title"></td>'
-                + '<td class="py-2 text-right text-xs header-title font-semibold"></td>';
+                + (hide ? '' : '<td class="py-2 text-right text-xs header-title font-semibold"></td>');
             tr.children[1].textContent = kode;
             tr.children[2].textContent = nama;
             tr.children[3].textContent = diminta + (satuan ? ' ' + satuan : '');
-            tr.children[4].textContent = disetujui + (satuan ? ' ' + satuan : '');
+            if (!hide) tr.children[4].textContent = disetujui + (satuan ? ' ' + satuan : '');
             tbody.appendChild(tr);
         });
     }
@@ -3569,11 +3580,13 @@ function fillPersediaanPrintTeknisi() {
     var tb = document.getElementById('modal-persediaan-items');
     if (tb) {
         Array.prototype.forEach.call(tb.querySelectorAll('tr'), function (tr) {
-            if (!tr.cells || tr.cells.length < 5) return;
+            if (!tr.cells || tr.cells.length < 4) return;
             if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
             var k = (tr.cells[1].textContent || '').trim();
             var n = (tr.cells[2].textContent || '').trim();
-            var j = (tr.cells[4].textContent || '').trim() || (tr.cells[3].textContent || '').trim();
+            var j = tr.cells.length >= 5
+                ? ((tr.cells[4].textContent || '').trim() || (tr.cells[3].textContent || '').trim())
+                : (tr.cells[3].textContent || '').trim();
             if (!k && !n && !j) return;
             items.push({ kode_barang: k || '-', nama_barang_snapshot: n || '-', nama_barang: n || '-', jumlah: j || '', satuan_snapshot: '', satuan: '' });
         });
@@ -3922,23 +3935,28 @@ document.head.appendChild(loadMoreStyle);
 // ================================================================
 let _editTiketData   = null;
 let _editTiketMode   = ''; // 'gangguan' | 'zoom' | 'permintaan' | 'lainnya'
+let _editAcc         = { id: null, kode: '', items: [], isPersediaan: false };
 
 // Sub kategori yang perlu_jadwal (zoom) — ambil dari PHP
 const _subZoomIds = <?= json_encode($sub_zoom_ids ?? []) ?>;
 function _sembunyikanSemuaSection() {
     ['editSectionGangguan', 'editSectionPermintaanZoom',
      'editSectionPermintaanBiasa', 'editSectionLainnya',
-     'editSectionRuangRapat'
+     'editSectionRuangRapat', 'editAccSection'
     ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 }
 
-function bukaEditTiket(id) {
+function bukaEditTiket(id, btn) {
     const modal   = document.getElementById('modalEditTiket');
     const loading = document.getElementById('editTiketLoading');
     const form    = document.getElementById('editTiketForm');
+
+    _editAcc = { id: id, kode: (btn && btn.dataset && btn.dataset.kode) || ('#' + id),
+        items: btn ? _tknReadAccItems(btn) : [],
+        isPersediaan: !!(btn && btn.dataset && btn.dataset.persediaan === '1') };
 
     loading.classList.remove('hidden');
     form.classList.add('hidden');
@@ -4188,6 +4206,10 @@ if (isGangguan) {
 
 loading.classList.add('hidden');
 form.classList.remove('hidden');
+        // Section Ubah ACC: hanya tiket persediaan dalam pengerjaan.
+        if (_editAcc.isPersediaan && t.status === 'On Progress' && _editAcc.items.length) {
+            document.getElementById('editAccSection').classList.remove('hidden');
+        }
     })
     .catch(() => {
         Swal.fire({ icon: 'error', title: 'Gagal memuat data tiket', confirmButtonColor: '#f59e0b' });
@@ -4200,6 +4222,15 @@ function tutupEditTiket() {
     document.body.style.overflow = 'auto';
     _editTiketData = null;
     _editTiketMode = '';
+    _editAcc = { id: null, kode: '', items: [], isPersediaan: false };
+}
+
+function bukaModalAccFromEdit() {
+    if (!_editAcc.id || !_editAcc.items.length) return;
+    var m = document.getElementById('modalAccPersediaan');
+    if (m) m.style.zIndex = '60';
+    // _tknReadAccItems terima array langsung; mode edit via argumen ke-4.
+    bukaModalAcc(_editAcc.id, _editAcc.kode, _editAcc.items, 'edit');
 }
 
 function simpanEditTiket() {
