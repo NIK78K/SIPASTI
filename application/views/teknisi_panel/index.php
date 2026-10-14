@@ -464,33 +464,118 @@ html.light #btnExportPersediaanTeknisi { background: linear-gradient(to right, #
 html.light #modal-persediaan-container .text-emerald-400 { color: #059669 !important; }
 
 /* ══════════════════════════════════════════
-   CETAK FORM PERSEDIAAN TEKNISI (tiruan sisi user)
+   CETAK FORM PERSEDIAAN TEKNISI
 ══════════════════════════════════════════ */
-.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; font-weight:700; text-align:center; }
-.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
-.pm-print-meta strong { font-weight:400; }
-.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
-.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
-.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
-.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
-.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
-.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
-.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
-.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
+#pmPrintSheetTeknisi {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+}
+.pm-print-kop {
+    display: flex;
+    align-items: center;
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.pm-print-kop img {
+    height: 64px;
+    width: auto;
+    object-fit: contain;
+    margin-right: 15px;
+}
+.pm-print-kop-text {
+    font-size: 14pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+.pm-print-title {
+    display: block;
+    width: 100%;
+    font-size: 13pt;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+}
+.pm-print-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 20px;
+    margin-bottom: 15px;
+    font-size: 12px;
+}
+.pm-print-grid div {
+    display: flex;
+}
+.pm-print-grid span.label {
+    width: 130px;
+    font-weight: normal;
+}
+.pm-print-grid span.sep {
+    width: 10px;
+}
+.pm-print-grid strong {
+    font-weight: normal;
+}
+.pm-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 12px;
+    margin-bottom: 25px;
+}
+.pm-print-table th, .pm-print-table td {
+    padding: 6px 8px;
+    border: 1px solid #000;
+    text-align: left;
+    font-weight: normal;
+}
+.pm-print-table th {
+    background-color: #e5e7eb !important;
+    font-weight: bold;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+.pm-print-table th:first-child, .pm-print-table td:first-child { width: 6%; text-align: center; }
+.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width: 22%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width: 42%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width: 15%; text-align: center; }
+.pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width: 15%; text-align: center; }
+
+.pm-print-signature {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-top: 20px;
+    page-break-inside: avoid !important;
+}
+.pm-print-signature > div {
+    width: 200px;
+    text-align: center;
+}
+.pm-print-signature .space {
+    height: 60px;
+}
+.pm-print-signature strong {
+    display: block;
+    font-weight: bold;
+}
 @media screen {
     #pmPrintSheetTeknisi { display:none; }
 }
 @media print {
-    @page { size:A4 landscape; margin:0; }
-    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
-    body * { visibility:hidden !important; }
-    #modalDetail, #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { visibility:visible !important; }
-    #modalDetail { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; overflow:hidden !important; }
-    #modalDetail > div:not(#pmPrintSheetTeknisi) { display:none !important; }
-    #pmPrintSheetTeknisi { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
-    #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { page-break-inside:avoid !important; }
-    #pmPrintSheetTeknisi .pm-print-signature { page-break-inside:avoid !important; }
-    #pmPrintSheetTeknisi .pm-print-signature > div { min-width:180px; text-align:center; }
+    @page { size: A4 portrait; margin: 15mm; }
+    html, body { width: 210mm; height: 297mm; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+    body * { visibility: hidden !important; }
+    #modalDetail, #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { visibility: visible !important; }
+    #modalDetail { position: absolute !important; inset: 0 !important; display: block !important; width: 210mm !important; height: 297mm !important; padding: 0 !important; background: #fff !important; overflow: hidden !important; }
+    #modalDetail > div:not(#pmPrintSheetTeknisi) { display: none !important; }
+    #pmPrintSheetTeknisi { display: block !important; width: 100%; height: 100%; overflow: hidden !important; color: #000; font-family: Arial, Helvetica, sans-serif; padding: 0 !important; box-sizing: border-box !important; page-break-after: avoid !important; }
+    #pmPrintSheetTeknisi, #pmPrintSheetTeknisi * { page-break-inside: avoid !important; }
 }
 
 /* ══════════════════════════════════════════
@@ -2525,26 +2610,44 @@ foreach ($tickets_my as $t):
         </div>
     </div>
     <div id="pmPrintSheetTeknisi" aria-hidden="true">
+        <div class="pm-print-kop">
+            <img id="print_logo_bps" src="<?= base_url('assets/img/bps.png') ?>" alt="Logo BPS">
+            <div class="pm-print-kop-text">
+                <div style="font-size:14pt;font-weight:bold;text-transform:uppercase;">BPS PROVINSI RIAU</div>
+                <div style="font-size:6pt;font-weight:normal;margin-top:2px;">Jl. Pattimura No.12, Cinta Raja, Kecamatan Sail, Kota Pekanbaru, Riau 28131</div>
+            </div>
+        </div>
         <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
-        <div class="pm-print-meta">No Faktur: <strong id="print_faktur_teknisi"></strong></div>
-        <div class="pm-print-meta">Tanggal: <strong id="print_tanggal_teknisi"></strong></div>
-        <div class="pm-print-meta">Tim Kerja: <strong id="print_unit_teknisi"></strong></div>
-        <div class="pm-print-meta">Tanggal Dibutuhkan: <strong id="print_butuh_teknisi"></strong></div>
-        <div class="pm-print-meta">Pemohon: <strong id="print_pemohon_teknisi"></strong></div>
+        <div class="pm-print-grid">
+            <div><span class="label">No. Faktur</span><span class="sep">:</span><strong id="print_faktur_teknisi"></strong></div>
+            <div><span class="label">Tim Kerja</span><span class="sep">:</span><strong id="print_unit_teknisi"></strong></div>
+            <div><span class="label">Tanggal</span><span class="sep">:</span><strong id="print_tanggal_teknisi"></strong></div>
+            <div><span class="label">Tanggal Dibutuhkan</span><span class="sep">:</span><strong id="print_butuh_teknisi"></strong></div>
+            <div><span class="label">Pemohon</span><span class="sep">:</span><strong id="print_pemohon_teknisi"></strong></div>
+        </div>
         <table class="pm-print-table">
             <thead>
                 <tr>
                     <th>NO</th>
-                    <th>Kode barang</th>
+                    <th>KODE BARANG</th>
                     <th>NAMA BARANG</th>
-                    <th>Jumlah</th>
+                    <th>DIMINTA</th>
+                    <th>DISETUJUI</th>
                 </tr>
             </thead>
             <tbody id="print_items_teknisi"></tbody>
         </table>
         <div class="pm-print-signature">
-            <div><div>Petugas / Teknisi</div><strong id="print_teknisi_nama_teknisi"></strong></div>
-            <div><div>Pemohon</div><strong id="print_pemohon_nama_teknisi"></strong></div>
+            <div>
+                <div>Petugas / Teknisi</div>
+                <div class="space"></div>
+                <strong id="print_teknisi_nama_teknisi"></strong>
+            </div>
+            <div>
+                <div>Pemohon</div>
+                <div class="space"></div>
+                <strong id="print_pemohon_nama_teknisi"></strong>
+            </div>
         </div>
     </div>
 </div>
@@ -3575,7 +3678,6 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
 function fillPersediaanPrintTeknisi() {
     var txt = function (id) { var el = document.getElementById(id); return el ? (el.textContent || '').trim() : ''; };
     var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-    // ponytail: DOM on-screen sumber utama; cache/JSON hanya fallback bila tabel kosong.
     var items = [];
     var tb = document.getElementById('modal-persediaan-items');
     if (tb) {
@@ -3584,16 +3686,28 @@ function fillPersediaanPrintTeknisi() {
             if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
             var k = (tr.cells[1].textContent || '').trim();
             var n = (tr.cells[2].textContent || '').trim();
-            var j = tr.cells.length >= 5
-                ? ((tr.cells[4].textContent || '').trim() || (tr.cells[3].textContent || '').trim())
-                : (tr.cells[3].textContent || '').trim();
-            if (!k && !n && !j) return;
-            items.push({ kode_barang: k || '-', nama_barang_snapshot: n || '-', nama_barang: n || '-', jumlah: j || '', satuan_snapshot: '', satuan: '' });
+            var diminta = (tr.cells[3].textContent || '').trim();
+            var disetujui = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : diminta;
+            if (!k && !n && !diminta) return;
+            items.push({ kode_barang: k || '-', nama_barang: n || '-', jumlah: diminta || '-', jumlah_disetujui: disetujui || '-' });
         });
     }
     var cache = (typeof _tknPersediaanCache !== 'undefined') ? _tknPersediaanCache : { ticket: null, items: [] };
     var ticket = cache.ticket || null;
-    if (!items.length && cache.items && cache.items.length) items = cache.items;
+    if (!items.length && cache.items && cache.items.length) {
+        items = cache.items.map(function(it) {
+            var diminta = parseInt(it.jumlah, 10) || 0;
+            var accRaw = (it.jumlah_disetujui !== null && it.jumlah_disetujui !== undefined && it.jumlah_disetujui !== '') ? parseInt(it.jumlah_disetujui, 10) : diminta;
+            var disetujui = isNaN(accRaw) ? diminta : accRaw;
+            var satuan = it.satuan_snapshot || it.satuan || '';
+            return {
+                kode_barang: it.kode_barang || '-',
+                nama_barang: it.nama_barang_snapshot || it.nama_barang || '-',
+                jumlah: diminta + (satuan ? ' ' + satuan : ''),
+                jumlah_disetujui: disetujui + (satuan ? ' ' + satuan : '')
+            };
+        });
+    }
     var kode = txt('modal-kode');
     var dibuat = txt('modal-created');
     var pemohon = txt('modal-persediaan-pemohon');
@@ -3616,31 +3730,56 @@ function fillPersediaanPrintTeknisi() {
     set('print_butuh_teknisi', butuhM ? butuhM[1].trim() : '-');
     set('print_pemohon_teknisi', pemohon || '-');
     set('print_pemohon_nama_teknisi', pemohon || '-');
-    set('print_teknisi_nama_teknisi', (teknisi && teknisi !== '-') ? teknisi : '-');
+    var tTeknisi = (teknisi && teknisi !== '-') ? teknisi : '(....................)';
+    set('print_teknisi_nama_teknisi', tTeknisi);
+
     var printRows = document.getElementById('print_items_teknisi');
     if (!printRows) return false;
     printRows.innerHTML = '';
-    var n = Math.max(items.length, 6);
-    for (var i = 0; i < n; i++) {
-        var it = items[i] || {};
-        var kkode = it.kode_barang || '';
-        var nnama = it.nama_barang_snapshot || it.nama_barang || '';
-        var satuan = it.satuan_snapshot || it.satuan || '';
-        var jml = it.jumlah ? it.jumlah + (satuan ? ' ' + satuan : '') : '';
+    if (!items.length) {
         var tr = document.createElement('tr');
-        [i + 1, kkode, nnama, jml].forEach(function (v) {
-            var td = document.createElement('td');
-            td.textContent = v;
-            tr.appendChild(td);
-        });
+        tr.innerHTML = '<td colspan="5" style="text-align:center;padding:8px;">Data barang tidak tersedia</td>';
         printRows.appendChild(tr);
+    } else {
+        items.forEach(function (it, i) {
+            var tr = document.createElement('tr');
+            [i + 1, it.kode_barang || '-', it.nama_barang || '-', it.jumlah || '-', it.jumlah_disetujui || '-'].forEach(function (v, idx) {
+                var td = document.createElement('td');
+                td.textContent = v;
+                if (idx === 0 || idx === 3 || idx === 4) {
+                    td.style.textAlign = 'center';
+                }
+                tr.appendChild(td);
+            });
+            printRows.appendChild(tr);
+        });
     }
     return true;
 }
 
 function exportPersediaanPdfTeknisi() {
-    fillPersediaanPrintTeknisi();
-    window.print();
+    if (!fillPersediaanPrintTeknisi()) return;
+    var fakturEl = document.getElementById('print_faktur_teknisi');
+    var faktur = fakturEl ? (fakturEl.textContent || '').trim() : '';
+    var cleanFaktur = faktur.replace(/[^a-zA-Z0-9\-]/g, '');
+    var filename = cleanFaktur ? cleanFaktur : 'Form-Persetujuan';
+    var originalTitle = document.title;
+    document.title = filename;
+
+    var doPrint = function() {
+        window.print();
+        setTimeout(function() {
+            document.title = originalTitle;
+        }, 1000);
+    };
+
+    var img = document.getElementById('print_logo_bps');
+    if (img && !img.complete) {
+        img.onload = doPrint;
+        img.onerror = doPrint;
+    } else {
+        doPrint();
+    }
 }
 window.fillPersediaanPrintTeknisi = fillPersediaanPrintTeknisi;
 window.exportPersediaanPdfTeknisi = exportPersediaanPdfTeknisi;
