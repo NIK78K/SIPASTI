@@ -910,6 +910,8 @@ CREATE TABLE IF NOT EXISTS `ticket_persediaan_items` (
   `jumlah` INT(11) NOT NULL DEFAULT 1,
   `nama_barang_snapshot` VARCHAR(150) DEFAULT NULL,
   `satuan_snapshot` VARCHAR(50) DEFAULT NULL,
+  `rating` TINYINT NULL DEFAULT NULL,
+  `komentar_item` TEXT DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `ticket_id` (`ticket_id`),
@@ -956,6 +958,35 @@ SET @col_exists := (
 );
 SET @alter_sql := IF(@col_exists = 0,
   'ALTER TABLE `ticket_persediaan_items` ADD COLUMN `jumlah_disetujui` INT NULL AFTER `jumlah`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- (f) rating per barang: rating + komentar_item (guard INFORMATION_SCHEMA, pola 005a)
+-- NULL=belum dinilai. AVG katalog hanya hitung 1-5.
+SET @col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ticket_persediaan_items'
+    AND COLUMN_NAME = 'rating'
+);
+SET @alter_sql := IF(@col_exists = 0,
+  'ALTER TABLE `ticket_persediaan_items` ADD COLUMN `rating` TINYINT NULL DEFAULT NULL AFTER `jumlah_disetujui`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @alter_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+SET @col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ticket_persediaan_items'
+    AND COLUMN_NAME = 'komentar_item'
+);
+SET @alter_sql := IF(@col_exists = 0,
+  'ALTER TABLE `ticket_persediaan_items` ADD COLUMN `komentar_item` TEXT NULL AFTER `rating`',
   'SELECT 1'
 );
 PREPARE stmt FROM @alter_sql;

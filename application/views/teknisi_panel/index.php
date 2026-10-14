@@ -3596,6 +3596,7 @@ document.getElementById('modal-jenis-kerusakan').textContent = cleanJK || 'Tidak
     document.body.style.overflow = 'hidden';
 }
 
+const TEKNISI_LOGIN = <?= json_encode($profil['name'] ?? '') ?>;
 let _tknPersediaanCache = { ticket: null, items: [] };
 
 function _tknParsePersediaanFallback(jk) {
@@ -3669,7 +3670,7 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
     }
     var _tknEl = document.getElementById('modal-persediaan-teknisi');
     var _pmhEl = document.getElementById('modal-persediaan-pemohon');
-    if (_tknEl) _tknEl.textContent = ticket.nama_teknisi || '-';
+    if (_tknEl) _tknEl.textContent = (ticket.nama_teknisi || TEKNISI_LOGIN || '-');
     if (_pmhEl) _pmhEl.textContent = ticket.pelapor || '-';
     fillPersediaanPrintTeknisi();
     container.classList.remove('hidden');
@@ -3718,7 +3719,8 @@ function fillPersediaanPrintTeknisi() {
         if (!kode || kode === '-') kode = ticket.kode_tiket || kode;
         if (!dibuat || dibuat === '-') dibuat = ticket.created_at || ticket.tanggal || dibuat;
         if (!pemohon || pemohon === '-') pemohon = ticket.pelapor || pemohon;
-        if (!teknisi || teknisi === '-') teknisi = ticket.nama_teknisi || teknisi;
+        if (!teknisi || teknisi === '-') teknisi = ticket.nama_teknisi || TEKNISI_LOGIN || teknisi;
+        if (!teknisi || teknisi === '-') teknisi = TEKNISI_LOGIN || teknisi;
         if (!jk || jk === 'Tidak ada deskripsi') jk = ticket.jenis_kerusakan || jk;
     }
     if ((!kode || kode === '-') && (!items.length)) return false;

@@ -135,10 +135,12 @@ if (!function_exists('persediaan_form_data')) {
         if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) {
             foreach ($t['persediaan_items'] as $item) {
                 $items[] = [
+                    'barang_id' => (int) ($item['barang_id'] ?? 0),
                     'kode'   => $item['kode_barang'] ?? '-',
                     'nama'   => $item['nama_barang_snapshot'] ?? $item['nama_barang'] ?? '-',
                     'jumlah' => (int) ($item['jumlah'] ?? 0),
                     'satuan' => $item['satuan_snapshot'] ?? $item['satuan'] ?? 'pcs',
+                    'rating' => isset($item['rating']) && $item['rating'] !== null && $item['rating'] !== '' ? (int) $item['rating'] : null,
                     'disetujui' => (array_key_exists('jumlah_disetujui', $item) && $item['jumlah_disetujui'] !== null && $item['jumlah_disetujui'] !== '')
                         ? (int) $item['jumlah_disetujui'] : null,
                 ];
@@ -436,18 +438,39 @@ foreach (($tickets ?? []) as $t) {
             <!-- RATING -->
             <td class="px-3 py-3 text-center">
                 <?php if ($status === 'Selesai'): ?>
-                    <?php if (empty($t['rating'])): ?>
+                    <?php $is_persediaan_rate = isPersediaan($t); ?>
+                    <?php if ($is_persediaan_rate): ?>
+                        <?php $need_item_rate = false; foreach (($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate = true; break; } } ?>
+                        <?php $rate_items = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
+                        <?php $rate_items_json = htmlspecialchars(json_encode(array_values($rate_items)), ENT_QUOTES); ?>
+                        <?php if ($need_item_rate): ?>
+                            <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_json ?>)"
+                                    class="px-3 py-1 rounded-full bg-gradient-to-r from-orange-400 to-orange-500
+                                           text-white text-[10px] font-semibold shadow hover:brightness-110 whitespace-nowrap">
+                                Beri Rating
+                            </button>
+                        <?php else: ?>
+                            <?php $rt_sum = 0; $rt_n = 0; foreach ($rate_items as $ri2) { if (!empty($ri2['rating'])) { $rt_sum += (int) $ri2['rating']; $rt_n++; } } $rt_avg = $rt_n ? (int) round($rt_sum / $rt_n) : 0; $rt_avg_exact = $rt_n ? round($rt_sum / $rt_n, 1) : 0; ?>
+                            <div class="flex justify-center gap-0.5 text-yellow-400 text-sm">
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                    <span class="<?= $i <= $rt_avg ? '' : 'text-slate-300' ?>">★</span>
+                                <?php endfor ?>
+                            </div>
+                        <?php endif ?>
+                    <?php else: ?>
+                        <?php if (empty($t['rating'])): ?>
                         <button onclick="openRatingModal(<?= $t['id'] ?>)"
                                 class="px-3 py-1 rounded-full bg-gradient-to-r from-orange-400 to-orange-500
                                        text-white text-[10px] font-semibold shadow hover:brightness-110 whitespace-nowrap">
                             Beri Rating
                         </button>
-                    <?php else: ?>
+                        <?php else: ?>
                         <div class="flex justify-center gap-0.5 text-yellow-400 text-sm">
                             <?php for ($i = 1; $i <= 5; $i++): ?>
                                 <span class="<?= $i <= $t['rating'] ? '' : 'text-slate-300' ?>">★</span>
                             <?php endfor ?>
                         </div>
+                        <?php endif ?>
                     <?php endif ?>
                 <?php else: ?>
                     <span class="text-slate-400 text-[10px]">-</span>
@@ -688,7 +711,28 @@ foreach (($tickets ?? []) as $t) {
 
         <?php if ($status === 'Selesai'): ?>
             <div class="pt-3 border-t border-slate-100">
-                <?php if (empty($t['rating'])): ?>
+                <?php $is_persediaan_rate_mob = isPersediaan($t); ?>
+                <?php if ($is_persediaan_rate_mob): ?>
+                    <?php $need_item_rate_mob = false; foreach ((array) ($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate_mob = true; break; } } ?>
+                    <?php $rate_items_mob = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items_mob[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
+                    <?php $rate_items_mob_json = htmlspecialchars(json_encode(array_values($rate_items_mob)), ENT_QUOTES); ?>
+                    <?php if ($need_item_rate_mob): ?>
+                    <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_mob_json ?>)"
+                            class="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500
+                                   text-white text-sm font-semibold shadow hover:brightness-110">
+                        Beri Rating
+                    </button>
+                    <?php else: ?>
+                    <?php $rt_sum_m = 0; $rt_n_m = 0; foreach ($rate_items_mob as $ri2m) { if (!empty($ri2m['rating'])) { $rt_sum_m += (int) $ri2m['rating']; $rt_n_m++; } } $rt_avg_m = $rt_n_m ? (int) round($rt_sum_m / $rt_n_m) : 0; $rt_avg_exact_m = $rt_n_m ? round($rt_sum_m / $rt_n_m, 1) : 0; ?>
+                    <div class="text-center">
+                        <div class="flex justify-center gap-1 text-yellow-400 text-lg">
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <span class="<?= $i <= $rt_avg_m ? '' : 'text-slate-300' ?>">★</span>
+                            <?php endfor ?>
+                        </div>
+                    </div>
+                    <?php endif ?>
+                <?php elseif (empty($t['rating'])): ?>
                     <button onclick="openRatingModal(<?= $t['id'] ?>)"
                             class="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500
                                    text-white text-sm font-semibold shadow hover:brightness-110">
@@ -873,6 +917,32 @@ foreach (($tickets ?? []) as $t) {
     </div>
 </div>
 
+<!-- ============================================================
+     MODAL RATING BARANG PERSEDIAAN (per barang_id)
+============================================================ -->
+<div id="ratingBarangModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 px-4">
+    <div class="w-full max-w-md rounded-2xl bg-white border border-orange-200 p-6 shadow-[0_25px_60px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto">
+        <h2 class="text-lg font-bold text-slate-800 mb-1">Beri Rating Barang</h2>
+        <p class="text-xs text-slate-500 mb-4">Nilai tiap barang yang Anda terima (1-5 bintang).</p>
+        <form method="post" id="ratingBarangForm">
+            <div id="ratingBarangRows" class="space-y-4 mb-4"></div>
+            <textarea name="komentar" rows="2" placeholder="Saran / masukan (opsional)"
+                class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm mb-5
+                       focus:ring-2 focus:ring-orange-400/30 focus:outline-none"></textarea>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeRatingBarangModal()"
+                    class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                <button type="submit" id="submitRatingBarangBtn"
+                    class="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500
+                           hover:brightness-110 text-white font-semibold shadow transition
+                           disabled:opacity-50 disabled:cursor-not-allowed">
+                    Kirim Rating
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 <!-- ============================================================
      MODAL LAYANAN / ZOOM
@@ -988,35 +1058,6 @@ foreach (($tickets ?? []) as $t) {
                 </svg>
             </button>
         </div>
-        <div id="pmPrintSheet" aria-hidden="true">
-            <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
-            <div class="pm-print-meta"><strong id="print_faktur"></strong></div>
-            <div class="pm-print-meta"><strong id="print_tanggal"></strong></div>
-            <div class="pm-print-meta"><strong id="print_unit"></strong></div>
-            <table class="pm-print-table">
-                <thead>
-                    <tr>
-                        <th>NO</th>
-                        <th>Kode barang</th>
-                        <th>NAMA BARANG</th>
-                        <th>Jumlah</th>
-                        <th>ACC</th>
-                    </tr>
-                </thead>
-                <tbody id="print_items"></tbody>
-            </table>
-            <div id="print_catatan_wrap" style="margin-top:8px;font-size:16px;">
-                <div><strong>Catatan Teknisi</strong> <span id="print_catatan_teknisi"></span></div>
-                <div id="print_catatan_text" style="white-space:pre-line;"></div>
-                <div id="print_file_row">Lampiran: <span id="print_file_name"></span></div>
-            </div>
-            <div class="pm-print-signature" style="display:flex;justify-content:flex-end;">
-                <div style="min-width:180px;text-align:center;">
-                    <div>Pemohon</div>
-                    <strong id="print_pemohon" style="display:block;margin-top:48px;"></strong>
-                </div>
-            </div>
-        </div>
         <div style="padding:20px 22px;overflow-y:auto;flex:1;">
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;">
                 <div class="pm-meta"><span>NO FAKTUR</span><strong id="pm_faktur"></strong></div>
@@ -1031,8 +1072,8 @@ foreach (($tickets ?? []) as $t) {
                             <th style="padding:10px 12px;text-align:center;border:1px solid #ddd6fe;width:52px;">NO</th>
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">KODE BARANG</th>
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">NAMA BARANG</th>
-                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">JUMLAH</th>
-                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">ACC</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">DIMINTA</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">DISETUJUI</th>
                         </tr>
                     </thead>
                     <tbody id="pm_items"></tbody>
@@ -1060,10 +1101,6 @@ foreach (($tickets ?? []) as $t) {
         </div>
         <div style="padding:14px 22px 20px;flex-shrink:0;border-top:0.5px solid #f1f5f9;">
             <div style="display:flex;gap:10px;">
-                <button onclick="exportPersediaanPdf()"
-                        style="flex:1;padding:10px;border-radius:10px;border:0;background:#7c3aed;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
-                    Export PDF
-                </button>
                 <button onclick="closePersediaanModal()"
                         style="flex:1;padding:10px;border-radius:10px;border:0.5px solid #e2e8f0;background:transparent;font-size:13px;color:#64748b;cursor:pointer;font-family:inherit;">
                     Tutup
@@ -1077,37 +1114,6 @@ foreach (($tickets ?? []) as $t) {
 .pm-meta { background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:10px;padding:10px 14px; }
 .pm-meta span { display:block;font-size:9px;font-weight:700;letter-spacing:.06em;color:#94a3b8;margin-bottom:4px; }
 .pm-meta strong { display:block;font-size:12px;color:#1e293b;word-break:break-word; }
-@media print {
-    @page { size:A4 landscape; margin:0; }
-    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
-    body * { visibility:hidden !important; }
-    #persediaanModal, #persediaanModal > div, #pmPrintSheet, #pmPrintSheet * {
-        visibility:visible !important;
-    }
-    #persediaanModal { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; }
-    #persediaanModal > div { display:block !important; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border:0 !important; box-shadow:none !important; border-radius:0 !important; }
-    #persediaanModal > div > *:not(#pmPrintSheet) { display:none !important; }
-    #pmPrintSheet { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
-    #pmPrintSheet, #pmPrintSheet * { page-break-inside:avoid !important; }
-    #pmPrintSheet .pm-print-signature { page-break-inside:avoid !important; }
-}
-.pm-print-sheet { display:none; }
-.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; text-align:center; }
-.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
-.pm-print-meta span { display:inline-block; width:105px; }
-.pm-print-meta strong { font-weight:400; }
-.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
-.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
-.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
-.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
-.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:36%; }
-.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:20%; }
-.pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width:15%; }
-.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
-.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
-@media screen {
-    #pmPrintSheet { display:none; }
-}
 </style>
 
 
@@ -1307,6 +1313,63 @@ foreach (($tickets ?? []) as $t) {
         }
     }
 
+    /* ============ RATING BARANG PERSEDIAAN (N baris bintang per barang) ============ */
+    var ratingBarangVals = {};
+    window.openRatingBarangModal = function(ticketId, items) {
+        var form = document.getElementById('ratingBarangForm');
+        if (form) form.action = '<?= base_url("user_ticket/rating_barang/") ?>' + ticketId;
+        ratingBarangVals = {};
+        var box = document.getElementById('ratingBarangRows');
+        box.innerHTML = '';
+        (items || []).forEach(function (it) {
+            var bid = it.barang_id;
+            ratingBarangVals[bid] = it.rating || 0;
+            var row = document.createElement('div');
+            row.className = 'rounded-xl border border-slate-200 p-3';
+            var name = document.createElement('p');
+            name.className = 'text-sm font-semibold text-slate-700 mb-2';
+            name.textContent = it.nama || ('Barang #' + bid);
+            row.appendChild(name);
+            var stars = document.createElement('div');
+            stars.className = 'flex gap-1 text-2xl';
+            for (var i = 1; i <= 5; i++) {
+                (function (v) {
+                    var s = document.createElement('span');
+                    s.id = 'rb-star-' + bid + '-' + v;
+                    s.className = 'cursor-pointer select-none ' + (v <= (it.rating || 0) ? 'text-yellow-400' : 'text-slate-300');
+                    s.textContent = '★';
+                    s.onclick = function () { window.setRatingBarang(bid, v); };
+                    stars.appendChild(s);
+                })(i);
+            }
+            row.appendChild(stars);
+            var hid = document.createElement('input');
+            hid.type = 'hidden'; hid.name = 'rating[' + bid + ']'; hid.id = 'rb-val-' + bid;
+            hid.value = it.rating || '';
+            row.appendChild(hid);
+            box.appendChild(row);
+        });
+        var m = document.getElementById('ratingBarangModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
+    };
+
+    window.setRatingBarang = function(bid, val) {
+        ratingBarangVals[bid] = val;
+        var hid = document.getElementById('rb-val-' + bid);
+        if (hid) hid.value = val;
+        for (var i = 1; i <= 5; i++) {
+            var s = document.getElementById('rb-star-' + bid + '-' + i);
+            if (s) s.className = 'cursor-pointer select-none ' + (i <= val ? 'text-yellow-400' : 'text-slate-300');
+        }
+    };
+
+    window.closeRatingBarangModal = function() {
+        var m = document.getElementById('ratingBarangModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
+        var btn = document.getElementById('submitRatingBarangBtn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Kirim Rating'; }
+    };
+
     /* ============ LAYANAN ZOOM ============ */
     window.openLayananModal = function(data) {
         document.getElementById('lm_subkategori').textContent = data.sub_kategori || 'Detail Layanan';
@@ -1373,15 +1436,9 @@ foreach (($tickets ?? []) as $t) {
         document.getElementById('pm_tanggal_butuh').textContent = form.tanggal_butuh || '-';
         document.getElementById('pm_pemohon').textContent = form.pemohon || '-';
         document.getElementById('pm_teknisi').textContent = data.nama_teknisi || '-';
-        document.getElementById('print_faktur').textContent = form.kode_tiket || data.kode_tiket || '-';
-        document.getElementById('print_tanggal').textContent = form.tanggal || '-';
-        document.getElementById('print_unit').textContent = form.unit_kerja || '-';
-        document.getElementById('print_pemohon').textContent = form.pemohon || '-';
 
         var rows = document.getElementById('pm_items');
-        var printRows = document.getElementById('print_items');
         rows.innerHTML = '';
-        printRows.innerHTML = '';
         var items = Array.isArray(form.items) ? form.items : [];
         if (!items.length) {
             rows.innerHTML = '<tr><td colspan="5" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
@@ -1406,19 +1463,6 @@ foreach (($tickets ?? []) as $t) {
                 rows.appendChild(row);
             });
         }
-        for (var printIndex = 0; printIndex < Math.max(items.length, 6); printIndex++) {
-            var printItem = items[printIndex] || {};
-            var printRow = document.createElement('tr');
-            var printAcc = (printItem.disetujui !== null && printItem.disetujui !== undefined && printItem.disetujui !== '' && printItem.jumlah)
-                ? printItem.disetujui + ' ' + (printItem.satuan || 'pcs') : '';
-            [printIndex + 1, printItem.kode || '', printItem.nama || '', printItem.jumlah ? printItem.jumlah + ' ' + (printItem.satuan || 'pcs') : '', printAcc]
-                .forEach(function(value) {
-                    var cell = document.createElement('td');
-                    cell.textContent = value;
-                    printRow.appendChild(cell);
-                });
-            printRows.appendChild(printRow);
-        }
 
         var adaCatatanPm = !!(data.layanan_catatan && data.layanan_catatan.trim());
         var adaFilePm = !!(data.layanan_file && data.layanan_file.trim());
@@ -1432,11 +1476,6 @@ foreach (($tickets ?? []) as $t) {
             pmFileLink.href = '<?= base_url("uploads/layanan/") ?>' + data.layanan_file;
             document.getElementById('pm_file_name').textContent = data.layanan_file;
         }
-        document.getElementById('print_catatan_teknisi').textContent = data.nama_teknisi ? '- ' + data.nama_teknisi : '';
-        document.getElementById('print_catatan_text').textContent = adaCatatanPm ? data.layanan_catatan : 'Belum ada catatan teknisi';
-        document.getElementById('print_file_row').style.display = adaFilePm ? 'block' : 'none';
-        if (adaFilePm) document.getElementById('print_file_name').textContent = data.layanan_file;
-
         var modal = document.getElementById('persediaanModal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -1446,10 +1485,6 @@ foreach (($tickets ?? []) as $t) {
         var modal = document.getElementById('persediaanModal');
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-    };
-
-    window.exportPersediaanPdf = function() {
-        window.print();
     };
 
     /* ============ CATATAN TEKNISI ============ */
@@ -1513,12 +1548,13 @@ foreach (($tickets ?? []) as $t) {
         }
 
         // Close on backdrop click
-        ['ratingModal','layananModal','catatanModal','batalModal','uploadDokumenModal'].forEach(function(id) {
+        ['ratingModal','ratingBarangModal','layananModal','catatanModal','batalModal','uploadDokumenModal'].forEach(function(id) {
             var m = document.getElementById(id);
             if (!m) return;
             m.addEventListener('click', function(e) {
                 if (e.target !== this) return;
                 if (id === 'ratingModal')             window.closeRatingModal();
+                else if (id === 'ratingBarangModal')  window.closeRatingBarangModal();
                 else if (id === 'layananModal')        window.closeLayananModal();
                 else if (id === 'catatanModal')        window.closeCatatanModal();
                 else if (id === 'batalModal')          window.closeBatalModal();
@@ -1531,6 +1567,24 @@ foreach (($tickets ?? []) as $t) {
         if (ratingForm) {
             ratingForm.addEventListener('submit', function() {
                 var btn = document.getElementById('submitRatingBtn');
+                if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Mengirim...'; }
+            });
+        }
+
+        // Rating barang form: wajib minimal 1 barang dinilai
+        var ratingBarangForm = document.getElementById('ratingBarangForm');
+        if (ratingBarangForm) {
+            ratingBarangForm.addEventListener('submit', function(e) {
+                var ok = false;
+                ratingBarangForm.querySelectorAll('input[name^="rating["]').forEach(function (el) {
+                    if (parseInt(el.value || '0', 10) >= 1) ok = true;
+                });
+                if (!ok) {
+                    e.preventDefault();
+                    if (window.Swal) Swal.fire({ icon: 'warning', title: 'Belum ada rating', text: 'Beri minimal 1 bintang untuk satu barang.' });
+                    return;
+                }
+                var btn = document.getElementById('submitRatingBarangBtn');
                 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Mengirim...'; }
             });
         }

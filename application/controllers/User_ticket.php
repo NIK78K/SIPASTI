@@ -614,6 +614,28 @@ public function history()
         exit;
     }
 
+    /* ===============================
+       RATING BARANG PERSEDIAAN (per barang_id)
+       POST: rating[<barang_id>] = 1-5, komentar opsional.
+       Endpoint rating tiket existing tetap untuk non-persediaan.
+    =============================== */
+    public function rating_barang($ticket_id)
+    {
+        $ratings = $this->input->post('rating');
+        if (!is_array($ratings) || empty($ratings)) {
+            redirect('user_ticket/history');
+            exit;
+        }
+        $this->User_ticket_model->save_rating_barang(
+            $ticket_id,
+            $this->session->userdata('user_id'),
+            $ratings,
+            $this->input->post('komentar')
+        );
+        redirect('user_ticket/history');
+        exit;
+    }
+
 public function search_perangkat()
 {
     $q = $this->input->get('q');

@@ -726,8 +726,10 @@ public function get_history_limit($user_id, $limit, $offset)
         $map = [];
         if (!empty($ids)) {
             $hasAcc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
+            $hasRate = $this->db->field_exists('rating', 'ticket_persediaan_items');
+            $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
             $items = $this->db
-                ->select('i.ticket_id, i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ', i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
+                ->select('i.ticket_id, i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ($hasRate ? ', i.rating' : '') . ($hasKomen ? ', i.komentar_item' : '') . ', i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
                 ->from('ticket_persediaan_items i')
                 ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
                 ->where_in('i.ticket_id', $ids)
@@ -757,6 +759,8 @@ public function get_history_limit($user_id, $limit, $offset)
 
     /* =========================
        RATING
+       tickets.rating tetap untuk non-persediaan.
+       Persediaan: rating per barang di ticket_persediaan_items.
     ========================= */
     public function update_rating($ticket_id, $user_id, $rating, $komentar = null)
     {
@@ -786,6 +790,62 @@ public function get_history_limit($user_id, $limit, $offset)
 
         $this->session->set_flashdata('error', 'Gagal menyimpan rating');
         return false;
+    }
+
+    /* =========================
+       RATING BARANG PERSEDIAAN PER BARANG (barang_id)
+       Validasi: tiket milik user + Selesai, barang bagian tiket, nilai 1-5.
+       Sekali per pasangan tiket-barang; update bila sudah ada.
+    ========================= */
+    public function save_rating_barang($ticket_id, $user_id, $ratings, $komentar = null)
+    {
+        $ticket_id = (int) $ticket_id;
+        if ($ticket_id <= 0 || !is_array($ratings) || empty($ratings)) {
+            $this->session->set_flashdata('error', 'Data rating barang tidak valid.');
+            return false;
+        }
+        $ticket = $this->db
+            ->where('id', $ticket_id)
+            ->where('user_id', $user_id)
+            ->where('status', 'Selesai')
+            ->get('tickets')
+            ->row_array();
+        if (!$ticket) {
+            $this->session->set_flashdata('error', 'Tiket tidak valid atau belum selesai');
+            return false;
+        }
+        if (!$this->db->table_exists('ticket_persediaan_items')
+            || !$this->db->field_exists('rating', 'ticket_persediaan_items')) {
+            $this->session->set_flashdata('error', 'Fitur rating barang belum tersedia.');
+            return false;
+        }
+        $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
+        $rows = $this->db->where('ticket_id', $ticket_id)->get('ticket_persediaan_items')->result_array();
+        $valid_ids = [];
+        foreach ($rows as $r) $valid_ids[(int) $r['barang_id']] = true;
+        $clean = [];
+        foreach ($ratings as $bid => $val) {
+            $bid = (int) $bid;
+            $val = (int) $val;
+            if ($bid <= 0 || $val < 1 || $val > 5) continue;
+            if (!isset($valid_ids[$bid])) continue;
+            $clean[$bid] = $val;
+        }
+        if (empty($clean)) {
+            $this->session->set_flashdata('error', 'Nilai rating harus 1-5 untuk barang di tiket ini.');
+            return false;
+        }
+        foreach ($clean as $bid => $val) {
+            $upd = ['rating' => $val];
+            if ($hasKomen && $komentar !== null && $komentar !== '') $upd['komentar_item'] = substr((string) $komentar, 0, 1000);
+            $this->db->where('ticket_id', $ticket_id)->where('barang_id', $bid)->update('ticket_persediaan_items', $upd);
+        }
+        // Komentar tiket tetap diisi agar riwayat konsisten.
+        if ($komentar !== null && $komentar !== '') {
+            $this->db->where('id', $ticket_id)->where('user_id', $user_id)->update('tickets', ['komentar' => substr((string) $komentar, 0, 1000)]);
+        }
+        $this->session->set_flashdata('success', 'Terima kasih atas rating barang Anda! ⭐');
+        return true;
     }
 
     /* =========================
@@ -949,7 +1009,20 @@ public function auto_rate_expired_tickets($user_id)
             'komentar' => 'Dinilai otomatis oleh sistem'
         ]);
 
-    return $this->db->affected_rows();
+    $n = $this->db->affected_rows();
+
+    // Konsisten: rating item persediaan yang masih NULL ikut jadi 5.
+    if ($n > 0 && $this->db->table_exists('ticket_persediaan_items')
+        && $this->db->field_exists('rating', 'ticket_persediaan_items')) {
+        $ids = array_column($tickets, 'id');
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!empty($ids)) {
+            // Hanya NULL -> 5, agar AVG konsisten dengan tickets.rating.
+            $this->db->query('UPDATE ticket_persediaan_items SET rating = 5 WHERE ticket_id IN (' . implode(',', $ids) . ') AND rating IS NULL');
+        }
+    }
+
+    return $n;
 }
 
 public function get_zoom_ticket_for_upload($ticket_id, $user_id)
@@ -1023,8 +1096,19 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
         return strnatcasecmp($a['kode_barang'] ?? '', $b['kode_barang'] ?? '');
     });
 
+    // Agregat rating per barang (hanya 1-5, abaikan NULL). Satu query.
+    $agg = [];
+    if ($this->db->table_exists('ticket_persediaan_items')
+        && $this->db->field_exists('rating', 'ticket_persediaan_items')) {
+        $q = $this->db->query('SELECT barang_id, AVG(rating) AS rating_avg, COUNT(rating) AS rating_count FROM ticket_persediaan_items WHERE rating BETWEEN 1 AND 5 GROUP BY barang_id');
+        foreach ($q->result_array() as $r) $agg[(int) $r['barang_id']] = $r;
+    }
+
     foreach ($rows as &$r) {
         $r['sisa'] = $this->get_sisa_persediaan($r['id'], $bulan, $tahun);
+        $a = $agg[(int) $r['id']] ?? null;
+        $r['rating_avg'] = $a ? round((float) $a['rating_avg'], 1) : null;
+        $r['rating_count'] = $a ? (int) $a['rating_count'] : 0;
     }
     unset($r);
 

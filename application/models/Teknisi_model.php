@@ -143,7 +143,8 @@ public function get_ticket_teknisi($user_id)
         pelapor.name AS pelapor,
         pelapor.email AS email,
         up.phone AS no_hp,
-        teknisi_user.name AS teknisi,
+        t.teknisi_id,
+        teknisi_user.name AS nama_teknisi,
         mk.nama_kategori,
         sub.nama_sub_kategori
     ')
@@ -193,6 +194,7 @@ public function get_ticket_teknisi($user_id)
                 mk.nama_kategori,
                 sub.nama_sub_kategori
             ')
+            ->select('NULL AS nama_teknisi', FALSE)
             ->from('tickets t')
             ->join('users u','u.id = t.user_id','left')
             ->join('user_profiles up', 'up.user_id = u.id', 'left')
@@ -225,7 +227,9 @@ public function get_ticket_teknisi($user_id)
                 u.email AS email,
                 up.phone AS no_hp,
                 mk.nama_kategori,
-                sub.nama_sub_kategori
+                sub.nama_sub_kategori,
+                t.teknisi_id,
+                teknisi_user.name AS nama_teknisi
             ')
             ->from('tickets t')
             ->join('users u','u.id = t.user_id','left')
@@ -233,6 +237,7 @@ public function get_ticket_teknisi($user_id)
             ->join('master_kategori mk', 'mk.id = t.kategori_id', 'left')
             ->join('master_sub_kategori sub', 'sub.id = t.sub_kategori_id', 'left')
             ->join('teknisi tek', 'tek.id = t.teknisi_id', 'left')
+            ->join('users teknisi_user','teknisi_user.id = tek.user_id','left')
             ->where('tek.user_id', $user_id)
             ->where('t.status','Menunggu')
             ->order_by('t.created_at','ASC')

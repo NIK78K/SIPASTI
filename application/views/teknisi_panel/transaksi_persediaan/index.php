@@ -266,60 +266,67 @@
         </div>
 
 <!-- Modal Tambah/Edit Transaksi -->
-<div id="modalBarang" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-20">
-    <div class="theme-card rounded-lg shadow-xl w-full max-w-2xl border max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-        <div id="modalHeader" class="bg-blue-600 px-5 py-4 flex items-center justify-between rounded-t-lg transition-colors">
-            <h3 id="modalTitle" class="text-lg font-semibold text-white">Tambah Transaksi</h3>
-            <button onclick="tutupModal()" class="text-white/80 hover:text-white transition">
+<div id="modalBarang" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4" onclick="tutupModal()">
+    <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl" onclick="event.stopPropagation()">
+        <div id="modalHeader" class="flex items-start justify-between">
+            <div>
+                <h3 id="modalTitle" class="text-lg font-semibold header-title mb-1">Tambah Transaksi</h3>
+                <p id="modalSubtitle" class="text-sm header-subtitle mb-5">Catat transaksi barang masuk/keluar</p>
+            </div>
+            <button onclick="tutupModal()" class="header-subtitle hover:text-white transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
 
-        <form id="formBarang" class="p-5">
+        <form id="formBarang">
             <input type="hidden" id="barang_id" name="id">
 
             <div class="grid md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
+                <div>
+                    <label class="block text-sm font-medium header-subtitle mb-1.5">
+                        Barang <span class="text-red-400">*</span>
+                    </label>
+                    <select id="trx_barang_id" name="barang_id" required
+                            class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <option value="" class="bg-slate-800 text-slate-400">-- Pilih Barang --</option>
+                        <?php foreach($barang_list as $brg): ?>
+                            <option value="<?= $brg->id ?>" class="bg-slate-800 text-white"><?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="text-xs header-subtitle">Pilih barang yang dicatat transaksinya.</p>
+                </div>
+
+            <div>
                 <label class="block text-sm font-medium header-subtitle mb-1.5">
-                    Barang <span class="text-red-400">*</span>
+                    Jenis <span id="jenisBadge" class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium border align-middle bg-emerald-900/40 text-emerald-400 border-emerald-800/40">masuk</span>
                 </label>
-                <select id="trx_barang_id" name="barang_id" required
-                        class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="" class="bg-slate-800 text-slate-400">-- Pilih Barang --</option>
-                    <?php foreach($barang_list as $brg): ?>
-                        <option value="<?= $brg->id ?>" class="bg-slate-800 text-white"><?= htmlspecialchars($brg->kode_barang . ' - ' . $brg->nama_barang) ?></option>
-                    <?php endforeach; ?>
+                <select id="jenis" name="jenis" required
+                        class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-70">
+                    <option value="masuk" class="bg-slate-800 text-white">masuk</option>
+                    <option value="keluar" class="bg-slate-800 text-white">keluar</option>
                 </select>
+                <p id="jenisHint" class="text-xs header-subtitle">Jenis terkunci sesuai tombol yang diklik.</p>
             </div>
 
-                <div>
-                    <label class="block text-sm font-medium header-subtitle mb-1.5">
-                        Jenis <span id="jenisBadge" class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium border align-middle bg-emerald-900/40 text-emerald-400 border-emerald-800/40">masuk</span>
-                    </label>
-                    <select id="jenis" name="jenis" required
-                            class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-70">
-                        <option value="masuk" class="bg-slate-800 text-white">masuk</option>
-                        <option value="keluar" class="bg-slate-800 text-white">keluar</option>
-                    </select>
-                    <p id="jenisHint" class="text-xs header-subtitle mt-1 opacity-70">Jenis terkunci sesuai tombol yang diklik.</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium header-subtitle mb-1.5">
-                        Tanggal <span class="text-red-400">*</span>
-                    </label>
-                    <input type="date" id="tanggal" name="tanggal" required value="<?= date('Y-m-d') ?>"
-                           class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                </div>
+            <div>
+                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    Tanggal <span class="text-red-400">*</span>
+                </label>
+                <input type="date" id="tanggal" name="tanggal" required value="<?= date('Y-m-d') ?>"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <p class="text-xs header-subtitle">Tanggal catatan transaksi.</p>
+            </div>
 
             <div>
                 <label class="block text-sm font-medium header-subtitle mb-1.5">
                     Jumlah <span class="text-red-400">*</span>
                 </label>
                 <input type="number" id="jumlah" name="jumlah" required min="0" step="any"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="Contoh: 10">
+                <p class="text-xs header-subtitle">Jumlah barang masuk/keluar.</p>
             </div>
 
             <div>
@@ -327,34 +334,37 @@
                     No. Dokumen <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium border align-middle bg-slate-700/40 text-slate-300 border-slate-600/40">Opsional</span>
                 </label>
                 <input type="text" id="no_dokumen" name="no_dokumen" maxlength="100"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="Opsional - mis. BAST-001/2026">
+                <p class="text-xs header-subtitle">Nomor dokumen pendukung, boleh dikosongkan.</p>
             </div>
 
             <div>
                 <label class="block text-sm font-medium header-subtitle mb-1.5">Uraian</label>
                 <input type="text" id="uraian" name="uraian" maxlength="255"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="Opsional">
+                <p class="text-xs header-subtitle">Keterangan tambahan, boleh dikosongkan.</p>
             </div>
 
             <div>
                 <label class="block text-sm font-medium header-subtitle mb-1.5">Penerima/Sumber</label>
                 <input type="text" id="penerima_sumber" name="penerima_sumber" maxlength="100"
-                       class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700/50 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-500 transition-all"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="Opsional">
+                <p class="text-xs header-subtitle">Asal barang masuk / tujuan barang keluar.</p>
+            </div>
             </div>
 
-            <div class="md:col-span-2 flex gap-2 pt-3 border-t border-slate-700">
+            <div class="flex justify-end gap-3 mt-6">
                 <button type="button" onclick="tutupModal()"
-                        class="flex-1 px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 transition">
+                        class="px-4 py-2 header-subtitle hover:text-white transition-colors">
                     Batal
                 </button>
                 <button type="submit" id="btnSimpan"
-                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition transform hover:scale-105 active:scale-95">
+                        class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg transition-all transform hover:scale-105 active:scale-95">
                     Simpan
                 </button>
-            </div>
             </div>
         </form>
     </div>
@@ -503,8 +513,9 @@ function setJenisMode(jenis, locked) {
         ? 'bg-emerald-900/40 text-emerald-400 border-emerald-800/40'
         : 'bg-red-900/40 text-red-400 border-red-800/40');
     document.getElementById('jenisHint').style.display = locked ? '' : 'none';
-    header.className = 'px-5 py-4 flex items-center justify-between rounded-t-lg transition-colors ' + (jenis === 'masuk' ? 'bg-emerald-600' : locked ? 'bg-rose-600' : 'bg-blue-600');
-    btn.className = 'flex-1 px-4 py-2 text-white rounded-lg transition transform hover:scale-105 active:scale-95 ' + (jenis === 'masuk' ? 'bg-emerald-600 hover:bg-emerald-700' : locked ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700');
+    header.className = 'flex items-start justify-between';
+    document.getElementById('modalSubtitle').textContent = jenis === 'masuk' ? 'Catat barang masuk baru' : locked ? 'Catat barang keluar baru' : 'Ubah catatan transaksi';
+    btn.className = 'px-5 py-2 rounded-lg text-white font-semibold shadow-lg transition-all transform hover:scale-105 active:scale-95 ' + (jenis === 'masuk' ? 'bg-emerald-600 hover:bg-emerald-700' : locked ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700');
 }
 
 function tambahTransaksi(jenis) {

@@ -90,6 +90,9 @@
                 </div>
                 <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem]"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
                 <p class="text-[11px] text-slate-500"><?= htmlspecialchars(($b['kategori_kode'] ?? '') . ($b['kategori_nama'] ? ' • ' . $b['kategori_nama'] : '')) ?> &bull; per <?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></p>
+                <?php if (!empty($b['rating_count'])): ?>
+                <p class="text-[11px] font-semibold text-amber-600">★ <?= number_format((float) $b['rating_avg'], 1) ?> (<?= (int) $b['rating_count'] ?>)</p>
+                <?php endif ?>
                 <div class="mt-auto pt-2 flex items-center gap-2">
                     <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none">
                         <button type="button" onclick="cardStep(<?= (int) $b['id'] ?>, -1)"
