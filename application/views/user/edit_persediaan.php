@@ -14,6 +14,7 @@ if (!empty($ticket['jenis_kerusakan'])) {
         $ln = trim($ln);
         if (stripos($ln, 'Keperluan:') === 0) $keperluan_saved = trim(substr($ln, strlen('Keperluan:')));
         elseif (stripos($ln, 'Unit Kerja:') === 0) $unit_saved = trim(substr($ln, strlen('Unit Kerja:')));
+        elseif (stripos($ln, 'Tanggal permintaan:') === 0) $tgl_saved = trim(substr($ln, strlen('Tanggal permintaan:')));
         elseif (stripos($ln, 'Tanggal dibutuhkan:') === 0) $tgl_saved = trim(substr($ln, strlen('Tanggal dibutuhkan:')));
     }
 }
@@ -200,8 +201,8 @@ foreach ($items_norm as $r) $n_qty += (int) $r['jumlah'];
                                class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-gray-800 transition-all">
                     </div>
                     <div>
-                        <label class="text-xs text-gray-600 font-semibold mb-1.5 block">Tanggal dibutuhkan</label>
-                        <input name="tanggal_dibutuhkan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($tgl_saved) ?>"
+                        <label class="text-xs text-gray-600 font-semibold mb-1.5 block">Tanggal permintaan</label>
+                        <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($tgl_saved) ?>"
                                class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-gray-800 transition-all">
                     </div>
                 </div>
@@ -354,7 +355,7 @@ foreach ($items_norm as $r) $n_qty += (int) $r['jumlah'];
 
     window.validEditPersediaan = function () {
         if (!editItems.length) {
-            Swal.fire({ icon: 'warning', title: 'Daftar barang kosong', text: 'Tambah dulu barang yang dibutuhkan.' });
+            Swal.fire({ icon: 'warning', title: 'Daftar barang kosong', text: 'Tambah dulu barang yang diminta.' });
             return false;
         }
         if (!document.getElementById('fKeperluan').value.trim()) {
@@ -366,7 +367,7 @@ foreach ($items_norm as $r) $n_qty += (int) $r['jumlah'];
             var now = new Date();
             var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
             if (tglEl.value < today) {
-                Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal dibutuhkan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
+                Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal permintaan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
                 return false;
             }
         }

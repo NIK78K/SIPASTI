@@ -2622,7 +2622,7 @@ foreach ($tickets_my as $t):
             <div><span class="label">No. Faktur</span><span class="sep">:</span><strong id="print_faktur_teknisi"></strong></div>
             <div><span class="label">Tim Kerja</span><span class="sep">:</span><strong id="print_unit_teknisi"></strong></div>
             <div><span class="label">Tanggal</span><span class="sep">:</span><strong id="print_tanggal_teknisi"></strong></div>
-            <div><span class="label">Tanggal Dibutuhkan</span><span class="sep">:</span><strong id="print_butuh_teknisi"></strong></div>
+            <div><span class="label">Tanggal Permintaan</span><span class="sep">:</span><strong id="print_butuh_teknisi"></strong></div>
             <div><span class="label">Pemohon</span><span class="sep">:</span><strong id="print_pemohon_teknisi"></strong></div>
         </div>
         <table class="pm-print-table">
@@ -3725,7 +3725,7 @@ function fillPersediaanPrintTeknisi() {
     }
     if ((!kode || kode === '-') && (!items.length)) return false;
     var unitM = (jk || '').match(/Unit Kerja:\s*(.+)/i);
-    var butuhM = (jk || '').match(/Tanggal dibutuhkan:\s*(.+)/i);
+    var butuhM = (jk || '').match(/Tanggal (?:permintaan|dibutuhkan):\s*(.+)/i);
     set('print_faktur_teknisi', kode || '-');
     set('print_tanggal_teknisi', dibuat || '-');
     set('print_unit_teknisi', unitM ? unitM[1].trim() : '-');

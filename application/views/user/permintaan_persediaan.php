@@ -143,7 +143,7 @@
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-950 to-blue-800">
         <div>
             <h2 class="text-white font-extrabold text-lg">Keranjang Kebutuhan</h2>
-            <p class="text-blue-100 text-xs">Tanpa bayar &mdash; hanya menandai barang dibutuhkan</p>
+            <p class="text-blue-100 text-xs">Tanpa bayar &mdash; hanya menandai barang diminta</p>
         </div>
         <button type="button" onclick="toggleCart(false)" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold transition">✕</button>
     </div>
@@ -173,8 +173,8 @@
                 </select>
             </div>
             <div>
-                <label class="text-xs font-bold text-gray-700">Tanggal dibutuhkan</label>
-                <input name="tanggal_dibutuhkan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
+                <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
+                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
                     class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
             </div>
         </div>
@@ -477,7 +477,7 @@ function cartAdd(id) {
     var inp = document.getElementById('qty-' + id);
     var q = inp ? (parseInt(inp.value || '0', 10) || 0) : 0;
     if (q < 1) {
-        Swal.fire({ icon: 'warning', title: 'Jumlah masih 0', text: 'Naikkan dulu jumlah barang yang dibutuhkan.' });
+        Swal.fire({ icon: 'warning', title: 'Jumlah masih 0', text: 'Naikkan dulu jumlah barang yang diminta.' });
         return;
     }
     var isUpdate = cartQty(id) > 0;
@@ -573,7 +573,7 @@ function toggleCart(open) {
 
 function validCheckout() {
     if (!cartData.count) {
-        Swal.fire({ icon: 'warning', title: 'Keranjang kosong', text: 'Pilih dulu barang yang dibutuhkan.' });
+        Swal.fire({ icon: 'warning', title: 'Keranjang kosong', text: 'Pilih dulu barang yang diminta.' });
         return false;
     }
     if (!document.getElementById('fKeperluan').value.trim()) {
@@ -585,7 +585,7 @@ function validCheckout() {
         var now = new Date();
         var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (tglEl.value < today) {
-            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal dibutuhkan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
+            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal permintaan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
             return false;
         }
     }

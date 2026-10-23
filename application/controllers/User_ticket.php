@@ -485,7 +485,7 @@ public function checkout_persediaan()
     $judul              = trim($this->input->post('judul', true) ?? '');
     $deskripsi          = trim($this->input->post('deskripsi', true) ?? '');
     $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
-    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+    $tanggal_permintaan = trim($this->input->post('tanggal_permintaan', true) ?: ($this->input->post('tanggal_dibutuhkan', true) ?? ''));
 
     if ($judul === '' && $keperluan === '') {
         $this->session->set_flashdata('error', 'Judul/Keperluan wajib diisi.');
@@ -496,15 +496,15 @@ public function checkout_persediaan()
 
     $cart = $this->_cart_persediaan_get();
     if (empty($cart)) {
-        $this->session->set_flashdata('error', 'Keranjang masih kosong. Pilih dulu barang yang dibutuhkan.');
+        $this->session->set_flashdata('error', 'Keranjang masih kosong. Pilih dulu barang yang diminta.');
         redirect('user_ticket/permintaan_persediaan');
         exit;
     }
 
-    if ($tanggal_dibutuhkan !== '') {
-        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
-        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
-            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+    if ($tanggal_permintaan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_permintaan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_permintaan || $tanggal_permintaan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal permintaan tidak valid. Pilih hari ini atau tanggal ke depan.');
             redirect('user_ticket/permintaan_persediaan');
             exit;
         }
@@ -553,7 +553,7 @@ public function checkout_persediaan()
     $ringkas[] = '';
     $ringkas[] = 'Keperluan: ' . $keperluan;
     if ($unit_kerja !== '') $ringkas[] = 'Unit Kerja: ' . $unit_kerja;
-    if ($tanggal_dibutuhkan !== '') $ringkas[] = 'Tanggal dibutuhkan: ' . $tanggal_dibutuhkan;
+    if ($tanggal_permintaan !== '') $ringkas[] = 'Tanggal permintaan: ' . $tanggal_permintaan;
     $ringkas[] = 'Total: ' . count($lines) . ' jenis, ' . $total_qty . ' item';
     $ringkas[] = 'Catatan: keranjang hanya menandai kebutuhan, stok berkurang saat teknisi menyetujui.';
 
@@ -613,7 +613,7 @@ public function pengajuan_persediaan()
 
     $keperluan          = trim($this->input->post('keperluan', true) ?? '');
     $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
-    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+    $tanggal_permintaan = trim($this->input->post('tanggal_permintaan', true) ?: ($this->input->post('tanggal_dibutuhkan', true) ?? ''));
 
     if ($keperluan === '') {
         $this->session->set_flashdata('error', 'Keperluan wajib diisi.');
@@ -640,10 +640,10 @@ public function pengajuan_persediaan()
         exit;
     }
 
-    if ($tanggal_dibutuhkan !== '') {
-        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
-        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
-            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+    if ($tanggal_permintaan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_permintaan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_permintaan || $tanggal_permintaan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal permintaan tidak valid. Pilih hari ini atau tanggal ke depan.');
             redirect($back);
             exit;
         }
@@ -670,7 +670,7 @@ public function pengajuan_persediaan()
     $ringkas[] = '';
     $ringkas[] = 'Keperluan: ' . $keperluan;
     if ($unit_kerja !== '') $ringkas[] = 'Unit Kerja: ' . $unit_kerja;
-    if ($tanggal_dibutuhkan !== '') $ringkas[] = 'Tanggal dibutuhkan: ' . $tanggal_dibutuhkan;
+    if ($tanggal_permintaan !== '') $ringkas[] = 'Tanggal permintaan: ' . $tanggal_permintaan;
     $ringkas[] = 'Total: ' . count($items) . ' jenis diajukan';
     $ringkas[] = 'Catatan: barang belum ada di daftar persediaan, menunggu verifikasi admin/teknisi.';
 
@@ -1021,7 +1021,7 @@ public function update_persediaan($ticket_id)
     $keperluan          = trim($this->input->post('keperluan', true) ?? '');
     $judul              = trim($this->input->post('judul', true) ?? '');
     $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
-    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+    $tanggal_permintaan = trim($this->input->post('tanggal_permintaan', true) ?: ($this->input->post('tanggal_dibutuhkan', true) ?? ''));
     $items_post         = $this->input->post('items');
 
     if ($judul === '' && $keperluan === '') {
@@ -1031,10 +1031,10 @@ public function update_persediaan($ticket_id)
     }
     $judul_final = $judul !== '' ? $judul : $keperluan;
 
-    if ($tanggal_dibutuhkan !== '') {
-        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
-        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
-            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+    if ($tanggal_permintaan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_permintaan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_permintaan || $tanggal_permintaan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal permintaan tidak valid. Pilih hari ini atau tanggal ke depan.');
             redirect($back);
             exit;
         }
@@ -1112,7 +1112,7 @@ public function update_persediaan($ticket_id)
 
     $ok = $this->User_ticket_model->update_persediaan_by_user(
         $ticket_id, $user_id, $ticket_data, $snap,
-        ['keperluan' => $keperluan, 'unit_kerja' => $unit_kerja, 'tanggal_dibutuhkan' => $tanggal_dibutuhkan]
+        ['keperluan' => $keperluan, 'unit_kerja' => $unit_kerja, 'tanggal_permintaan' => $tanggal_permintaan, 'tanggal_dibutuhkan' => $tanggal_permintaan]
     );
 
     if (!$ok) {
@@ -1159,6 +1159,7 @@ private function _parse_persediaan_ringkas($jk, $kebutuhan)
         'judul'              => trim((string) $kebutuhan),
         'keperluan'          => '',
         'unit_kerja'         => '',
+        'tanggal_permintaan' => '',
         'tanggal_dibutuhkan' => '',
         'deskripsi'          => '',
     ];
@@ -1167,7 +1168,10 @@ private function _parse_persediaan_ringkas($jk, $kebutuhan)
         if (preg_match('/^Judul:\s*(.*)$/', $ln, $m)) $out['judul'] = trim($m[1]);
         elseif (preg_match('/^Keperluan:\s*(.*)$/', $ln, $m)) $out['keperluan'] = trim($m[1]);
         elseif (preg_match('/^Unit Kerja:\s*(.*)$/', $ln, $m)) $out['unit_kerja'] = trim($m[1]);
-        elseif (preg_match('/^Tanggal dibutuhkan:\s*(.*)$/', $ln, $m)) $out['tanggal_dibutuhkan'] = trim($m[1]);
+        elseif (preg_match('/^Tanggal (?:permintaan|dibutuhkan):\s*(.*)$/i', $ln, $m)) {
+            $out['tanggal_permintaan'] = trim($m[1]);
+            $out['tanggal_dibutuhkan'] = trim($m[1]);
+        }
         elseif (preg_match('/^Deskripsi:\s*(.*)$/', $ln, $m)) $out['deskripsi'] = trim($m[1]);
     }
 

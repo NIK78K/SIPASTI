@@ -149,7 +149,7 @@ if (!function_exists('persediaan_form_data')) {
 
         $ringkasan = (string) ($t['jenis_kerusakan'] ?? '');
         preg_match('/Unit Kerja:\s*(.+)/i', $ringkasan, $unit_match);
-        preg_match('/Tanggal dibutuhkan:\s*(.+)/i', $ringkasan, $tanggal_match);
+        preg_match('/Tanggal (?:permintaan|dibutuhkan):\s*(.+)/i', $ringkasan, $tanggal_match);
 
         return [
             'kode_tiket'      => $t['kode_tiket'] ?? '-',
@@ -1073,7 +1073,7 @@ foreach (($tickets ?? []) as $t) {
                 <div class="pm-meta"><span>NO FAKTUR</span><strong id="pm_faktur"></strong></div>
                 <div class="pm-meta"><span>TANGGAL</span><strong id="pm_tanggal"></strong></div>
                 <div class="pm-meta"><span>TIM KERJA</span><strong id="pm_unit"></strong></div>
-                <div class="pm-meta"><span>TANGGAL DIBUTUHKAN</span><strong id="pm_tanggal_butuh"></strong></div>
+                <div class="pm-meta"><span>TANGGAL PERMINTAAN</span><strong id="pm_tanggal_butuh"></strong></div>
             </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;min-width:520px;font-size:12px;">

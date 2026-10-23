@@ -82,8 +82,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-700">Tanggal dibutuhkan</label>
-                    <input name="tanggal_dibutuhkan" id="pTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
+                    <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
+                    <input name="tanggal_permintaan" id="pTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
                         class="mt-1 w-full h-14 rounded-xl px-5 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-gray-800 font-medium transition-all hover:border-gray-300">
                 </div>
             </div>
@@ -152,7 +152,7 @@ function validPengajuan() {
         var now = new Date();
         var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (tglEl.value < today) {
-            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal dibutuhkan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
+            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal permintaan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
             return false;
         }
     }

@@ -967,7 +967,8 @@ public function update_persediaan_by_user($ticket_id, $user_id, $ticket_data, $i
     $ringkas[] = '';
     $ringkas[] = 'Keperluan: ' . ($meta['keperluan'] ?? '');
     if (!empty($meta['unit_kerja'])) $ringkas[] = 'Unit Kerja: ' . $meta['unit_kerja'];
-    if (!empty($meta['tanggal_dibutuhkan'])) $ringkas[] = 'Tanggal dibutuhkan: ' . $meta['tanggal_dibutuhkan'];
+    $tgl = !empty($meta['tanggal_permintaan']) ? $meta['tanggal_permintaan'] : ($meta['tanggal_dibutuhkan'] ?? '');
+    if (!empty($tgl)) $ringkas[] = 'Tanggal permintaan: ' . $tgl;
     $ringkas[] = 'Total: ' . count($items) . ' jenis, ' . $total . ' item';
     $ringkas[] = 'Catatan: keranjang hanya menandai kebutuhan, stok berkurang saat teknisi menyetujui.';
     $ticket_data['jenis_kerusakan'] = implode("\n", $ringkas);

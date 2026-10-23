@@ -146,7 +146,7 @@ if (empty($persediaan_items_ticket) && $is_persediaan) {
 $jk_meta = $ticket['jenis_kerusakan'] ?? '';
 $tckt_unit = '-'; $tckt_butuh = '-';
 if (preg_match('/Unit Kerja:\s*(.+)/i', $jk_meta, $um)) $tckt_unit = trim($um[1]);
-if (preg_match('/Tanggal dibutuhkan:\s*(.+)/i', $jk_meta, $bm)) $tckt_butuh = trim($bm[1]);
+if (preg_match('/Tanggal (?:permintaan|dibutuhkan):\s*(.+)/i', $jk_meta, $bm)) $tckt_butuh = trim($bm[1]);
 $tckt_faktur  = $ticket['kode_tiket'] ?? '-';
 $tckt_tanggal = !empty($ticket['created_at']) ? date('d M Y • H:i', strtotime($ticket['created_at'])) : '-';
 $tckt_pemohon = $ticket['pelapor'] ?? '-';
@@ -221,7 +221,7 @@ foreach ($persediaan_items_ticket as $it) {
     <div class="pm-print-meta">No Faktur: <strong id="print_faktur_ticket"><?= htmlspecialchars($tckt_faktur) ?></strong></div>
     <div class="pm-print-meta">Tanggal: <strong id="print_tanggal_ticket"><?= htmlspecialchars($tckt_tanggal) ?></strong></div>
     <div class="pm-print-meta">Tim Kerja: <strong id="print_unit_ticket"><?= htmlspecialchars($tckt_unit) ?></strong></div>
-    <div class="pm-print-meta">Tanggal Dibutuhkan: <strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
+    <div class="pm-print-meta">Tanggal Permintaan: <strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
     <div class="pm-print-meta">Pemohon: <strong id="print_pemohon_ticket"><?= htmlspecialchars($tckt_pemohon) ?></strong></div>
     <table class="pm-print-table">
         <thead>
