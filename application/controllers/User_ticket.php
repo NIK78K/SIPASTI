@@ -164,7 +164,7 @@ public function create_permintaan()
     // ── Conflict check kendaraan ──
     if ($this->input->post('is_kendaraan') == '1') {
         $kendaraan_id  = (int) $this->input->post('kend_kendaraan_id');
-        $tipe          = $this->input->post('kend_tipe_pinjam') ?: 'harian';
+        $tipe          = $this->input->post('kend_tipe_pinjam') ?: 'harian';          
         $tgl_pinjam    = $this->input->post('kend_tanggal_pinjam');
         $tgl_kembali   = $this->input->post('kend_tanggal_kembali');
         $jam_pinjam    = $this->input->post('kend_jam_pinjam')  ?: null;
@@ -245,13 +245,11 @@ $data = [
        Keranjang = menandai barang dibutuhkan. Stok berkurang
        hanya saat teknisi approve manual. Tanpa insert transaksi.
     =============================== */
-public function create_persediaan()
+/* ===============================
+   OPSI UNIT KERJA (dipakai form persediaan)
+================================ */
+private function _unit_kerja_options()
 {
-    $this->load->model('Barang_persediaan_model');
-
-    $bulan = (int) date('n');
-    $tahun = (int) date('Y');
-
     $unit_kerja_list = $this->db
         ->select('unit_kerja')
         ->where('unit_kerja IS NOT NULL', null, false)
@@ -269,6 +267,33 @@ public function create_persediaan()
         ->get('user_profiles')
         ->row('unit_kerja') ?? '');
 
+    return [$unit_kerja_list, $unit_kerja_default];
+}
+
+/* ===============================
+   PEMILIH JENIS LAYANAN BARANG PERSEDIAAN
+================================ */
+public function create_persediaan()
+{
+    $this->load->view('layout/header_user');
+    $this->load->view('user/create_persediaan');
+    $this->load->view('layout/footer_user');
+}
+
+/* ===============================
+   PERMINTAAN BARANG PERSEDIAAN (katalog + keranjang, tanpa bayar)
+   Keranjang = menandai barang dibutuhkan. Stok berkurang
+   hanya saat teknisi approve manual. Tanpa insert transaksi.
+=============================== */
+public function permintaan_persediaan()
+{
+    $this->load->model('Barang_persediaan_model');
+
+    $bulan = (int) date('n');
+    $tahun = (int) date('Y');
+
+    list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
     $data = [
         'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
         'barang_list'   => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
@@ -279,7 +304,7 @@ public function create_persediaan()
     ];
 
     $this->load->view('layout/header_user');
-    $this->load->view('user/create_persediaan', $data);
+    $this->load->view('user/permintaan_persediaan', $data);
     $this->load->view('layout/footer_user');
 }
 
@@ -452,7 +477,7 @@ public function cart_count()
 public function checkout_persediaan()
 {
     if (!$this->input->post()) {
-        redirect('user_ticket/create_persediaan');
+        redirect('user_ticket/permintaan_persediaan');
         exit;
     }
 
@@ -464,7 +489,7 @@ public function checkout_persediaan()
 
     if ($judul === '' && $keperluan === '') {
         $this->session->set_flashdata('error', 'Judul/Keperluan wajib diisi.');
-        redirect('user_ticket/create_persediaan');
+        redirect('user_ticket/permintaan_persediaan');
         exit;
     }
     $judul_final = $judul !== '' ? $judul : $keperluan;
@@ -472,7 +497,7 @@ public function checkout_persediaan()
     $cart = $this->_cart_persediaan_get();
     if (empty($cart)) {
         $this->session->set_flashdata('error', 'Keranjang masih kosong. Pilih dulu barang yang dibutuhkan.');
-        redirect('user_ticket/create_persediaan');
+        redirect('user_ticket/permintaan_persediaan');
         exit;
     }
 
@@ -480,7 +505,7 @@ public function checkout_persediaan()
         $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
         if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
             $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
-            redirect('user_ticket/create_persediaan');
+            redirect('user_ticket/permintaan_persediaan');
             exit;
         }
     }
@@ -510,7 +535,7 @@ public function checkout_persediaan()
 
     if (!empty($errors)) {
         $this->session->set_flashdata('error', implode(' ', $errors));
-        redirect('user_ticket/create_persediaan');
+        redirect('user_ticket/permintaan_persediaan');
         exit;
     }
 
@@ -518,7 +543,7 @@ public function checkout_persediaan()
     $sub = $this->User_ticket_model->ensure_persediaan_sub();
     if (!$kategori_id || !$sub) {
         $this->session->set_flashdata('error', 'Kategori permintaan barang belum tersedia.');
-        redirect('user_ticket/create_persediaan');
+        redirect('user_ticket/permintaan_persediaan');
         exit;
     }
 
@@ -558,6 +583,110 @@ public function checkout_persediaan()
 
     $this->session->unset_userdata('cart_persediaan');
     $this->session->set_flashdata('success', 'Permintaan ' . count($lines) . ' jenis barang berhasil dibuat. Pantau di riwayat tiket.');
+    redirect('user_ticket/history');
+    exit;
+}
+
+/* ---------- pengajuan: barang BELUM ada di daftar/katalog persediaan ---------- */
+public function pengajuan_persediaan()
+{
+    /* ---------- GET: tampilkan form pengajuan ---------- */
+    if (!$this->input->post()) {
+        list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
+        $data = [
+            'unit_kerja_list'    => $unit_kerja_list,
+            'unit_kerja_default' => $unit_kerja_default,
+        ];
+
+        $this->load->view('layout/header_user');
+        $this->load->view('user/pengajuan_persediaan', $data);
+        $this->load->view('layout/footer_user');
+        return;
+    }
+
+    /* ---------- POST: simpan pengajuan ---------- */
+    $back = 'user_ticket/pengajuan_persediaan';
+
+    $nama_arr = $this->input->post('nama_barang');
+    $ket_arr  = $this->input->post('keterangan');
+
+    $keperluan          = trim($this->input->post('keperluan', true) ?? '');
+    $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
+    $tanggal_dibutuhkan = trim($this->input->post('tanggal_dibutuhkan', true) ?? '');
+
+    if ($keperluan === '') {
+        $this->session->set_flashdata('error', 'Keperluan wajib diisi.');
+        redirect($back);
+        exit;
+    }
+
+    $items = [];
+    if (is_array($nama_arr)) {
+        foreach ($nama_arr as $i => $n) {
+            $n = trim(strip_tags((string) $n));
+            if ($n === '') continue;
+            $k = trim(strip_tags((string) ($ket_arr[$i] ?? '')));
+            $items[] = [
+                'nama' => substr($n, 0, 150),
+                'ket'  => substr($k, 0, 255),
+            ];
+        }
+    }
+
+    if (empty($items)) {
+        $this->session->set_flashdata('error', 'Isi minimal 1 barang yang diajukan.');
+        redirect($back);
+        exit;
+    }
+
+    if ($tanggal_dibutuhkan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_dibutuhkan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_dibutuhkan || $tanggal_dibutuhkan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal dibutuhkan tidak valid. Pilih hari ini atau tanggal ke depan.');
+            redirect($back);
+            exit;
+        }
+    }
+
+    $kategori_id = $this->User_ticket_model->get_kategori_id_by_slug('permintaan');
+    $sub = $this->User_ticket_model->ensure_pengajuan_persediaan_sub();
+    if (!$kategori_id || !$sub) {
+        $this->session->set_flashdata('error', 'Kategori pengajuan barang belum tersedia.');
+        redirect($back);
+        exit;
+    }
+
+    $lines = [];
+    foreach ($items as $it) {
+        $ln = '- ' . $it['nama'];
+        if ($it['ket'] !== '') $ln .= ' (' . $it['ket'] . ')';
+        $lines[] = $ln;
+    }
+
+    $ringkas   = [];
+    $ringkas[] = '[PENGAJUAN BARANG PERSEDIAAN]';
+    $ringkas   = array_merge($ringkas, $lines);
+    $ringkas[] = '';
+    $ringkas[] = 'Keperluan: ' . $keperluan;
+    if ($unit_kerja !== '') $ringkas[] = 'Unit Kerja: ' . $unit_kerja;
+    if ($tanggal_dibutuhkan !== '') $ringkas[] = 'Tanggal dibutuhkan: ' . $tanggal_dibutuhkan;
+    $ringkas[] = 'Total: ' . count($items) . ' jenis diajukan';
+    $ringkas[] = 'Catatan: barang belum ada di daftar persediaan, menunggu verifikasi admin/teknisi.';
+
+    $this->db->insert('tickets', [
+        'user_id'         => $this->session->userdata('user_id'),
+        'pelapor'         => $this->session->userdata('name'),
+        'kode_tiket'      => 'TKT-' . date('YmdHis'),
+        'kategori_id'     => $kategori_id,
+        'sub_kategori_id' => $sub->id,
+        'jenis_kerusakan' => implode("\n", $ringkas),
+        'kebutuhan'       => substr($keperluan, 0, 255),
+        'status'          => 'Menunggu',
+        'created_at'      => date('Y-m-d H:i:s'),
+    ]);
+
+    $this->session->set_flashdata('success', 'Pengajuan ' . count($items) . ' jenis barang berhasil dikirim. Pantau di riwayat tiket.');
     redirect('user_ticket/history');
     exit;
 }
@@ -622,7 +751,9 @@ public function history()
     public function rating_barang($ticket_id)
     {
         $ratings = $this->input->post('rating');
-        if (!is_array($ratings) || empty($ratings)) {
+        $ratings = is_array($ratings) ? $ratings : [];
+        $rating_layanan = $this->input->post('rating_layanan');
+        if (empty($ratings) && ($rating_layanan === null || $rating_layanan === '')) {
             redirect('user_ticket/history');
             exit;
         }
@@ -630,7 +761,8 @@ public function history()
             $ticket_id,
             $this->session->userdata('user_id'),
             $ratings,
-            $this->input->post('komentar')
+            $this->input->post('komentar'),
+            $rating_layanan
         );
         redirect('user_ticket/history');
         exit;

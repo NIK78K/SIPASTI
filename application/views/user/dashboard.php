@@ -564,16 +564,16 @@
                 </div>
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Persediaan</span>
             </div>
-            <h3 class="relative text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors duration-300">Permintaan Barang Persediaan</h3>
+            <h3 class="relative text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors duration-300">Barang Persediaan</h3>
             <p class="relative text-sm text-gray-600 leading-relaxed mb-6">
-                Ajukan permintaan barang persediaan kantor seperti
+                <span class="font-semibold text-gray-800">Minta</span> barang dari katalog seperti
                 <span class="font-semibold text-gray-800">ATK</span>,
                 <span class="font-semibold text-gray-800">toner printer</span>,
                 <span class="font-semibold text-gray-800">kertas</span>,
-                dan <span class="font-semibold text-gray-800">kebutuhan persediaan</span> lainnya.
+                atau <span class="font-semibold text-gray-800">ajukan</span> barang baru yang belum tersedia.
             </p>
             <div class="relative mt-auto flex items-center justify-between pt-5 border-t border-emerald-100">
-                <span class="font-semibold text-emerald-600 group-hover:text-emerald-700">Buat Permintaan</span>
+                <span class="font-semibold text-emerald-600 group-hover:text-emerald-700">Pilih Layanan</span>
                 <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                 </div>

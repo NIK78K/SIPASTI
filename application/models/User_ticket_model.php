@@ -759,8 +759,8 @@ public function get_history_limit($user_id, $limit, $offset)
 
     /* =========================
        RATING
-       tickets.rating tetap untuk non-persediaan.
-       Persediaan: rating per barang di ticket_persediaan_items.
+       tickets.rating menyimpan rating layanan.
+       Persediaan juga menyimpan rating per barang di ticket_persediaan_items.
     ========================= */
     public function update_rating($ticket_id, $user_id, $rating, $komentar = null)
     {
@@ -797,10 +797,13 @@ public function get_history_limit($user_id, $limit, $offset)
        Validasi: tiket milik user + Selesai, barang bagian tiket, nilai 1-5.
        Sekali per pasangan tiket-barang; update bila sudah ada.
     ========================= */
-    public function save_rating_barang($ticket_id, $user_id, $ratings, $komentar = null)
+    public function save_rating_barang($ticket_id, $user_id, $ratings, $komentar = null, $rating_layanan = null)
     {
         $ticket_id = (int) $ticket_id;
-        if ($ticket_id <= 0 || !is_array($ratings) || empty($ratings)) {
+        $rating_layanan = ($rating_layanan === null || $rating_layanan === '')
+            ? null : (int) $rating_layanan;
+        if ($ticket_id <= 0 || !is_array($ratings)
+            || ($rating_layanan !== null && ($rating_layanan < 1 || $rating_layanan > 5))) {
             $this->session->set_flashdata('error', 'Data rating barang tidak valid.');
             return false;
         }
@@ -814,25 +817,27 @@ public function get_history_limit($user_id, $limit, $offset)
             $this->session->set_flashdata('error', 'Tiket tidak valid atau belum selesai');
             return false;
         }
-        if (!$this->db->table_exists('ticket_persediaan_items')
-            || !$this->db->field_exists('rating', 'ticket_persediaan_items')) {
-            $this->session->set_flashdata('error', 'Fitur rating barang belum tersedia.');
-            return false;
-        }
-        $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
-        $rows = $this->db->where('ticket_id', $ticket_id)->get('ticket_persediaan_items')->result_array();
-        $valid_ids = [];
-        foreach ($rows as $r) $valid_ids[(int) $r['barang_id']] = true;
         $clean = [];
-        foreach ($ratings as $bid => $val) {
-            $bid = (int) $bid;
-            $val = (int) $val;
-            if ($bid <= 0 || $val < 1 || $val > 5) continue;
-            if (!isset($valid_ids[$bid])) continue;
-            $clean[$bid] = $val;
+        if (!empty($ratings)) {
+            if (!$this->db->table_exists('ticket_persediaan_items')
+                || !$this->db->field_exists('rating', 'ticket_persediaan_items')) {
+                $this->session->set_flashdata('error', 'Fitur rating barang belum tersedia.');
+                return false;
+            }
+            $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
+            $rows = $this->db->where('ticket_id', $ticket_id)->get('ticket_persediaan_items')->result_array();
+            $valid_ids = [];
+            foreach ($rows as $r) $valid_ids[(int) $r['barang_id']] = true;
+            foreach ($ratings as $bid => $val) {
+                $bid = (int) $bid;
+                $val = (int) $val;
+                if ($bid <= 0 || $val < 1 || $val > 5) continue;
+                if (!isset($valid_ids[$bid])) continue;
+                $clean[$bid] = $val;
+            }
         }
-        if (empty($clean)) {
-            $this->session->set_flashdata('error', 'Nilai rating harus 1-5 untuk barang di tiket ini.');
+        if (empty($clean) && $rating_layanan === null) {
+            $this->session->set_flashdata('error', 'Beri rating layanan atau minimal satu barang.');
             return false;
         }
         foreach ($clean as $bid => $val) {
@@ -840,11 +845,15 @@ public function get_history_limit($user_id, $limit, $offset)
             if ($hasKomen && $komentar !== null && $komentar !== '') $upd['komentar_item'] = substr((string) $komentar, 0, 1000);
             $this->db->where('ticket_id', $ticket_id)->where('barang_id', $bid)->update('ticket_persediaan_items', $upd);
         }
-        // Komentar tiket tetap diisi agar riwayat konsisten.
+        $ticket_update = [];
+        if ($rating_layanan !== null) $ticket_update['rating'] = $rating_layanan;
         if ($komentar !== null && $komentar !== '') {
-            $this->db->where('id', $ticket_id)->where('user_id', $user_id)->update('tickets', ['komentar' => substr((string) $komentar, 0, 1000)]);
+            $ticket_update['komentar'] = substr((string) $komentar, 0, 1000);
         }
-        $this->session->set_flashdata('success', 'Terima kasih atas rating barang Anda! ⭐');
+        if (!empty($ticket_update)) {
+            $this->db->where('id', $ticket_id)->where('user_id', $user_id)->update('tickets', $ticket_update);
+        }
+        $this->session->set_flashdata('success', 'Terima kasih atas rating layanan dan barang Anda! ⭐');
         return true;
     }
 
@@ -1146,6 +1155,35 @@ public function ensure_persediaan_sub()
 
     return $this->db
         ->get_where('master_sub_kategori', ['slug' => 'permintaan-persediaan'])
+        ->row();
+}
+
+/* ===============================
+   SUB KATEGORI PENGAJUAN PERSEDIAAN (seed bila belum ada)
+   Untuk barang yang BELUM ada di daftar/katalog persediaan.
+================================ */
+public function ensure_pengajuan_persediaan_sub()
+{
+    $sub = $this->db
+        ->get_where('master_sub_kategori', ['slug' => 'pengajuan-persediaan'])
+        ->row();
+    if ($sub) return $sub;
+
+    $kat = $this->db
+        ->get_where('master_kategori', ['slug' => 'permintaan'])
+        ->row();
+    if (!$kat) return null;
+
+    $this->db->insert('master_sub_kategori', [
+        'kategori_id'       => $kat->id,
+        'nama_sub_kategori' => 'Pengajuan Persediaan',
+        'slug'              => 'pengajuan-persediaan',
+        'perlu_jadwal'      => 0,
+        'created_at'        => date('Y-m-d H:i:s'),
+    ]);
+
+    return $this->db
+        ->get_where('master_sub_kategori', ['slug' => 'pengajuan-persediaan'])
         ->row();
 }
 

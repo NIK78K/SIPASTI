@@ -1,81 +1,152 @@
-<div class="container-fluid p-6">
-    <div class="theme-card backdrop-blur-sm rounded-xl shadow-2xl p-6 mb-6 border">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-3xl font-bold header-title">Master Stok Awal Persediaan</h1>
-                <p class="text-sm header-subtitle mt-1">Stok awal barang persediaan per periode bulan & tahun</p>
-            </div>
-            <button onclick="tambahStok()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition shadow-lg font-medium transform hover:scale-105 active:scale-95">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Input Stok Awal
-            </button>
-        </div>
+<!-- PAGE TITLE -->
+<div class="flex items-center justify-between mb-10">
+    <div>
+        <h1 class="text-3xl font-extrabold header-title tracking-tight">
+            Master Stok Awal Persediaan
+        </h1>
+        <p class="text-sm header-subtitle mt-1">
+            Stok awal barang persediaan per periode bulan & tahun
+        </p>
+    </div>
 
-        <!-- Tabel Stok Awal -->
-        <div class="overflow-x-auto">
-            <table id="tabelBarang" class="w-full" style="width: 100% !important;">
-                <thead>
-                    <tr class="bg-slate-900/90 header-subtitle border-b border-slate-800/50">
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 50px;">No</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 140px;">Kode Barang</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold">Nama Barang</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 140px;">Kategori</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 80px;">Bulan</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 80px;">Tahun</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 100px;">Jumlah</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold">Keterangan</th>
-                        <th class="px-4 py-4 text-left text-sm font-semibold" style="width: 140px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php $no = 1; foreach($stok_awal as $st): ?>
-                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/50 transition-all duration-200">
-                        <td class="px-4 py-4 header-subtitle"><?= $no++ ?></td>
-                        <td class="px-4 py-4">
-                            <span class="px-2.5 py-1 bg-slate-800/80 text-cyan-300 rounded text-xs font-mono border border-slate-700/50 whitespace-nowrap">
-                                <?= htmlspecialchars($st->kode_barang ?? '-') ?>
-                            </span>
-                        </td>
-                        <td class="px-4 py-4 header-title font-medium"><?= htmlspecialchars($st->nama_barang ?? '-') ?></td>
-                        <td class="px-4 py-4">
-                            <span class="px-2.5 py-1 bg-purple-900/40 text-purple-400 rounded-full text-xs font-medium border border-purple-800/40 shadow-sm whitespace-nowrap">
-                                <?= htmlspecialchars($st->kategori_kode ?? '-') ?>
-                            </span>
-                            <div class="text-xs header-subtitle mt-1"><?= htmlspecialchars($st->kategori_nama ?? '') ?></div>
-                        </td>
-                        <td class="px-4 py-4 header-subtitle"><?= htmlspecialchars($st->bulan) ?></td>
-                        <td class="px-4 py-4 header-subtitle"><?= htmlspecialchars($st->tahun) ?></td>
-                        <td class="px-4 py-4">
-                            <span class="px-2.5 py-1 bg-emerald-900/40 text-emerald-400 rounded text-xs font-medium border border-emerald-800/40 whitespace-nowrap">
-                                <?= htmlspecialchars($st->jumlah) ?> <?= htmlspecialchars($st->satuan ?? '') ?>
-                            </span>
-                        </td>
-                        <td class="px-4 py-4 header-subtitle"><?= htmlspecialchars($st->keterangan ?? '-') ?></td>
-                        <td class="px-4 py-4">
-                            <div class="flex gap-1.5">
-                                <button onclick="editStok(<?= $st->id ?>)"
-                                        class="p-2 bg-amber-900/40 hover:bg-amber-800/50 text-amber-400 rounded transition-all duration-200 shadow-sm border border-amber-800/30 transform hover:scale-110"
-                                        title="Edit">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                </button>
-                                <button onclick="hapusStok(<?= $st->id ?>, '<?= addslashes($st->nama_barang ?? '') ?>')"
-                                        class="p-2 bg-red-900/40 hover:bg-red-800/50 text-red-400 rounded transition-all duration-200 shadow-sm border border-red-800/30 transform hover:scale-110"
-                                        title="Hapus">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+    <button onclick="tambahStok()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
+               bg-blue-600 hover:bg-blue-700
+               text-white text-sm font-semibold
+               shadow-lg transition-all transform hover:scale-105 active:scale-95">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Input Stok Awal
+    </button>
+</div>
+
+<!-- TABLE CARD -->
+<div id="tabelStok" class="rounded-2xl border theme-card shadow-xl overflow-hidden">
+
+    <!-- TOOLBAR -->
+    <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between border-b border-slate-800/50">
+        <p id="stokCount" class="text-sm header-subtitle">
+            <?= count($stok_awal) ?> data stok awal terdaftar
+        </p>
+        <div class="relative w-full sm:max-w-xs">
+            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 header-subtitle pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z"/>
+            </svg>
+            <input type="text" id="stokSearch" placeholder="Cari kode, nama, kategori, periode..."
+                   class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm
+                          bg-slate-800/80 border border-slate-700/50
+                          text-white placeholder-slate-500 focus:outline-none
+                          focus:ring-2 focus:ring-blue-500 transition-all">
         </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="grid grid-cols-[50px_130px_1fr_160px_110px_110px_1.2fr_100px]
+                px-6 py-4 text-sm header-subtitle
+                border-b border-slate-800/50 bg-slate-900/90">
+        <div>No</div>
+        <div>Kode</div>
+        <div>Nama Barang</div>
+        <div>Kategori</div>
+        <div class="text-center">Periode</div>
+        <div class="text-center">Jumlah</div>
+        <div>Keterangan</div>
+        <div class="text-right">Aksi</div>
+    </div>
+
+    <!-- BODY -->
+    <div id="stokTable" class="divide-y divide-slate-800/50">
+        <?php if (empty($stok_awal)): ?>
+            <div class="px-6 py-10 text-center header-subtitle">
+                Belum ada data stok awal.
+            </div>
+        <?php else: ?>
+            <?php $no = 1; foreach($stok_awal as $st): ?>
+            <div class="stok-row grid grid-cols-[50px_130px_1fr_160px_110px_110px_1.2fr_100px]
+                        px-6 py-4 items-center
+                        hover:bg-slate-800/50 transition-colors"
+                 data-search="<?= htmlspecialchars(strtolower(($st->kode_barang ?? '') . ' ' . ($st->nama_barang ?? '') . ' ' . ($st->kategori_kode ?? '') . ' ' . ($st->kategori_nama ?? '') . ' ' . ($st->bulan ?? '') . '/' . ($st->tahun ?? '') . ' ' . ($st->keterangan ?? ''))) ?>">
+                <div class="header-subtitle"><?= $no++ ?></div>
+
+                <div>
+                    <span class="inline-flex px-3 py-1 rounded-full
+                                 text-xs font-medium
+                                 bg-indigo-500/15 text-indigo-400
+                                 border border-indigo-500/25 whitespace-nowrap">
+                        <?= htmlspecialchars($st->kode_barang ?? '-') ?>
+                    </span>
+                </div>
+
+                <div class="font-medium header-title">
+                    <?= htmlspecialchars($st->nama_barang ?? '-') ?>
+                </div>
+
+                <div>
+                    <span class="inline-flex px-3 py-1 rounded-full
+                                 text-xs font-medium
+                                 bg-purple-500/15 text-purple-400
+                                 border border-purple-500/25 whitespace-nowrap">
+                        <?= htmlspecialchars($st->kategori_kode ?? '-') ?>
+                    </span>
+                    <div class="text-xs header-subtitle mt-1"><?= htmlspecialchars($st->kategori_nama ?? '') ?></div>
+                </div>
+
+                <div class="text-center header-subtitle text-sm whitespace-nowrap">
+                    <?= htmlspecialchars($st->bulan ?? '-') ?>/<?= htmlspecialchars($st->tahun ?? '-') ?>
+                </div>
+
+                <div class="text-center">
+                    <span class="inline-flex px-3 py-1 rounded-full
+                                 text-xs font-medium
+                                 bg-blue-500/15 text-blue-400
+                                 border border-blue-500/25 whitespace-nowrap">
+                        <?= htmlspecialchars($st->jumlah ?? 0) ?> <?= htmlspecialchars($st->satuan ?? '') ?>
+                    </span>
+                </div>
+
+                <div class="header-subtitle text-sm">
+                    <?= htmlspecialchars($st->keterangan ?? '-') ?>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button onclick="editStok(<?= $st->id ?>)"
+                        class="w-9 h-9 flex items-center justify-center
+                               rounded-lg bg-yellow-500/15
+                               text-yellow-400 hover:bg-yellow-500/25 transition-all transform hover:scale-110"
+                        title="Edit Stok Awal">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                             stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                        </svg>
+                    </button>
+                    <button onclick="hapusStok(<?= $st->id ?>, '<?= addslashes($st->nama_barang ?? '') ?>')"
+                        class="w-9 h-9 flex items-center justify-center
+                               rounded-lg bg-red-500/15
+                               text-red-400 hover:bg-red-500/25 transition-all transform hover:scale-110"
+                        title="Hapus Stok Awal">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                             stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+        <div id="stokEmpty" class="hidden px-6 py-10 text-center header-subtitle">
+            Data tidak ditemukan
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between border-t border-slate-800/50">
+        <p id="stokInfo" class="text-sm header-subtitle"></p>
+        <div id="stokPagination" class="flex items-center gap-1.5"></div>
     </div>
 </div>
 
@@ -157,43 +228,38 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-#tabelBarang_wrapper { color: #cbd5e1; }
-#tabelBarang_wrapper .dataTables_length,
-#tabelBarang_wrapper .dataTables_filter { margin-bottom: 1.5rem; }
-#tabelBarang_wrapper .dataTables_length select,
-#tabelBarang_wrapper .dataTables_filter input {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(71, 85, 105, 0.5);
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    margin-left: 0.5rem;
+#stokPagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+    align-items: center;
+    max-width: 100%;
 }
-#tabelBarang_wrapper .dataTables_filter input { min-width: 250px; }
-#tabelBarang_wrapper .dataTables_length label,
-#tabelBarang_wrapper .dataTables_filter label { color: #94a3b8; font-size: 0.875rem; }
-#tabelBarang_wrapper .dataTables_info { color: #64748b; padding-top: 1rem; }
-#tabelBarang_wrapper .dataTables_paginate { padding-top: 1rem; }
-#tabelBarang_wrapper .dataTables_paginate .paginate_button {
-    color: #94a3b8 !important;
-    background: rgba(30, 41, 59, 0.5) !important;
-    border: 1px solid rgba(71, 85, 105, 0.4) !important;
-    margin: 0 3px;
-    padding: 0.5rem 0.875rem;
-    border-radius: 0.5rem;
+.stok-page-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.625rem;
+    font-size: 0.8125rem;
+    border: 1px solid rgba(71, 85, 105, 0.4);
+    background: rgba(30, 41, 59, 0.5);
+    color: #94a3b8;
+    transition: all 0.2s;
+    flex-shrink: 0;
 }
-#tabelBarang_wrapper .dataTables_paginate .paginate_button.current {
-    color: white !important;
-    background: #2563eb !important;
-    border-color: #3b82f6 !important;
+@media (max-width: 640px) {
+    #stokPagination { justify-content: center; }
 }
-table.dataTable tbody tr { background-color: transparent; }
+.stok-page-btn:hover { background: rgba(30, 41, 59, 0.9); color: #e2e8f0; }
+.stok-page-btn.active { background: #2563eb; border-color: #3b82f6; color: #fff; font-weight: 600; }
+.stok-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 html.light input, html.light select {
     background: rgba(255, 255, 255, 0.95) !important;
     color: var(--text-primary) !important;
@@ -214,6 +280,16 @@ html.light input::placeholder { color: #94a3b8 !important; }
 <script>
 let editMode = false;
 
+const stokPerPage = 15;
+let stokPage = 1;
+let stokFiltered = [];
+
+function esc(s) {
+    return String(s ?? '-').replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+}
+
 function getSwalColors() {
     const isLight = document.documentElement.classList.contains('light');
     return {
@@ -222,28 +298,80 @@ function getSwalColors() {
     };
 }
 
-$(document).ready(function() {
-    $('#tabelBarang').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/id.json',
-            search: "Cari:",
-            lengthMenu: "Tampilkan _MENU_ data",
-            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
-            infoFiltered: "(difilter dari _MAX_ total data)",
-            zeroRecords: "Data tidak ditemukan",
-            emptyTable: "Tidak ada data tersedia",
-            paginate: { first: "Pertama", last: "Terakhir", next: "Selanjutnya", previous: "Sebelumnya" }
-        },
-        pageLength: 15,
-        lengthMenu: [[15, 25, 50, 100, -1], [15, 25, 50, 100, "Semua"]],
-        order: [[3, 'asc']],
-        columnDefs: [
-            { orderable: false, targets: 8 }
-        ],
-        autoWidth: false
+function applyStokFilter(resetPage = true) {
+    const q = (document.getElementById('stokSearch').value || '').toLowerCase().trim();
+    const all = Array.from(document.querySelectorAll('.stok-row'));
+    stokFiltered = !q ? all : all.filter(r => (r.dataset.search || '').includes(q));
+    if (resetPage) stokPage = 1;
+    renderStok();
+}
+
+function renderStok() {
+    const all = Array.from(document.querySelectorAll('.stok-row'));
+    const total = stokFiltered.length;
+    const pages = Math.max(1, Math.ceil(total / stokPerPage));
+    if (stokPage > pages) stokPage = pages;
+    const start = total === 0 ? 0 : (stokPage - 1) * stokPerPage + 1;
+    const end = Math.min(total, stokPage * stokPerPage);
+    const visibleRows = new Set(stokFiltered.slice(start - 1, end));
+
+    all.forEach((row) => {
+        row.classList.toggle('hidden', !visibleRows.has(row));
+        const rowNumber = stokFiltered.indexOf(row) + 1;
+        if (row.firstElementChild) row.firstElementChild.textContent = rowNumber > 0 ? rowNumber : '';
     });
-});
+
+    document.getElementById('stokEmpty').classList.toggle('hidden', total !== 0);
+    document.getElementById('stokInfo').textContent =
+        total === 0 ? 'Menampilkan 0 data' : `Menampilkan ${start} sampai ${end} dari ${total} data`;
+
+    const pag = document.getElementById('stokPagination');
+    pag.innerHTML = '';
+    const mkBtn = (label, page, disabled = false, active = false, title = '') => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        if (title) b.title = title;
+        b.className = 'stok-page-btn' + (active ? ' active' : '');
+        b.disabled = disabled;
+        b.addEventListener('click', () => {
+            if (disabled || page === stokPage) return;
+            stokPage = page;
+            renderStok();
+        });
+        return b;
+    };
+    pag.appendChild(mkBtn('‹', Math.max(1, stokPage - 1), stokPage === 1, false, 'Sebelumnya'));
+
+    const pageItems = [];
+    if (pages <= 7) {
+        for (let p = 1; p <= pages; p++) pageItems.push(p);
+    } else {
+        pageItems.push(1);
+        if (stokPage > 4) pageItems.push('ellipsis-left');
+        for (let p = Math.max(2, stokPage - 1); p <= Math.min(pages - 1, stokPage + 1); p++) {
+            pageItems.push(p);
+        }
+        if (stokPage < pages - 3) pageItems.push('ellipsis-right');
+        pageItems.push(pages);
+    }
+    pageItems.forEach((item) => {
+        if (typeof item === 'string') {
+            const s = document.createElement('span');
+            s.textContent = '…';
+            s.className = 'px-1 header-subtitle';
+            pag.appendChild(s);
+            return;
+        }
+        pag.appendChild(mkBtn(String(item), item, false, item === stokPage));
+    });
+
+    pag.appendChild(mkBtn('›', Math.min(pages, stokPage + 1), stokPage === pages, false, 'Selanjutnya'));
+}
+
+document.getElementById('stokSearch').addEventListener('input', () => applyStokFilter(true));
+stokFiltered = Array.from(document.querySelectorAll('.stok-row'));
+renderStok();
 
 function tambahStok() {
     editMode = false;

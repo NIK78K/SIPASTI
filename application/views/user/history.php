@@ -441,19 +441,19 @@ foreach (($tickets ?? []) as $t) {
                     <?php $is_persediaan_rate = isPersediaan($t); ?>
                     <?php if ($is_persediaan_rate): ?>
                         <?php $need_item_rate = false; foreach (($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate = true; break; } } ?>
+                        <?php $need_service_rate = empty($t['rating']); ?>
                         <?php $rate_items = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
                         <?php $rate_items_json = htmlspecialchars(json_encode(array_values($rate_items)), ENT_QUOTES); ?>
-                        <?php if ($need_item_rate): ?>
-                            <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_json ?>)"
+                        <?php if ($need_item_rate || $need_service_rate): ?>
+                            <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_json ?>, <?= (int) ($t['rating'] ?? 0) ?>)"
                                     class="px-3 py-1 rounded-full bg-gradient-to-r from-orange-400 to-orange-500
                                            text-white text-[10px] font-semibold shadow hover:brightness-110 whitespace-nowrap">
                                 Beri Rating
                             </button>
                         <?php else: ?>
-                            <?php $rt_sum = 0; $rt_n = 0; foreach ($rate_items as $ri2) { if (!empty($ri2['rating'])) { $rt_sum += (int) $ri2['rating']; $rt_n++; } } $rt_avg = $rt_n ? (int) round($rt_sum / $rt_n) : 0; $rt_avg_exact = $rt_n ? round($rt_sum / $rt_n, 1) : 0; ?>
                             <div class="flex justify-center gap-0.5 text-yellow-400 text-sm">
                                 <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <span class="<?= $i <= $rt_avg ? '' : 'text-slate-300' ?>">★</span>
+                                    <span class="<?= $i <= (int) $t['rating'] ? '' : 'text-slate-300' ?>">★</span>
                                 <?php endfor ?>
                             </div>
                         <?php endif ?>
@@ -714,20 +714,20 @@ foreach (($tickets ?? []) as $t) {
                 <?php $is_persediaan_rate_mob = isPersediaan($t); ?>
                 <?php if ($is_persediaan_rate_mob): ?>
                     <?php $need_item_rate_mob = false; foreach ((array) ($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate_mob = true; break; } } ?>
+                    <?php $need_service_rate_mob = empty($t['rating']); ?>
                     <?php $rate_items_mob = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items_mob[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
                     <?php $rate_items_mob_json = htmlspecialchars(json_encode(array_values($rate_items_mob)), ENT_QUOTES); ?>
-                    <?php if ($need_item_rate_mob): ?>
-                    <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_mob_json ?>)"
+                    <?php if ($need_item_rate_mob || $need_service_rate_mob): ?>
+                    <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_mob_json ?>, <?= (int) ($t['rating'] ?? 0) ?>)"
                             class="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500
                                    text-white text-sm font-semibold shadow hover:brightness-110">
                         Beri Rating
                     </button>
                     <?php else: ?>
-                    <?php $rt_sum_m = 0; $rt_n_m = 0; foreach ($rate_items_mob as $ri2m) { if (!empty($ri2m['rating'])) { $rt_sum_m += (int) $ri2m['rating']; $rt_n_m++; } } $rt_avg_m = $rt_n_m ? (int) round($rt_sum_m / $rt_n_m) : 0; $rt_avg_exact_m = $rt_n_m ? round($rt_sum_m / $rt_n_m, 1) : 0; ?>
                     <div class="text-center">
                         <div class="flex justify-center gap-1 text-yellow-400 text-lg">
                             <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <span class="<?= $i <= $rt_avg_m ? '' : 'text-slate-300' ?>">★</span>
+                                <span class="<?= $i <= (int) $t['rating'] ? '' : 'text-slate-300' ?>">★</span>
                             <?php endfor ?>
                         </div>
                     </div>
@@ -922,9 +922,19 @@ foreach (($tickets ?? []) as $t) {
 ============================================================ -->
 <div id="ratingBarangModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 px-4">
     <div class="w-full max-w-md rounded-2xl bg-white border border-orange-200 p-6 shadow-[0_25px_60px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto">
-        <h2 class="text-lg font-bold text-slate-800 mb-1">Beri Rating Barang</h2>
-        <p class="text-xs text-slate-500 mb-4">Nilai tiap barang yang Anda terima (1-5 bintang).</p>
+        <h2 class="text-lg font-bold text-slate-800 mb-1">Beri Rating Layanan dan Barang</h2>
+        <p class="text-xs text-slate-500 mb-4">Nilai layanan dan tiap barang yang Anda terima (1-5 bintang).</p>
         <form method="post" id="ratingBarangForm">
+            <div class="rounded-xl border border-orange-200 bg-orange-50 p-3 mb-4">
+                <p class="text-sm font-semibold text-slate-700 mb-2">Rating Layanan</p>
+                <div class="flex gap-1 text-2xl">
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <span id="rl-star-<?= $i ?>" class="cursor-pointer select-none text-slate-300 hover:text-yellow-400 transition"
+                              onclick="setRatingLayanan(<?= $i ?>)">★</span>
+                    <?php endfor ?>
+                </div>
+                <input type="hidden" name="rating_layanan" id="ratingLayananValue">
+            </div>
             <div id="ratingBarangRows" class="space-y-4 mb-4"></div>
             <textarea name="komentar" rows="2" placeholder="Saran / masukan (opsional)"
                 class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm mb-5
@@ -1315,9 +1325,10 @@ foreach (($tickets ?? []) as $t) {
 
     /* ============ RATING BARANG PERSEDIAAN (N baris bintang per barang) ============ */
     var ratingBarangVals = {};
-    window.openRatingBarangModal = function(ticketId, items) {
+    window.openRatingBarangModal = function(ticketId, items, ratingLayanan) {
         var form = document.getElementById('ratingBarangForm');
         if (form) form.action = '<?= base_url("user_ticket/rating_barang/") ?>' + ticketId;
+        setRatingLayanan(ratingLayanan || 0);
         ratingBarangVals = {};
         var box = document.getElementById('ratingBarangRows');
         box.innerHTML = '';
@@ -1353,6 +1364,14 @@ foreach (($tickets ?? []) as $t) {
         m.classList.remove('hidden'); m.classList.add('flex');
     };
 
+    window.setRatingLayanan = function(val) {
+        document.getElementById('ratingLayananValue').value = val || '';
+        for (var i = 1; i <= 5; i++) {
+            var s = document.getElementById('rl-star-' + i);
+            if (s) s.className = 'cursor-pointer select-none ' + (i <= val ? 'text-yellow-400' : 'text-slate-300');
+        }
+    };
+
     window.setRatingBarang = function(bid, val) {
         ratingBarangVals[bid] = val;
         var hid = document.getElementById('rb-val-' + bid);
@@ -1366,6 +1385,7 @@ foreach (($tickets ?? []) as $t) {
     window.closeRatingBarangModal = function() {
         var m = document.getElementById('ratingBarangModal');
         m.classList.add('hidden'); m.classList.remove('flex');
+        setRatingLayanan(0);
         var btn = document.getElementById('submitRatingBarangBtn');
         if (btn) { btn.disabled = false; btn.textContent = 'Kirim Rating'; }
     };
@@ -1571,17 +1591,17 @@ foreach (($tickets ?? []) as $t) {
             });
         }
 
-        // Rating barang form: wajib minimal 1 barang dinilai
+        // Rating gabungan: wajib rating layanan atau minimal satu barang.
         var ratingBarangForm = document.getElementById('ratingBarangForm');
         if (ratingBarangForm) {
             ratingBarangForm.addEventListener('submit', function(e) {
-                var ok = false;
+                var ok = parseInt(document.getElementById('ratingLayananValue').value || '0', 10) >= 1;
                 ratingBarangForm.querySelectorAll('input[name^="rating["]').forEach(function (el) {
                     if (parseInt(el.value || '0', 10) >= 1) ok = true;
                 });
                 if (!ok) {
                     e.preventDefault();
-                    if (window.Swal) Swal.fire({ icon: 'warning', title: 'Belum ada rating', text: 'Beri minimal 1 bintang untuk satu barang.' });
+                    if (window.Swal) Swal.fire({ icon: 'warning', title: 'Belum ada rating', text: 'Beri rating layanan atau minimal satu barang.' });
                     return;
                 }
                 var btn = document.getElementById('submitRatingBarangBtn');
