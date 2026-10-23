@@ -71,6 +71,7 @@ class Barang_persediaan extends CI_Controller {
         $this->form_validation->set_rules('kode_barang', 'Kode Barang', 'trim|max_length[50]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('satuan', 'Satuan', 'trim|max_length[50]');
+        $this->form_validation->set_rules('stok_minimum', 'Stok Minimum', 'trim|numeric|greater_than_equal_to[0]');
 
         if ($this->form_validation->run() == FALSE) {
             echo json_encode(['status' => 'error', 'message' => strip_tags(validation_errors())]);
@@ -81,6 +82,8 @@ class Barang_persediaan extends CI_Controller {
         $kode_barang = trim($this->input->post('kode_barang', true));
         $nama_barang = trim($this->input->post('nama_barang', true));
         $satuan = trim($this->input->post('satuan', true)) ?: 'pcs';
+        $stok_min_input = $this->input->post('stok_minimum', true);
+        $stok_minimum = ($stok_min_input !== null && $stok_min_input !== '') ? max(0, (int) $stok_min_input) : 0;
         $status = $this->input->post('status', true) ?: 'Aktif';
         if (!in_array($status, ['Aktif', 'Nonaktif'])) $status = 'Aktif';
 
@@ -121,6 +124,7 @@ class Barang_persediaan extends CI_Controller {
             'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
+            'stok_minimum' => $stok_minimum,
             'status' => $status
         ]);
 
@@ -137,6 +141,7 @@ class Barang_persediaan extends CI_Controller {
         $this->form_validation->set_rules('kode_barang', 'Kode Barang', 'trim|max_length[50]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('satuan', 'Satuan', 'trim|max_length[50]');
+        $this->form_validation->set_rules('stok_minimum', 'Stok Minimum', 'trim|numeric|greater_than_equal_to[0]');
 
         if ($this->form_validation->run() == FALSE) {
             echo json_encode(['status' => 'error', 'message' => strip_tags(validation_errors())]);
@@ -148,6 +153,8 @@ class Barang_persediaan extends CI_Controller {
         $kode_barang = trim($this->input->post('kode_barang', true));
         $nama_barang = trim($this->input->post('nama_barang', true));
         $satuan = trim($this->input->post('satuan', true)) ?: 'pcs';
+        $stok_min_input = $this->input->post('stok_minimum', true);
+        $stok_minimum = ($stok_min_input !== null && $stok_min_input !== '') ? max(0, (int) $stok_min_input) : 0;
         $status = $this->input->post('status', true) ?: 'Aktif';
         if (!in_array($status, ['Aktif', 'Nonaktif'])) $status = 'Aktif';
 
@@ -173,12 +180,42 @@ class Barang_persediaan extends CI_Controller {
             'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
+            'stok_minimum' => $stok_minimum,
             'status' => $status
         ]);
 
         echo json_encode($ok
             ? ['status' => 'success', 'message' => 'Barang persediaan berhasil diupdate!']
             : ['status' => 'error', 'message' => 'Gagal mengupdate barang!']);
+    }
+
+    public function update_stok_minimum($id = NULL) {
+        header('Content-Type: application/json');
+
+        $id = $id ?: $this->input->post('id', true);
+        $stok_min = $this->input->post('stok_minimum', true);
+
+        if (empty($id) || !is_numeric($id)) {
+            echo json_encode(['status' => 'error', 'message' => 'ID barang tidak valid!']);
+            return;
+        }
+
+        if ($stok_min === null || $stok_min === '' || !is_numeric($stok_min) || (int) $stok_min < 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Stok minimum harus berupa angka 0 atau lebih!']);
+            return;
+        }
+
+        $barang = $this->Barang_persediaan_model->get_by_id($id);
+        if (!$barang) {
+            echo json_encode(['status' => 'error', 'message' => 'Data barang tidak ditemukan!']);
+            return;
+        }
+
+        $ok = $this->Barang_persediaan_model->update($id, ['stok_minimum' => (int) $stok_min]);
+
+        echo json_encode($ok
+            ? ['status' => 'success', 'message' => 'Stok minimum "' . $barang->nama_barang . '" berhasil diubah!', 'stok_minimum' => (int) $stok_min]
+            : ['status' => 'error', 'message' => 'Gagal mengubah stok minimum!']);
     }
 
     public function hapus($id) {

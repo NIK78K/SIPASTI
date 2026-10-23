@@ -5,6 +5,21 @@ class Barang_persediaan_model extends CI_Model {
 
     private $table = 'master_barang_persediaan';
 
+    public function __construct() {
+        parent::__construct();
+        if (!$this->db->field_exists('stok_minimum', $this->table)) {
+            $this->load->dbforge();
+            $this->dbforge->add_column($this->table, [
+                'stok_minimum' => [
+                    'type' => 'INT',
+                    'constraint' => 11,
+                    'default' => 0,
+                    'after' => 'satuan'
+                ]
+            ]);
+        }
+    }
+
     public function get_all_with_kategori() {
         $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
         $this->db->from($this->table . ' b');

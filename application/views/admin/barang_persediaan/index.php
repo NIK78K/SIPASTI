@@ -182,7 +182,6 @@
             </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label for="nama_barang" class="block text-sm font-medium header-subtitle mb-1.5">
                     Nama Barang <span class="text-red-400">*</span>
@@ -193,12 +192,23 @@
                 <p class="text-xs header-subtitle">Nama lengkap barang, contoh: Kertas HVS A4 80gr.</p>
             </div>
 
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label for="satuan" class="block text-sm font-medium header-subtitle mb-1.5">Satuan</label>
                 <input type="text" id="satuan" name="satuan"
                        class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        placeholder="pcs" value="pcs">
                 <p class="text-xs header-subtitle">Satuan jumlah barang, contoh: pcs, rim, atau box.</p>
+            </div>
+
+            <div>
+                <label for="stok_minimum" class="block text-sm font-medium header-subtitle mb-1.5">
+                    Stok Minimum <span class="text-xs text-slate-400 font-normal">(Batas Min)</span>
+                </label>
+                <input type="number" id="stok_minimum" name="stok_minimum" min="0" value="0"
+                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                       placeholder="0">
+                <p class="text-xs header-subtitle">Jumlah batas minimum stok per barang (default: 0).</p>
             </div>
             </div>
 
@@ -227,7 +237,7 @@
 
 <!-- Modal Lihat Barang per Kategori -->
 <div id="modalLihat" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
-    <div class="theme-card w-full max-w-3xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden" onclick="event.stopPropagation()">
+    <div class="theme-card w-full max-w-4xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden" onclick="event.stopPropagation()">
         <h3 id="lihatJudul" class="text-lg font-semibold header-title mb-1">Detail Kategori</h3>
         <p id="lihatSubdeskripsi" class="text-sm header-subtitle mb-5"></p>
 
@@ -239,7 +249,8 @@
                             <th class="px-3 py-3 font-semibold">Nama Barang</th>
                             <th class="px-3 py-3 font-semibold" style="width: 140px;">Kode</th>
                             <th class="px-3 py-3 font-semibold" style="width: 90px;">Satuan</th>
-                            <th class="px-3 py-3 font-semibold" style="width: 120px;">Status</th>
+                            <th class="px-3 py-3 font-semibold text-center" style="width: 120px;">Stok Minimum</th>
+                            <th class="px-3 py-3 font-semibold" style="width: 110px;">Status</th>
                             <th class="px-3 py-3 font-semibold" style="width: 110px;">Aksi</th>
                         </tr>
                     </thead>
@@ -315,15 +326,31 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
+#barangPagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+    align-items: center;
+    max-width: 100%;
+}
 .barang-page-btn {
-    min-width: 2.25rem;
-    padding: 0.5rem 0.625rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 0.625rem;
     font-size: 0.8125rem;
     border: 1px solid rgba(71, 85, 105, 0.4);
     background: rgba(30, 41, 59, 0.5);
     color: #94a3b8;
     transition: all 0.2s;
+    flex-shrink: 0;
+}
+@media (max-width: 640px) {
+    #barangPagination { justify-content: center; }
 }
 .barang-page-btn:hover { background: rgba(30, 41, 59, 0.9); color: #e2e8f0; }
 .barang-page-btn.active { background: #2563eb; border-color: #3b82f6; color: #fff; font-weight: 600; }
@@ -350,6 +377,7 @@ html.light input::placeholder, html.light textarea::placeholder { color: #94a3b8
 <script>
 let editMode = false;
 let lihatKategoriId = null;
+let returnToLihatKategoriId = null;
 let lihatItems = [];
 
 const barangPerPage = 15;
@@ -444,6 +472,7 @@ function tambahBarang() {
     document.getElementById('barang_id').value = '';
     document.getElementById('kode_barang').value = '';
     document.getElementById('satuan').value = 'pcs';
+    document.getElementById('stok_minimum').value = '0';
     document.getElementById('status').value = 'Aktif';
     document.getElementById('modalBarang').classList.remove('hidden');
 }
@@ -468,7 +497,12 @@ function editBarang(id) {
             const c = getSwalColors();
             return Swal.fire({ icon: 'error', title: 'Gagal!', text: d.message, ...c });
         }
-        tutupLihat();
+        if (lihatKategoriId) {
+            returnToLihatKategoriId = lihatKategoriId;
+            tutupLihat();
+        } else {
+            returnToLihatKategoriId = null;
+        }
         editMode = true;
         document.getElementById('modalTitle').textContent = 'Edit Barang';
         document.getElementById('barang_id').value = d.id;
@@ -476,6 +510,7 @@ function editBarang(id) {
         document.getElementById('kode_barang').value = d.kode_barang || '';
         document.getElementById('nama_barang').value = d.nama_barang;
         document.getElementById('satuan').value = d.satuan;
+        document.getElementById('stok_minimum').value = (d.stok_minimum !== undefined && d.stok_minimum !== null) ? d.stok_minimum : 0;
         document.getElementById('status').value = d.status;
         document.getElementById('modalBarang').classList.remove('hidden');
     });
@@ -495,7 +530,16 @@ document.getElementById('formBarang').addEventListener('submit', function(e) {
         if (data.status === 'success') {
             const c = getSwalColors();
             Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 1500, ...c })
-            .then(() => location.reload());
+            .then(() => {
+                if (returnToLihatKategoriId) {
+                    const kid = returnToLihatKategoriId;
+                    returnToLihatKategoriId = null;
+                    tutupModal();
+                    lihatKategori(kid);
+                } else {
+                    location.reload();
+                }
+            });
         } else {
             const c = getSwalColors();
             Swal.fire({ icon: 'error', title: 'Gagal!', text: data.message, ...c });
@@ -585,6 +629,11 @@ function toggleStatus(id, currentStatus) {
 
 function tutupModal() {
     document.getElementById('modalBarang').classList.add('hidden');
+    if (returnToLihatKategoriId) {
+        const kid = returnToLihatKategoriId;
+        returnToLihatKategoriId = null;
+        lihatKategori(kid);
+    }
 }
 
 function lihatKategori(kategoriId) {
@@ -603,7 +652,7 @@ function lihatKategori(kategoriId) {
         document.getElementById('lihatSubdeskripsi').textContent = first.kategori_deskripsi || '';
         const tbody = document.getElementById('lihatRows');
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center header-subtitle">Belum ada barang di kategori ini.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-6 text-center header-subtitle">Belum ada barang di kategori ini.</td></tr>';
         } else {
             tbody.innerHTML = rows.map(function(b) {
                 const aktif = (b.status === 'Aktif');
@@ -611,10 +660,12 @@ function lihatKategori(kategoriId) {
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                     : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
                 const dotCls = aktif ? 'bg-emerald-400' : 'bg-red-400';
+                const minStok = parseInt(b.stok_minimum || 0, 10);
                 return '<tr class="border-b border-slate-800/50 hover:bg-slate-800/50 transition-all duration-200">'
                     + '<td class="px-3 py-3 header-title font-medium">' + esc(b.nama_barang) + '</td>'
                     + '<td class="px-3 py-3"><span class="px-2.5 py-1 bg-slate-800/80 text-cyan-300 rounded text-xs font-mono border border-slate-700/50 whitespace-nowrap">' + esc(b.kode_barang) + '</span></td>'
                     + '<td class="px-3 py-3 header-subtitle">' + esc(b.satuan) + '</td>'
+                    + '<td class="px-3 py-3 text-center"><span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25 font-mono">' + minStok + '</span></td>'
                     + '<td class="px-3 py-3"><button type="button" onclick="toggleStatus(' + b.id + ', \'' + esc(b.status) + '\')" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 cursor-pointer whitespace-nowrap ' + badgeCls + '"><span class="w-1.5 h-1.5 ' + dotCls + ' rounded-full"></span>' + esc(b.status) + '</button></td>'
                     + '<td class="px-3 py-3"><div class="flex gap-1.5">'
                     + '<button type="button" onclick="editBarang(' + b.id + ')" class="p-2 bg-amber-900/40 hover:bg-amber-800/50 text-amber-400 rounded transition-all duration-200 shadow-sm border border-amber-800/30 transform hover:scale-110" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>'
