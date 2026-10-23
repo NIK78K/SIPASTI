@@ -91,7 +91,19 @@
                 <td class="px-4 py-3 text-right text-green-400 font-semibold"><?= number_format((int)($r->masuk ?? 0)) ?></td>
                 <td class="px-4 py-3 text-right text-red-400 font-semibold"><?= number_format((int)($r->keluar ?? 0)) ?></td>
                 <td class="px-4 py-3 text-right font-semibold <?= (int)($r->stok_akhir ?? 0) < 0 ? 'text-red-400 font-bold' : 'text-gray-200' ?>"><?= number_format((int)($r->stok_akhir ?? 0)) ?></td>
-                <td class="px-4 py-3 text-gray-400"><?= htmlspecialchars($r->keterangan ?? '-') ?></td>
+                <td class="px-4 py-3">
+                    <?php if (!empty($r->keterangan)): ?>
+                        <?php if ($r->keterangan === 'Stok minimum tercapai'): ?>
+                            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/25 whitespace-nowrap">
+                                <?= htmlspecialchars($r->keterangan) ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/25 whitespace-nowrap">
+                                <?= htmlspecialchars($r->keterangan) ?>
+                            </span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </td>
             </tr>
             <?php endforeach; ?>
             <tr class="bg-slate-800/40 font-semibold">

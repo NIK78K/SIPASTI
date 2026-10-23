@@ -202,15 +202,27 @@ class Laporan extends CI_Controller {
             $masuk  = $mut[$b->id]['masuk'] ?? 0;
             $keluar = $mut[$b->id]['keluar'] ?? 0;
             $akhir  = $awal + $masuk - $keluar;
+            $min    = (int) ($b->stok_minimum ?? 0);
+
+            $ket = '';
+            if ($min > 0) {
+                if ($akhir === $min) {
+                    $ket = 'Stok minimum tercapai';
+                } elseif ($akhir < $min) {
+                    $ket = 'Stok sudah melampaui stok minimum';
+                }
+            }
+
             $rows[] = (object) [
-                'kode_barang' => $b->kode_barang ?? '-',
-                'nama_barang' => $b->nama_barang ?? '-',
-                'satuan'      => $b->satuan ?? '-',
-                'stok_awal'   => $awal,
-                'masuk'       => $masuk,
-                'keluar'      => $keluar,
-                'stok_akhir'  => $akhir,
-                'keterangan'  => ($awal === 0 && $masuk === 0 && $keluar === 0 && $akhir === 0) ? 'Habis' : (($awal <= 5 || $akhir <= 5) ? 'Hampir habis' : ''),
+                'kode_barang'   => $b->kode_barang ?? '-',
+                'nama_barang'   => $b->nama_barang ?? '-',
+                'satuan'        => $b->satuan ?? '-',
+                'stok_awal'     => $awal,
+                'masuk'         => $masuk,
+                'keluar'        => $keluar,
+                'stok_akhir'    => $akhir,
+                'stok_minimum'  => $min,
+                'keterangan'    => $ket,
             ];
         }
 
