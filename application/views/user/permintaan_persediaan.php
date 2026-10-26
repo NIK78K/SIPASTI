@@ -93,7 +93,8 @@
 
     <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <?php foreach (($barang_list ?? []) as $b): ?>
-        <div class="barang-card group bg-white rounded-2xl border border-gray-100 shadow hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col"
+        <div class="barang-card group bg-white rounded-2xl border border-gray-100 shadow hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col cursor-pointer"
+              onclick="openUlasanBarang(<?= (int) $b['id'] ?>, event)"
               data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
               data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
             <div class="h-1.5 bg-gradient-to-r from-blue-950 to-blue-700"></div>
@@ -101,21 +102,30 @@
                 <div class="flex items-center justify-between gap-2">
                     <span class="font-mono text-[11px] text-slate-500 truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
                 </div>
-                <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem]"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
+                <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-blue-900 transition-colors"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
                 <p class="text-[11px] text-slate-500"><?= htmlspecialchars(($b['kategori_kode'] ?? '') . ($b['kategori_nama'] ? ' • ' . $b['kategori_nama'] : '')) ?> &bull; per <?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></p>
-                <?php if (!empty($b['rating_count'])): ?>
-                <p class="text-[11px] font-semibold text-amber-600">★ <?= number_format((float) $b['rating_avg'], 1) ?> (<?= (int) $b['rating_count'] ?>)</p>
-                <?php endif ?>
-                <div class="mt-auto pt-2 flex items-center gap-2">
-                    <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none">
-                        <button type="button" onclick="cardStep(<?= (int) $b['id'] ?>, -1)"
+                <div class="flex items-center justify-between gap-1 text-[11px] pt-0.5">
+                    <?php if (!empty($b['rating_count'])): ?>
+                    <span class="font-semibold text-amber-600 flex items-center gap-1">
+                        ★ <?= number_format((float) $b['rating_avg'], 1) ?> (<?= (int) $b['rating_count'] ?>)
+                    </span>
+                    <?php else: ?>
+                    <span class="text-slate-400 text-[10px]">Belum ada rating</span>
+                    <?php endif ?>
+                    <span class="text-blue-900 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
+                        Lihat Ulasan &rarr;
+                    </span>
+                </div>
+                <div class="mt-auto pt-2 flex items-center gap-2" onclick="event.stopPropagation()">
+                    <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none" onclick="event.stopPropagation()">
+                        <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, -1)"
                             class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">−</button>
-                        <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
+                        <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
                             class="w-11 h-9 text-center text-sm font-bold text-gray-800 border-x-2 border-gray-200 focus:outline-none">
-                        <button type="button" onclick="cardStep(<?= (int) $b['id'] ?>, 1)"
+                        <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, 1)"
                             class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">+</button>
                     </div>
-                    <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="cartAdd(<?= (int) $b['id'] ?>)"
+                    <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="event.stopPropagation();cartAdd(<?= (int) $b['id'] ?>)"
                         class="flex-1 h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95">
                         + Keranjang
                     </button>
@@ -369,6 +379,15 @@
 <script>
 var activeKat = 'all';
 var cartData = { count: 0, total_qty: 0, items: [] };
+
+function openUlasanBarang(id, e) {
+    if (e) {
+        if (e.target.closest('#stepper-' + id) || e.target.closest('#add-' + id) || e.target.closest('button') || e.target.closest('input')) {
+            return;
+        }
+    }
+    window.location.href = '<?= base_url("user_ticket/ulasan_barang/") ?>' + id;
+}
 
 function setKategori(id, btn) {
     activeKat = String(id);

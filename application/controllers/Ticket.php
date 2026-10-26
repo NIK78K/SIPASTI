@@ -298,6 +298,14 @@ public function index()
             );
         }
 
+        $this->load->model('Barang_persediaan_model');
+        $res_peng = $this->Barang_persediaan_model->proses_pengajuan_persediaan_selesai($id);
+        if (!empty($res_peng['status']) && $res_peng['count'] > 0) {
+            $this->session->set_flashdata('success', 'Pengajuan disetujui. ' . $res_peng['count'] . ' barang berhasil ditambahkan ke master barang persediaan dengan stok 0.');
+        } else {
+            $this->session->set_flashdata('success', 'Tiket berhasil diselesaikan.');
+        }
+
         redirect('ticket');
     }
 

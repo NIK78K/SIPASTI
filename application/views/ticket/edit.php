@@ -22,9 +22,11 @@ $subSlug = '';
 if ($subKatId > 0) {
     $subSlug = strtolower($this->db->select('slug')->where('id', $subKatId)->get('master_sub_kategori')->row('slug') ?? '');
 }
-$isPersediaan = $isPermintaan && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isZoom
+$isPengajuanPersediaan = $isPermintaan && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isZoom
+                && (strpos($subSlug, 'pengajuan') !== false || strpos($jk, '[PENGAJUAN BARANG PERSEDIAAN]') !== false);
+$isPersediaan = $isPermintaan && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isZoom && !$isPengajuanPersediaan
                 && (strpos($subSlug, 'persediaan') !== false || strpos($jk, '[PERMINTAAN BARANG PERSEDIAAN]') !== false);
-$isPermintaanBiasa = $isPermintaan && !$isZoom && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isPersediaan;
+$isPermintaanBiasa = $isPermintaan && !$isZoom && !$isRuangRapat && !$isKendaraan && !$isBmn && !$isPersediaan && !$isPengajuanPersediaan;
 
 /* ── Helper: ambil nilai dari baris jenis_kerusakan ── */
 function parseJkField($jk, $label) {
@@ -48,6 +50,11 @@ if ($isRuangRapat) {
     $focusColor = 'focus:ring-purple-500';
     $accentCls  = 'text-purple-400';
     $catatanPlh = 'Catatan persetujuan / penolakan BMN...';
+} elseif ($isPengajuanPersediaan) {
+    $tipeLabel  = '📦 Pengajuan Barang Persediaan';
+    $focusColor = 'focus:ring-emerald-500';
+    $accentCls  = 'text-emerald-400';
+    $catatanPlh = 'Catatan persetujuan pengajuan barang persediaan...';
 } elseif ($isPersediaan) {
     $tipeLabel  = '📦 Permintaan Barang Persediaan';
     $focusColor = 'focus:ring-teal-500';
@@ -726,7 +733,7 @@ if ($isBmn) {
 
         <?php else: ?>
         <!-- ─────────── PERMINTAAN IT BIASA ─────────── -->
-        <?php $jkBersih = preg_replace('/\[ref:[^\]]*\]/', '', $jk); ?>
+        <?php $jkBersih = (string) preg_replace('/\[(ref|pengajuan_items_json):[^\]]*\]/s', '', $jk); ?>
         <div class="space-y-4 pt-1 border-t etck-border">
             <p class="text-xs font-semibold <?= $accentCls ?> pt-3">Detail Permintaan</p>
 

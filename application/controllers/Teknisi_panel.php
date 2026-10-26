@@ -279,10 +279,12 @@ public function acc_persediaan($ticket_id)
     }
 
     $items = $this->input->post('items');
+    $keterangan = $this->input->post('keterangan');
     if (!is_array($items) || empty($items)) { echo json_encode(['status' => 'error', 'message' => 'Items kosong']); return; }
+    if (!is_array($keterangan)) $keterangan = [];
 
     $this->load->model('Transaksi_persediaan_model');
-    $res = $this->Transaksi_persediaan_model->save_acc_ticket($ticket_id, $teknisi_id, $items);
+    $res = $this->Transaksi_persediaan_model->save_acc_ticket($ticket_id, $teknisi_id, $items, $keterangan);
     echo json_encode($res['ok'] ? ['status' => 'success', 'message' => $res['msg']] : ['status' => 'error', 'message' => $res['msg']]);
 }
 
@@ -328,6 +330,9 @@ public function selesai($id)
         'status'     => 'Selesai',
         'selesai_at' => date('Y-m-d H:i:s'),
     ]);
+
+    $this->load->model('Barang_persediaan_model');
+    $this->Barang_persediaan_model->proses_pengajuan_persediaan_selesai($id);
 
     $this->db->where('id', $teknisi_id)->update('teknisi', [
         'status' => 'available'

@@ -52,6 +52,7 @@ entity "master_barang_persediaan" as barang {
     kode_barang : VARCHAR
     nama_barang : VARCHAR
     satuan : VARCHAR
+    stok_minimum : INT
     status : ENUM
     created_at : TIMESTAMP
     updated_at : TIMESTAMP
@@ -107,6 +108,7 @@ entity "ticket_persediaan_items" as ticket_items {
     barang_id : INT <<FK>>
     jumlah : INT
     jumlah_disetujui : INT
+    keterangan : VARCHAR
     nama_barang_snapshot : VARCHAR
     satuan_snapshot : VARCHAR
     created_at : TIMESTAMP
@@ -142,5 +144,6 @@ barang ||--o{ keranjang : dimasukkan_ke
 
 - `ticket_persediaan_items` adalah tabel detail yang menghubungkan permintaan dengan barang.
 - `jumlah_disetujui` menyimpan jumlah barang yang disetujui teknisi.
+- `keterangan` menyimpan alasan penyesuaian jika jumlah disetujui tidak sama dengan yang diminta user.
 - Transaksi `keluar` dapat ditautkan ke tiket melalui `ticket_id`.
 - Pada alur saat ini, keranjang digunakan melalui session; `keranjang_persediaan` disediakan sebagai tabel keranjang/cadangan.

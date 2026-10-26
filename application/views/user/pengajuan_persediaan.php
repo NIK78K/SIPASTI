@@ -48,7 +48,7 @@
                     <span class="text-red-500">*</span>
                 </label>
                 <p class="text-xs text-slate-500 leading-relaxed">
-                    Tulis barang yang <strong>belum ada</strong> di daftar/katalog persediaan.
+                    Tulis barang yang <strong>belum ada</strong> di daftar/katalog persediaan beserta kategori yang sesuai.
                     Kalau barangnya sudah ada di katalog, gunakan layanan <a href="<?= base_url('user_ticket/permintaan_persediaan') ?>" class="text-blue-800 font-semibold hover:underline">Permintaan</a>.
                 </p>
                 <div id="pengajuanRows" class="space-y-3"></div>
@@ -104,22 +104,52 @@
     </div>
 </div>
 
+<template id="pengajuanRowTemplate">
+    <div class="pengajuan-row rounded-2xl border-2 border-gray-200 p-4 space-y-3 bg-slate-50/50">
+        <div class="flex items-center justify-between">
+            <p class="text-xs font-extrabold tracking-wide text-blue-900 row-label">BARANG</p>
+            <button type="button" onclick="pengajuanDelRow(this)" class="text-xs font-bold text-red-600 hover:text-red-700 transition">Hapus</button>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="text-[11px] font-bold text-gray-600 mb-1 block">Nama Barang <span class="text-red-500">*</span></label>
+                <input name="nama_barang[]" type="text" placeholder="cth: Tinta printer Epson 003 hitam"
+                    class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
+            </div>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600 mb-1 block">Kategori Barang <span class="text-red-500">*</span></label>
+                <select name="kategori_id[]"
+                    class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
+                    <option value="">-- Pilih Kategori --</option>
+                    <?php foreach (($kategori_persediaan ?? []) as $kp): ?>
+                        <option value="<?= (int) $kp['id'] ?>"><?= htmlspecialchars($kp['kode'] . ' - ' . $kp['nama']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+        <div>
+            <label class="text-[11px] font-bold text-gray-600 mb-1 block">Spesifikasi / Keterangan (Opsional)</label>
+            <input name="keterangan[]" type="text" placeholder="cth: warna hitam, botol 65ml"
+                class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
+        </div>
+    </div>
+</template>
+
 <script>
 function pengajuanAddRow() {
     var box = document.getElementById('pengajuanRows');
-    var idx = box.querySelectorAll('.pengajuan-row').length + 1;
-    var div = document.createElement('div');
-    div.className = 'pengajuan-row rounded-2xl border-2 border-gray-200 p-4 space-y-3 bg-slate-50/50';
-    div.innerHTML =
-        '<div class="flex items-center justify-between">'
-        + '<p class="text-xs font-extrabold tracking-wide text-blue-900">BARANG ' + idx + '</p>'
-        + '<button type="button" onclick="pengajuanDelRow(this)" class="text-xs font-bold text-red-600 hover:text-red-700 transition">Hapus</button>'
-        + '</div>'
-        + '<input name="nama_barang[]" type="text" placeholder="Nama barang *  cth: Tinta printer Epson 003 hitam"'
-        + ' class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">'
-        + '<input name="keterangan[]" type="text" placeholder="Spesifikasi/keterangan (opsional)  cth: ukuran A4 80gr"'
-        + ' class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">';
-    box.appendChild(div);
+    var tpl = document.getElementById('pengajuanRowTemplate');
+    var clone = tpl.content.cloneNode(true);
+    box.appendChild(clone);
+    pengajuanReindex();
+}
+
+function pengajuanReindex() {
+    var box = document.getElementById('pengajuanRows');
+    box.querySelectorAll('.pengajuan-row').forEach(function (el, i) {
+        var label = el.querySelector('.row-label');
+        if (label) label.textContent = 'BARANG ' + (i + 1);
+    });
 }
 
 function pengajuanDelRow(btn) {
@@ -129,18 +159,36 @@ function pengajuanDelRow(btn) {
         return;
     }
     btn.closest('.pengajuan-row').remove();
-    box.querySelectorAll('.pengajuan-row').forEach(function (el, i) {
-        el.querySelector('p').textContent = 'BARANG ' + (i + 1);
-    });
+    pengajuanReindex();
 }
 
 function validPengajuan() {
+    var rows = document.querySelectorAll('#pengajuanRows .pengajuan-row');
     var adaNama = false;
-    document.querySelectorAll('#pengajuanRows input[name="nama_barang[]"]').forEach(function (el) {
-        if (el.value.trim() !== '') adaNama = true;
+    var kategoriLengkap = true;
+    var barisKurangKat = 0;
+
+    rows.forEach(function (row, idx) {
+        var namaInput = row.querySelector('input[name="nama_barang[]"]');
+        var katSelect = row.querySelector('select[name="kategori_id[]"]');
+        var namaVal = namaInput ? namaInput.value.trim() : '';
+        var katVal = katSelect ? katSelect.value.trim() : '';
+
+        if (namaVal !== '') {
+            adaNama = true;
+            if (!katVal && kategoriLengkap) {
+                kategoriLengkap = false;
+                barisKurangKat = idx + 1;
+            }
+        }
     });
+
     if (!adaNama) {
         Swal.fire({ icon: 'warning', title: 'Barang belum diisi', text: 'Isi minimal 1 nama barang yang diajukan.' });
+        return false;
+    }
+    if (!kategoriLengkap) {
+        Swal.fire({ icon: 'warning', title: 'Kategori wajib dipilih', text: 'Pilih kategori persediaan untuk BARANG ' + barisKurangKat + '.' });
         return false;
     }
     if (!document.getElementById('pKeperluan').value.trim()) {

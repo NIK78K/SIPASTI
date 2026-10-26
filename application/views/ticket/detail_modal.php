@@ -88,7 +88,10 @@ $status = $ticket['status'] ?? 'Menunggu';
 <div class="mb-5">
     <div class="text-xs dtck-label mb-2">Deskripsi / Kebutuhan</div>
     <div class="dtck-text text-sm leading-relaxed">
-        <?= nl2br(htmlspecialchars($ticket['jenis_kerusakan'] ?? '-')) ?>
+        <?php 
+            $jk_clean = (string) preg_replace('/\[pengajuan_items_json:[^\]]*\]/s', '', $ticket['jenis_kerusakan'] ?? '-');
+            echo nl2br(htmlspecialchars(trim($jk_clean)));
+        ?>
     </div>
 </div>
 
@@ -113,8 +116,10 @@ $status = $ticket['status'] ?? 'Menunggu';
 // jadi sheet cetak di-render server-side agar selalu terisi walau JS gagal).
 $persediaan_items_ticket = [];
 if ($is_persediaan && isset($this->db) && $this->db->table_exists('ticket_persediaan_items')) {
+    $hasAcc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
+    $hasKet = $this->db->field_exists('keterangan', 'ticket_persediaan_items');
     $persediaan_items_ticket = $this->db
-        ->select('i.jumlah, i.nama_barang_snapshot, b.nama_barang, b.kode_barang, i.satuan_snapshot, b.satuan')
+        ->select('i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ($hasKet ? ', i.keterangan' : '') . ', i.nama_barang_snapshot, b.nama_barang, b.kode_barang, i.satuan_snapshot, b.satuan')
         ->from('ticket_persediaan_items i')
         ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
         ->where('i.ticket_id', (int)($ticket['id'] ?? 0))
@@ -156,10 +161,14 @@ $tckt_print_items = [];
 foreach ($persediaan_items_ticket as $it) {
     $sat = $it['satuan_snapshot'] ?? ($it['satuan'] ?? '');
     $qty = (int)($it['jumlah'] ?? 0);
+    $acc = (array_key_exists('jumlah_disetujui', $it) && $it['jumlah_disetujui'] !== null && $it['jumlah_disetujui'] !== '')
+        ? (int)$it['jumlah_disetujui'] : null;
     $tckt_print_items[] = [
-        'kode'   => ($it['kode_barang'] ?? '') !== '' ? $it['kode_barang'] : '-',
-        'nama'   => ($it['nama_barang_snapshot'] ?? '') !== '' ? $it['nama_barang_snapshot'] : ($it['nama_barang'] ?? '-'),
-        'jumlah' => $qty > 0 ? $qty . ($sat !== '' ? ' ' . $sat : '') : '',
+        'kode'       => ($it['kode_barang'] ?? '') !== '' ? $it['kode_barang'] : '-',
+        'nama'       => ($it['nama_barang_snapshot'] ?? '') !== '' ? $it['nama_barang_snapshot'] : ($it['nama_barang'] ?? '-'),
+        'jumlah'     => $qty > 0 ? $qty . ($sat !== '' ? ' ' . $sat : '') : '',
+        'disetujui'  => $acc !== null ? $acc . ($sat !== '' ? ' ' . $sat : '') : '-',
+        'keterangan' => ($it['keterangan'] ?? '') !== '' ? $it['keterangan'] : '-',
     ];
 }
 ?>
@@ -169,24 +178,28 @@ foreach ($persediaan_items_ticket as $it) {
 <div class="mt-5">
     <div class="text-xs dtck-label mb-2">Daftar Barang Persediaan</div>
     <div class="dtck-photo-wrap rounded-lg border p-3 overflow-x-auto">
-        <table class="w-full text-sm min-w-[480px]">
+        <table class="w-full text-sm min-w-[560px]">
             <thead>
                 <tr class="dtck-label text-[11px] uppercase tracking-wider text-left">
                     <th class="pb-2 pr-3 font-semibold w-10 text-center">No</th>
                     <th class="pb-2 pr-3 font-semibold">Kode</th>
                     <th class="pb-2 pr-3 font-semibold">Nama Barang</th>
-                    <th class="pb-2 font-semibold text-right">Jumlah</th>
+                    <th class="pb-2 font-semibold text-right">Diminta</th>
+                    <th class="pb-2 font-semibold text-right">Disetujui</th>
+                    <th class="pb-2 pl-3 font-semibold text-left">Keterangan</th>
                 </tr>
             </thead>
             <tbody id="tckt-persediaan-items">
                 <?php if (empty($tckt_print_items)): ?>
-                <tr><td colspan="4" class="text-xs text-center py-4 dtck-muted">Data barang tidak tersedia</td></tr>
+                <tr><td colspan="6" class="text-xs text-center py-4 dtck-muted">Data barang tidak tersedia</td></tr>
                 <?php else: foreach ($tckt_print_items as $idx => $pi): ?>
                 <tr>
                     <td class="py-2 pr-3 text-center text-xs dtck-muted"><?= $idx + 1 ?></td>
                     <td class="py-2 pr-3 font-mono text-xs dtck-text"><?= htmlspecialchars($pi['kode']) ?></td>
                     <td class="py-2 pr-3 text-xs dtck-text"><?= htmlspecialchars($pi['nama']) ?></td>
-                    <td class="py-2 text-right text-xs dtck-text font-semibold"><?= htmlspecialchars($pi['jumlah']) ?></td>
+                    <td class="py-2 text-right text-xs dtck-text"><?= htmlspecialchars($pi['jumlah']) ?></td>
+                    <td class="py-2 text-right text-xs dtck-text font-semibold"><?= htmlspecialchars($pi['disetujui']) ?></td>
+                    <td class="py-2 pl-3 text-left text-xs dtck-muted"><?= htmlspecialchars($pi['keterangan']) ?></td>
                 </tr>
                 <?php endforeach; endif ?>
             </tbody>
@@ -229,17 +242,21 @@ foreach ($persediaan_items_ticket as $it) {
                 <th>NO</th>
                 <th>Kode barang</th>
                 <th>NAMA BARANG</th>
-                <th>Jumlah</th>
+                <th>Diminta</th>
+                <th>Disetujui</th>
+                <th>Keterangan</th>
             </tr>
         </thead>
         <tbody id="print_items_ticket">
             <?php for ($i = 0; $i < max(count($tckt_print_items), 6); $i++):
-                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'jumlah' => '']; ?>
+                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'jumlah' => '', 'disetujui' => '', 'keterangan' => '']; ?>
             <tr>
                 <td><?= $i + 1 ?></td>
                 <td><?= htmlspecialchars($pr['kode']) ?></td>
                 <td><?= htmlspecialchars($pr['nama']) ?></td>
                 <td><?= htmlspecialchars($pr['jumlah']) ?></td>
+                <td><?= htmlspecialchars($pr['disetujui']) ?></td>
+                <td><?= htmlspecialchars($pr['keterangan']) ?></td>
             </tr>
             <?php endfor ?>
         </tbody>

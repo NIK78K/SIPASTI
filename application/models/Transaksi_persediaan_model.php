@@ -107,10 +107,10 @@ class Transaksi_persediaan_model extends CI_Model {
     }
 
     /* ===============================
-       ACC TEKNISI: jumlah_disetujui per item (0<=disetujui<=jumlah).
+       ACC TEKNISI: jumlah_disetujui & keterangan per item (0<=disetujui<=jumlah).
        NULL=belum ACC; default ikut jumlah saat ACC bila key absen.
     ================================ */
-    public function save_acc_ticket($ticket_id, $teknisi_id, $items) {
+    public function save_acc_ticket($ticket_id, $teknisi_id, $items, $keterangan = []) {
         $ticket_id  = (int) $ticket_id;
         $teknisi_id = (int) $teknisi_id;
         $ticket = $this->db->where('id', $ticket_id)->get('tickets')->row_array();
@@ -120,6 +120,10 @@ class Transaksi_persediaan_model extends CI_Model {
         if (!in_array($ticket['status'] ?? '', ['Menunggu', 'On Progress'])) return ['ok' => false, 'msg' => 'Tiket sudah diproses.'];
         if (!$this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items')) return ['ok' => false, 'msg' => 'Kolom jumlah_disetujui belum ada.'];
         if (!is_array($items) || empty($items)) return ['ok' => false, 'msg' => 'Items kosong.'];
+
+        if ($this->db->table_exists('ticket_persediaan_items') && !$this->db->field_exists('keterangan', 'ticket_persediaan_items')) {
+            $this->db->query("ALTER TABLE `ticket_persediaan_items` ADD COLUMN `keterangan` VARCHAR(255) NULL AFTER `jumlah_disetujui`");
+        }
 
         $rows = $this->db->where('ticket_id', $ticket_id)->get('ticket_persediaan_items')->result_array();
         if (empty($rows)) return ['ok' => false, 'msg' => 'Bukan tiket persediaan.'];
@@ -133,8 +137,12 @@ class Transaksi_persediaan_model extends CI_Model {
             if (!is_numeric($val)) return ['ok' => false, 'msg' => 'Jumlah ACC tidak valid (ID ' . $bid . ').'];
             $val = (int) $val;
             if ($val < 0 || $val > $max[$bid]) return ['ok' => false, 'msg' => 'ACC ID ' . $bid . ' harus 0-' . $max[$bid] . '.'];
+            $upd = ['jumlah_disetujui' => $val];
+            if (is_array($keterangan) && array_key_exists($bid, $keterangan)) {
+                $upd['keterangan'] = trim((string)$keterangan[$bid]);
+            }
             $this->db->where('ticket_id', $ticket_id)->where('barang_id', $bid)
-                ->update('ticket_persediaan_items', ['jumlah_disetujui' => $val]);
+                ->update('ticket_persediaan_items', $upd);
         }
         return ['ok' => true, 'msg' => 'Jumlah disetujui tersimpan.'];
     }

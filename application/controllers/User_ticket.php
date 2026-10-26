@@ -594,9 +594,15 @@ public function pengajuan_persediaan()
     if (!$this->input->post()) {
         list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
 
+        $kategori_persediaan = $this->db
+            ->order_by('kode', 'ASC')
+            ->get('master_kategori_persediaan')
+            ->result_array();
+
         $data = [
-            'unit_kerja_list'    => $unit_kerja_list,
-            'unit_kerja_default' => $unit_kerja_default,
+            'unit_kerja_list'     => $unit_kerja_list,
+            'unit_kerja_default'  => $unit_kerja_default,
+            'kategori_persediaan' => $kategori_persediaan,
         ];
 
         $this->load->view('layout/header_user');
@@ -608,8 +614,9 @@ public function pengajuan_persediaan()
     /* ---------- POST: simpan pengajuan ---------- */
     $back = 'user_ticket/pengajuan_persediaan';
 
-    $nama_arr = $this->input->post('nama_barang');
-    $ket_arr  = $this->input->post('keterangan');
+    $nama_arr     = $this->input->post('nama_barang');
+    $kategori_arr = $this->input->post('kategori_id');
+    $ket_arr      = $this->input->post('keterangan');
 
     $keperluan          = trim($this->input->post('keperluan', true) ?? '');
     $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
@@ -621,15 +628,26 @@ public function pengajuan_persediaan()
         exit;
     }
 
+    // Mapping kategori persediaan
+    $all_kat = $this->db->get('master_kategori_persediaan')->result_array();
+    $kat_map = [];
+    foreach ($all_kat as $k) {
+        $kat_map[(int)$k['id']] = $k['kode'] . ' - ' . $k['nama'];
+    }
+
     $items = [];
     if (is_array($nama_arr)) {
         foreach ($nama_arr as $i => $n) {
             $n = trim(strip_tags((string) $n));
             if ($n === '') continue;
             $k = trim(strip_tags((string) ($ket_arr[$i] ?? '')));
+            $kid = !empty($kategori_arr[$i]) ? (int) $kategori_arr[$i] : null;
+            $knama = ($kid && isset($kat_map[$kid])) ? $kat_map[$kid] : '';
             $items[] = [
-                'nama' => substr($n, 0, 150),
-                'ket'  => substr($k, 0, 255),
+                'nama'          => substr($n, 0, 150),
+                'kategori_id'   => $kid,
+                'kategori_nama' => $knama,
+                'ket'           => substr($k, 0, 255),
             ];
         }
     }
@@ -660,6 +678,9 @@ public function pengajuan_persediaan()
     $lines = [];
     foreach ($items as $it) {
         $ln = '- ' . $it['nama'];
+        if (!empty($it['kategori_nama'])) {
+            $ln .= ' [Kategori: ' . $it['kategori_nama'] . ']';
+        }
         if ($it['ket'] !== '') $ln .= ' (' . $it['ket'] . ')';
         $lines[] = $ln;
     }
@@ -673,6 +694,7 @@ public function pengajuan_persediaan()
     if ($tanggal_permintaan !== '') $ringkas[] = 'Tanggal permintaan: ' . $tanggal_permintaan;
     $ringkas[] = 'Total: ' . count($items) . ' jenis diajukan';
     $ringkas[] = 'Catatan: barang belum ada di daftar persediaan, menunggu verifikasi admin/teknisi.';
+    $ringkas[] = '[pengajuan_items_json:' . json_encode($items) . ']';
 
     $this->db->insert('tickets', [
         'user_id'         => $this->session->userdata('user_id'),
@@ -745,7 +767,7 @@ public function history()
 
     /* ===============================
        RATING BARANG PERSEDIAAN (per barang_id)
-       POST: rating[<barang_id>] = 1-5, komentar opsional.
+       POST: rating[<barang_id>] = 1-5, ulasan_barang[<barang_id>] opsional, komentar umum opsional.
        Endpoint rating tiket existing tetap untuk non-persediaan.
     =============================== */
     public function rating_barang($ticket_id)
@@ -753,6 +775,9 @@ public function history()
         $ratings = $this->input->post('rating');
         $ratings = is_array($ratings) ? $ratings : [];
         $rating_layanan = $this->input->post('rating_layanan');
+        $ulasan_barang  = $this->input->post('ulasan_barang');
+        $ulasan_barang  = is_array($ulasan_barang) ? $ulasan_barang : [];
+
         if (empty($ratings) && ($rating_layanan === null || $rating_layanan === '')) {
             redirect('user_ticket/history');
             exit;
@@ -762,10 +787,47 @@ public function history()
             $this->session->userdata('user_id'),
             $ratings,
             $this->input->post('komentar'),
-            $rating_layanan
+            $rating_layanan,
+            $ulasan_barang
         );
         redirect('user_ticket/history');
         exit;
+    }
+
+    /* ===============================
+       HALAMAN PENILAIAN & ULASAN BARANG
+    =============================== */
+    public function ulasan_barang($barang_id)
+    {
+        $barang_id = (int) $barang_id;
+        $this->load->model(['Barang_persediaan_model', 'User_ticket_model']);
+
+        $barang = $this->Barang_persediaan_model->get_by_id($barang_id);
+        if (!$barang) {
+            $this->session->set_flashdata('error', 'Barang persediaan tidak ditemukan.');
+            redirect('user_ticket/permintaan_persediaan');
+            exit;
+        }
+
+        $bulan = (int) date('n');
+        $tahun = (int) date('Y');
+        $sisa  = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, $bulan, $tahun);
+
+        $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
+
+        $data = [
+            'barang'       => $barang,
+            'sisa'         => $sisa,
+            'rating_avg'   => $ulasan_data['rating_avg'],
+            'rating_count' => $ulasan_data['rating_count'],
+            'ulasan_count' => $ulasan_data['ulasan_count'],
+            'star_counts'  => $ulasan_data['star_counts'],
+            'ulasan_list'  => $ulasan_data['ulasan_list'],
+        ];
+
+        $this->load->view('layout/header_user');
+        $this->load->view('user/ulasan_barang', $data);
+        $this->load->view('layout/footer_user');
     }
 
 public function search_perangkat()

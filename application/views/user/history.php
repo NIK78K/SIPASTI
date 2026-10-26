@@ -143,6 +143,7 @@ if (!function_exists('persediaan_form_data')) {
                     'rating' => isset($item['rating']) && $item['rating'] !== null && $item['rating'] !== '' ? (int) $item['rating'] : null,
                     'disetujui' => (array_key_exists('jumlah_disetujui', $item) && $item['jumlah_disetujui'] !== null && $item['jumlah_disetujui'] !== '')
                         ? (int) $item['jumlah_disetujui'] : null,
+                    'keterangan' => $item['keterangan'] ?? '',
                 ];
             }
         }
@@ -442,7 +443,7 @@ foreach (($tickets ?? []) as $t) {
                     <?php if ($is_persediaan_rate): ?>
                         <?php $need_item_rate = false; foreach (($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate = true; break; } } ?>
                         <?php $need_service_rate = empty($t['rating']); ?>
-                        <?php $rate_items = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
+                        <?php $rate_items = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0, 'komentar_item' => (string) ($x['komentar_item'] ?? '')]; } ?>
                         <?php $rate_items_json = htmlspecialchars(json_encode(array_values($rate_items)), ENT_QUOTES); ?>
                         <?php if ($need_item_rate || $need_service_rate): ?>
                             <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_json ?>, <?= (int) ($t['rating'] ?? 0) ?>)"
@@ -715,7 +716,7 @@ foreach (($tickets ?? []) as $t) {
                 <?php if ($is_persediaan_rate_mob): ?>
                     <?php $need_item_rate_mob = false; foreach ((array) ($t['persediaan_items'] ?? []) as $ri) { if (empty($ri['rating'])) { $need_item_rate_mob = true; break; } } ?>
                     <?php $need_service_rate_mob = empty($t['rating']); ?>
-                    <?php $rate_items_mob = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items_mob[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0]; } ?>
+                    <?php $rate_items_mob = []; foreach ((array) ($t['persediaan_items'] ?? []) as $x) { $rate_items_mob[] = ['barang_id' => (int) ($x['barang_id'] ?? 0), 'nama' => (string) ($x['nama_barang_snapshot'] ?? $x['nama_barang'] ?? '-'), 'rating' => isset($x['rating']) && $x['rating'] !== null && $x['rating'] !== '' ? (int) $x['rating'] : 0, 'komentar_item' => (string) ($x['komentar_item'] ?? '')]; } ?>
                     <?php $rate_items_mob_json = htmlspecialchars(json_encode(array_values($rate_items_mob)), ENT_QUOTES); ?>
                     <?php if ($need_item_rate_mob || $need_service_rate_mob): ?>
                     <button onclick="openRatingBarangModal(<?= (int) $t['id'] ?>, <?= $rate_items_mob_json ?>, <?= (int) ($t['rating'] ?? 0) ?>)"
@@ -1076,14 +1077,15 @@ foreach (($tickets ?? []) as $t) {
                 <div class="pm-meta"><span>TANGGAL PERMINTAAN</span><strong id="pm_tanggal_butuh"></strong></div>
             </div>
             <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;min-width:520px;font-size:12px;">
+                <table style="width:100%;border-collapse:collapse;min-width:600px;font-size:12px;">
                     <thead>
                         <tr style="background:#f5f3ff;color:#5b21b6;">
                             <th style="padding:10px 12px;text-align:center;border:1px solid #ddd6fe;width:52px;">NO</th>
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">KODE BARANG</th>
                             <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;">NAMA BARANG</th>
-                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">DIMINTA</th>
-                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:110px;">DISETUJUI</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:100px;">DIMINTA</th>
+                            <th style="padding:10px 12px;text-align:right;border:1px solid #ddd6fe;width:100px;">DISETUJUI</th>
+                            <th style="padding:10px 12px;text-align:left;border:1px solid #ddd6fe;width:140px;">KETERANGAN</th>
                         </tr>
                     </thead>
                     <tbody id="pm_items"></tbody>
@@ -1336,9 +1338,9 @@ foreach (($tickets ?? []) as $t) {
             var bid = it.barang_id;
             ratingBarangVals[bid] = it.rating || 0;
             var row = document.createElement('div');
-            row.className = 'rounded-xl border border-slate-200 p-3';
+            row.className = 'rounded-xl border border-slate-200 bg-slate-50/50 p-3 space-y-2';
             var name = document.createElement('p');
-            name.className = 'text-sm font-semibold text-slate-700 mb-2';
+            name.className = 'text-sm font-semibold text-slate-800';
             name.textContent = it.nama || ('Barang #' + bid);
             row.appendChild(name);
             var stars = document.createElement('div');
@@ -1358,6 +1360,22 @@ foreach (($tickets ?? []) as $t) {
             hid.type = 'hidden'; hid.name = 'rating[' + bid + ']'; hid.id = 'rb-val-' + bid;
             hid.value = it.rating || '';
             row.appendChild(hid);
+
+            var ulasanWrap = document.createElement('div');
+            ulasanWrap.className = 'pt-1';
+            var ulasanLabel = document.createElement('label');
+            ulasanLabel.className = 'text-[11px] font-semibold text-slate-600 block mb-1';
+            ulasanLabel.textContent = 'Ulasan barang (opsional):';
+            ulasanWrap.appendChild(ulasanLabel);
+            var ulasanInput = document.createElement('textarea');
+            ulasanInput.name = 'ulasan_barang[' + bid + ']';
+            ulasanInput.rows = 2;
+            ulasanInput.className = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-orange-400/30 focus:outline-none resize-none bg-white';
+            ulasanInput.placeholder = 'Bagikan ulasan Anda tentang kualitas barang ini...';
+            ulasanInput.value = it.komentar_item || '';
+            ulasanWrap.appendChild(ulasanInput);
+            row.appendChild(ulasanWrap);
+
             box.appendChild(row);
         });
         var m = document.getElementById('ratingBarangModal');
@@ -1461,19 +1479,21 @@ foreach (($tickets ?? []) as $t) {
         rows.innerHTML = '';
         var items = Array.isArray(form.items) ? form.items : [];
         if (!items.length) {
-            rows.innerHTML = '<tr><td colspan="5" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
+            rows.innerHTML = '<tr><td colspan="6" style="padding:18px;text-align:center;color:#94a3b8;border:1px solid #e2e8f0;">Data barang tidak tersedia</td></tr>';
         } else {
             items.forEach(function(item, index) {
                 var row = document.createElement('tr');
                 row.style.background = index % 2 ? '#fafafa' : '#fff';
                 var accText = (item.disetujui !== null && item.disetujui !== undefined && item.disetujui !== '')
                     ? item.disetujui + ' ' + (item.satuan || 'pcs') : '-';
+                var ketText = item.keterangan ? item.keterangan : '-';
                 [
                     { value: index + 1, align: 'center' },
                     { value: item.kode || '-', align: 'left' },
                     { value: item.nama || '-', align: 'left' },
                     { value: (item.jumlah || 0) + ' ' + (item.satuan || 'pcs'), align: 'right' },
-                    { value: accText, align: 'right' }
+                    { value: accText, align: 'right' },
+                    { value: ketText, align: 'left' }
                 ].forEach(function(cell) {
                     var td = document.createElement('td');
                     td.textContent = cell.value;

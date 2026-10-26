@@ -447,9 +447,14 @@ $no = $page + 1;
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                         </button>
-                        <?php if ($status === 'On Progress'): ?>
-                        <a href="<?= base_url('ticket/selesai/'.$t['id']) ?>" title="Tandai Selesai"
-                           onclick="return confirm('Tandai tiket ini sebagai selesai?')"
+                        <?php 
+                        $isPengajuanPersediaan = (strpos($t['jenis_kerusakan'] ?? '', '[PENGAJUAN BARANG PERSEDIAAN]') !== false)
+                            || (!empty($t['nama_sub_kategori']) && stripos($t['nama_sub_kategori'], 'Pengajuan Persediaan') !== false);
+                        ?>
+                        <?php if ($status === 'On Progress' || ($status === 'Menunggu' && $isPengajuanPersediaan)): ?>
+                        <a href="<?= base_url('ticket/selesai/'.$t['id']) ?>" 
+                           title="<?= $isPengajuanPersediaan ? 'Setujui & Selesaikan Pengajuan' : 'Tandai Selesai' ?>"
+                           onclick="return confirm('<?= $isPengajuanPersediaan ? 'Setujui pengajuan dan masukkan barang ke master barang persediaan?' : 'Tandai tiket ini sebagai selesai?' ?>')"
                            class="p-1 rounded-md bg-green-600/20 hover:bg-green-500/40
                                   text-green-500 hover:text-green-600 transition-all hover:scale-105 active:scale-95">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -763,8 +768,10 @@ function fillPersediaanPrintTicket() {
             var k = (tr.cells[1].textContent || '').trim();
             var n = (tr.cells[2].textContent || '').trim();
             var j = (tr.cells[3].textContent || '').trim();
+            var d = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : j;
+            var ket = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
             if (!k && !n && !j) return;
-            items.push({ kode: k || '-', nama: n || '-', jumlah: j || '' });
+            items.push({ kode: k || '-', nama: n || '-', jumlah: j || '', disetujui: d || '', keterangan: ket || '' });
         });
     }
     if (!items.length) {
@@ -791,9 +798,12 @@ function fillPersediaanPrintTicket() {
     for (var i = 0; i < n; i++) {
         var it = items[i] || {};
         var tr = document.createElement('tr');
-        [i + 1, it.kode || '', it.nama || '', it.jumlah || ''].forEach(function (v) {
+        [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''].forEach(function (v, idx) {
             var td = document.createElement('td');
             td.textContent = v;
+            if (idx === 0 || idx === 3 || idx === 4) {
+                td.style.textAlign = 'center';
+            }
             tr.appendChild(td);
         });
         printRows.appendChild(tr);

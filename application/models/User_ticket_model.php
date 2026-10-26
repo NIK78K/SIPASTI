@@ -726,10 +726,11 @@ public function get_history_limit($user_id, $limit, $offset)
         $map = [];
         if (!empty($ids)) {
             $hasAcc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
+            $hasKet = $this->db->field_exists('keterangan', 'ticket_persediaan_items');
             $hasRate = $this->db->field_exists('rating', 'ticket_persediaan_items');
             $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
             $items = $this->db
-                ->select('i.ticket_id, i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ($hasRate ? ', i.rating' : '') . ($hasKomen ? ', i.komentar_item' : '') . ', i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
+                ->select('i.ticket_id, i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ($hasKet ? ', i.keterangan' : '') . ($hasRate ? ', i.rating' : '') . ($hasKomen ? ', i.komentar_item' : '') . ', i.nama_barang_snapshot, i.satuan_snapshot, b.kode_barang, b.nama_barang, b.satuan')
                 ->from('ticket_persediaan_items i')
                 ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
                 ->where_in('i.ticket_id', $ids)
@@ -797,7 +798,7 @@ public function get_history_limit($user_id, $limit, $offset)
        Validasi: tiket milik user + Selesai, barang bagian tiket, nilai 1-5.
        Sekali per pasangan tiket-barang; update bila sudah ada.
     ========================= */
-    public function save_rating_barang($ticket_id, $user_id, $ratings, $komentar = null, $rating_layanan = null)
+    public function save_rating_barang($ticket_id, $user_id, $ratings, $komentar = null, $rating_layanan = null, $ulasan_barang = [])
     {
         $ticket_id = (int) $ticket_id;
         $rating_layanan = ($rating_layanan === null || $rating_layanan === '')
@@ -842,7 +843,13 @@ public function get_history_limit($user_id, $limit, $offset)
         }
         foreach ($clean as $bid => $val) {
             $upd = ['rating' => $val];
-            if ($hasKomen && $komentar !== null && $komentar !== '') $upd['komentar_item'] = substr((string) $komentar, 0, 1000);
+            if ($hasKomen) {
+                if (is_array($ulasan_barang) && !empty($ulasan_barang[$bid]) && trim((string) $ulasan_barang[$bid]) !== '') {
+                    $upd['komentar_item'] = substr(trim((string) $ulasan_barang[$bid]), 0, 1000);
+                } elseif ($komentar !== null && $komentar !== '') {
+                    $upd['komentar_item'] = substr((string) $komentar, 0, 1000);
+                }
+            }
             $this->db->where('ticket_id', $ticket_id)->where('barang_id', $bid)->update('ticket_persediaan_items', $upd);
         }
         $ticket_update = [];
@@ -853,8 +860,66 @@ public function get_history_limit($user_id, $limit, $offset)
         if (!empty($ticket_update)) {
             $this->db->where('id', $ticket_id)->where('user_id', $user_id)->update('tickets', $ticket_update);
         }
-        $this->session->set_flashdata('success', 'Terima kasih atas rating layanan dan barang Anda! ⭐');
+        $this->session->set_flashdata('success', 'Terima kasih atas rating layanan dan ulasan barang Anda! ⭐');
         return true;
+    }
+
+    /* =========================
+       GET ULASAN & PENILAIAN BARANG
+    ========================= */
+    public function get_ulasan_barang($barang_id)
+    {
+        $barang_id = (int) $barang_id;
+        $out = [
+            'rating_avg'   => 0,
+            'rating_count' => 0,
+            'ulasan_count' => 0,
+            'star_counts'  => [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0],
+            'ulasan_list'  => [],
+        ];
+
+        if (!$this->db->table_exists('ticket_persediaan_items') || !$this->db->field_exists('rating', 'ticket_persediaan_items')) {
+            return $out;
+        }
+
+        $hasKomen = $this->db->field_exists('komentar_item', 'ticket_persediaan_items');
+
+        $this->db->select('i.id, i.rating, ' . ($hasKomen ? 'i.komentar_item, ' : "'' AS komentar_item, ") . 'i.created_at, t.kode_tiket, t.pelapor, u.name as user_name');
+        $this->db->from('ticket_persediaan_items i');
+        $this->db->join('tickets t', 't.id = i.ticket_id', 'left');
+        $this->db->join('users u', 'u.id = t.user_id', 'left');
+        $this->db->where('i.barang_id', $barang_id);
+        $this->db->where('i.rating >=', 1);
+        $this->db->where('i.rating <=', 5);
+        $this->db->order_by('i.id', 'DESC');
+        $rows = $this->db->get()->result_array();
+
+        if (empty($rows)) {
+            return $out;
+        }
+
+        $total_stars  = 0;
+        $rating_count = count($rows);
+        $ulasan_count = 0;
+
+        foreach ($rows as $r) {
+            $star = (int) $r['rating'];
+            $total_stars += $star;
+            if (isset($out['star_counts'][$star])) {
+                $out['star_counts'][$star]++;
+            }
+            $komentar = trim((string) ($r['komentar_item'] ?? ''));
+            if ($komentar !== '') {
+                $ulasan_count++;
+            }
+        }
+
+        $out['rating_avg']   = round($total_stars / $rating_count, 1);
+        $out['rating_count'] = $rating_count;
+        $out['ulasan_count'] = $ulasan_count;
+        $out['ulasan_list']  = $rows;
+
+        return $out;
     }
 
     /* =========================

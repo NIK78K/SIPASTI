@@ -40,9 +40,13 @@ function _persediaan_ringkas_view($ci, $ticket_id) {
 if (!function_exists('_persediaan_full_view')) {
 function _persediaan_full_view($ci, $ticket_id) {
     if (!$ci->db->table_exists('ticket_persediaan_items')) return [];
+    if (!$ci->db->field_exists('keterangan', 'ticket_persediaan_items')) {
+        $ci->db->query("ALTER TABLE `ticket_persediaan_items` ADD COLUMN `keterangan` VARCHAR(255) NULL AFTER `jumlah_disetujui`");
+    }
     $hasAcc = $ci->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
+    $hasKet = $ci->db->field_exists('keterangan', 'ticket_persediaan_items');
     return $ci->db
-        ->select('i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ', i.nama_barang_snapshot, b.nama_barang, b.kode_barang, i.satuan_snapshot, b.satuan')
+        ->select('i.barang_id, i.jumlah' . ($hasAcc ? ', i.jumlah_disetujui' : '') . ($hasKet ? ', i.keterangan' : '') . ', i.nama_barang_snapshot, b.nama_barang, b.kode_barang, i.satuan_snapshot, b.satuan')
         ->from('ticket_persediaan_items i')
         ->join('master_barang_persediaan b', 'b.id = i.barang_id', 'left')
         ->where('i.ticket_id', (int)$ticket_id)
@@ -68,7 +72,7 @@ function _persediaan_sisa_view($ci, $barang_id) {
     return $sisa;
 }
 }
-// Paket siap JSON untuk modal ACC: barang_id, kode, nama, diminta, disetujui, sisa, satuan.
+// Paket siap JSON untuk modal ACC: barang_id, kode, nama, diminta, disetujui, keterangan, sisa, satuan.
 if (!function_exists('_persediaan_acc_view')) {
 function _persediaan_acc_view($ci, $ticket_id) {
     $out = [];
@@ -77,13 +81,14 @@ function _persediaan_acc_view($ci, $ticket_id) {
         $acc = (array_key_exists('jumlah_disetujui', $it) && $it['jumlah_disetujui'] !== null && $it['jumlah_disetujui'] !== '')
             ? (int)$it['jumlah_disetujui'] : $diminta;
         $out[] = [
-            'barang_id' => (int)($it['barang_id'] ?? 0),
-            'kode'      => $it['kode_barang'] ?? '-',
-            'nama'      => $it['nama_barang_snapshot'] ?: ($it['nama_barang'] ?? '-'),
-            'satuan'    => $it['satuan_snapshot'] ?: ($it['satuan'] ?? ''),
-            'diminta'   => $diminta,
-            'disetujui' => $acc,
-            'sisa'      => _persediaan_sisa_view($ci, $it['barang_id'] ?? 0),
+            'barang_id'  => (int)($it['barang_id'] ?? 0),
+            'kode'       => $it['kode_barang'] ?? '-',
+            'nama'       => $it['nama_barang_snapshot'] ?: ($it['nama_barang'] ?? '-'),
+            'satuan'     => $it['satuan_snapshot'] ?: ($it['satuan'] ?? ''),
+            'diminta'    => $diminta,
+            'disetujui'  => $acc,
+            'keterangan' => $it['keterangan'] ?? '',
+            'sisa'       => _persediaan_sisa_view($ci, $it['barang_id'] ?? 0),
         ];
     }
     return $out;
@@ -2508,7 +2513,7 @@ foreach ($tickets_my as $t):
                     Daftar Barang Persediaan
                 </h4>
                 <div class="bg-slate-800/40 rounded-xl p-4 overflow-x-auto">
-                    <table class="w-full text-sm min-w-[520px]">
+                    <table class="w-full text-sm min-w-[580px]">
                         <thead>
                             <tr class="header-subtitle text-[11px] uppercase tracking-wider text-left">
                                 <th class="pb-2 pr-3 font-semibold w-10 text-center">No</th>
@@ -2516,6 +2521,7 @@ foreach ($tickets_my as $t):
                                 <th class="pb-2 pr-3 font-semibold">Nama Barang</th>
                                 <th class="pb-2 font-semibold text-right">Diminta</th>
                                 <th id="th-persetujuan-teknisi" class="pb-2 font-semibold text-right">Disetujui</th>
+                                <th id="th-keterangan-teknisi" class="pb-2 pl-3 font-semibold text-left">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody id="modal-persediaan-items"></tbody>
@@ -2633,6 +2639,7 @@ foreach ($tickets_my as $t):
                     <th>NAMA BARANG</th>
                     <th>DIMINTA</th>
                     <th>DISETUJUI</th>
+                    <th>KETERANGAN</th>
                 </tr>
             </thead>
             <tbody id="print_items_teknisi"></tbody>
@@ -3166,27 +3173,54 @@ function bukaModalAcc(id, kode, src, mode) {
                 ? (parseInt(it.disetujui, 10) || 0) : diminta;
             if (accVal < 0) accVal = 0;
             if (accVal > diminta) accVal = diminta;
+            var ketVal = it.keterangan || '';
             var sisa = (it.sisa !== null && it.sisa !== undefined && it.sisa !== '') ? ('Sisa kini: ' + it.sisa) : 'Sisa kini: -';
             var satuan = it.satuan ? ' ' + it.satuan : '';
+            var isDifferent = (accVal < diminta);
+
             var row = document.createElement('div');
             row.className = 'bg-slate-800/40 border border-white/5 rounded-xl p-3 flex flex-col gap-2';
             row.innerHTML = '<div class="flex items-start justify-between gap-3">'
-                + '<div><div class="header-title text-sm font-semibold"></div>'
+                + '<div><div class="header-title text-sm font-semibold item-title"></div>'
                 + '<div class="header-subtitle text-xs mt-0.5">Diminta ' + diminta + satuan + ' · ' + _tknEsc(sisa) + '</div></div>'
                 + '<div class="text-[11px] header-subtitle whitespace-nowrap">#' + (idx + 1) + '</div></div>'
-                + '<label class="text-xs header-subtitle font-semibold">Jumlah disetujui (0–' + diminta + ')</label>'
+                + '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">'
+                + '<div>'
+                + '<label class="text-xs header-subtitle font-semibold block mb-1">Jumlah disetujui (0–' + diminta + ')</label>'
                 + '<input type="number" class="acc-input w-full bg-slate-800/80 border border-emerald-500/30 rounded-lg px-3 py-2 text-sm header-title focus:outline-none focus:ring-2 focus:ring-emerald-500/50"'
-                + ' min="0" max="' + diminta + '" step="1" value="' + accVal + '" data-barang="' + bid + '" data-max="' + diminta + '">';
-            row.querySelector('.header-title').textContent = (it.kode ? it.kode + ' — ' : '') + (it.nama || '-');
+                + ' min="0" max="' + diminta + '" step="1" value="' + accVal + '" data-barang="' + bid + '" data-max="' + diminta + '">'
+                + '</div>'
+                + '<div>'
+                + '<label class="text-xs header-subtitle font-semibold block mb-1">Keterangan / Alasan penyesuaian <span class="acc-ket-badge text-amber-400 font-normal ' + (isDifferent ? '' : 'hidden') + '">(Alasan tidak sesuai)</span></label>'
+                + '<input type="text" class="acc-ket-input w-full bg-slate-800/80 border ' + (isDifferent ? 'border-amber-500/60' : 'border-slate-600/60') + ' rounded-lg px-3 py-2 text-sm header-title focus:outline-none focus:ring-2 focus:ring-emerald-500/50"'
+                + ' placeholder="cth: Stok menipis / hanya ada ' + accVal + '" value="' + _tknEsc(ketVal) + '" data-barang="' + bid + '">'
+                + '</div>'
+                + '</div>';
+            row.querySelector('.item-title').textContent = (it.kode ? it.kode + ' — ' : '') + (it.nama || '-');
+
             var input = row.querySelector('.acc-input');
-            input.addEventListener('change', function () {
+            var ketInput = row.querySelector('.acc-ket-input');
+            var ketBadge = row.querySelector('.acc-ket-badge');
+
+            var updateKetState = function () {
                 var mx = parseInt(input.dataset.max || '0', 10) || 0;
                 var v = parseInt(input.value, 10);
                 if (isNaN(v)) v = mx;
                 if (v < 0) v = 0;
                 if (v > mx) v = mx;
                 input.value = v;
-            });
+                if (v < mx) {
+                    ketBadge.classList.remove('hidden');
+                    ketInput.classList.remove('border-slate-600/60');
+                    ketInput.classList.add('border-amber-500/60');
+                } else {
+                    ketBadge.classList.add('hidden');
+                    ketInput.classList.remove('border-amber-500/60');
+                    ketInput.classList.add('border-slate-600/60');
+                }
+            };
+            input.addEventListener('input', updateKetState);
+            input.addEventListener('change', updateKetState);
             wrap.appendChild(row);
         });
     }
@@ -3205,7 +3239,9 @@ function tutupModalAcc() {
 
 function _tknCollectAcc() {
     var values = {};
+    var keterangan = {};
     var inputs = document.querySelectorAll('#accItemsWrap .acc-input');
+    var ketInputs = document.querySelectorAll('#accItemsWrap .acc-ket-input');
     for (var i = 0; i < inputs.length; i++) {
         var bid = parseInt(inputs[i].dataset.barang || '0', 10) || 0;
         var mx = parseInt(inputs[i].dataset.max || '0', 10) || 0;
@@ -3214,14 +3250,24 @@ function _tknCollectAcc() {
         if (isNaN(v)) return { ok: false, msg: 'Isi jumlah yang disetujui dengan angka.' };
         if (v < 0 || v > mx) return { ok: false, msg: 'Jumlah harus 0 sampai ' + mx + '.' };
         values[bid] = v;
+        var ket = ketInputs[i] ? ketInputs[i].value.trim() : '';
+        if (v < mx && !ket) {
+            return { ok: false, msg: 'Mohon isi keterangan alasan penyesuaian untuk barang yang disetujui (' + v + ' dari ' + mx + ').' };
+        }
+        keterangan[bid] = ket;
     }
     if (!Object.keys(values).length) return { ok: false, msg: 'Tidak ada barang untuk ACC.' };
-    return { ok: true, values: values };
+    return { ok: true, values: values, keterangan: keterangan };
 }
 
-function _tknPostAcc(id, values) {
+function _tknPostAcc(id, values, keterangan) {
     var fd = new FormData();
-    Object.keys(values).forEach(function (bid) { fd.append('items[' + bid + ']', values[bid]); });
+    Object.keys(values).forEach(function (bid) {
+        fd.append('items[' + bid + ']', values[bid]);
+        if (keterangan && keterangan[bid] !== undefined) {
+            fd.append('keterangan[' + bid + ']', keterangan[bid]);
+        }
+    });
     return fetch('<?= base_url("teknisi_panel/acc_persediaan/") ?>' + id, {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -3238,7 +3284,7 @@ function submitAccPersediaan() {
         return;
     }
     Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    _tknPostAcc(id, got.values)
+    _tknPostAcc(id, got.values, got.keterangan)
         .then(function (accRes) {
             if (accRes.status !== 'success') {
                 Swal.fire({ icon: 'error', title: accRes.message || 'Gagal menyimpan ACC', confirmButtonColor: '#059669' });
@@ -3627,6 +3673,8 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
     const hide = !!hideDisetujui;
     const thAcc = document.getElementById('th-persetujuan-teknisi');
     if (thAcc) thAcc.style.display = hide ? 'none' : '';
+    const thKet = document.getElementById('th-keterangan-teknisi');
+    if (thKet) thKet.style.display = hide ? 'none' : '';
     const noteAcc = document.getElementById('modal-persediaan-note');
     if (noteAcc) noteAcc.style.display = hide ? 'none' : '';
     // Sumber utama: paket ACC (ada diminta + disetujui + sisa); fallback ke full lalu parse teks.
@@ -3635,6 +3683,7 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
             return {
                 kode_barang: a.kode || '-', nama_barang_snapshot: a.nama || '-', nama_barang: a.nama || '-',
                 jumlah: a.diminta ?? 0, jumlah_disetujui: (a.disetujui !== null && a.disetujui !== undefined) ? a.disetujui : null,
+                keterangan: a.keterangan || '',
                 satuan_snapshot: a.satuan || '', satuan: a.satuan || ''
             };
         })
@@ -3644,7 +3693,7 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
     _tknPersediaanCache = { ticket: ticket, items: items };
     tbody.innerHTML = '';
     if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="' + (hide ? '4' : '5') + '" class="header-subtitle text-xs text-center py-4">Data barang tidak tersedia</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + (hide ? '4' : '6') + '" class="header-subtitle text-xs text-center py-4">Data barang tidak tersedia</td></tr>';
     } else {
         items.forEach(function (it, idx) {
             const kode = it.kode_barang || '-';
@@ -3660,11 +3709,14 @@ function renderPersediaanTeknisi(ticket, hideDisetujui) {
                 + '<td class="py-2 pr-3 font-mono text-xs header-title"></td>'
                 + '<td class="py-2 pr-3 text-xs header-title"></td>'
                 + '<td class="py-2 text-right text-xs header-title"></td>'
-                + (hide ? '' : '<td class="py-2 text-right text-xs header-title font-semibold"></td>');
+                + (hide ? '' : '<td class="py-2 text-right text-xs header-title font-semibold"></td><td class="py-2 pl-3 text-left text-xs header-subtitle"></td>');
             tr.children[1].textContent = kode;
             tr.children[2].textContent = nama;
             tr.children[3].textContent = diminta + (satuan ? ' ' + satuan : '');
-            if (!hide) tr.children[4].textContent = disetujui + (satuan ? ' ' + satuan : '');
+            if (!hide) {
+                tr.children[4].textContent = disetujui + (satuan ? ' ' + satuan : '');
+                tr.children[5].textContent = it.keterangan || '-';
+            }
             tbody.appendChild(tr);
         });
     }
@@ -3689,8 +3741,9 @@ function fillPersediaanPrintTeknisi() {
             var n = (tr.cells[2].textContent || '').trim();
             var diminta = (tr.cells[3].textContent || '').trim();
             var disetujui = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : diminta;
+            var keterangan = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
             if (!k && !n && !diminta) return;
-            items.push({ kode_barang: k || '-', nama_barang: n || '-', jumlah: diminta || '-', jumlah_disetujui: disetujui || '-' });
+            items.push({ kode_barang: k || '-', nama_barang: n || '-', jumlah: diminta || '-', jumlah_disetujui: disetujui || '-', keterangan: keterangan || '-' });
         });
     }
     var cache = (typeof _tknPersediaanCache !== 'undefined') ? _tknPersediaanCache : { ticket: null, items: [] };
@@ -3705,7 +3758,8 @@ function fillPersediaanPrintTeknisi() {
                 kode_barang: it.kode_barang || '-',
                 nama_barang: it.nama_barang_snapshot || it.nama_barang || '-',
                 jumlah: diminta + (satuan ? ' ' + satuan : ''),
-                jumlah_disetujui: disetujui + (satuan ? ' ' + satuan : '')
+                jumlah_disetujui: disetujui + (satuan ? ' ' + satuan : ''),
+                keterangan: it.keterangan || '-'
             };
         });
     }
@@ -3740,16 +3794,18 @@ function fillPersediaanPrintTeknisi() {
     printRows.innerHTML = '';
     if (!items.length) {
         var tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="5" style="text-align:center;padding:8px;">Data barang tidak tersedia</td>';
+        tr.innerHTML = '<td colspan="6" style="text-align:center;padding:8px;">Data barang tidak tersedia</td>';
         printRows.appendChild(tr);
     } else {
         items.forEach(function (it, i) {
             var tr = document.createElement('tr');
-            [i + 1, it.kode_barang || '-', it.nama_barang || '-', it.jumlah || '-', it.jumlah_disetujui || '-'].forEach(function (v, idx) {
+            [i + 1, it.kode_barang || '-', it.nama_barang || '-', it.jumlah || '-', it.jumlah_disetujui || '-', it.keterangan || '-'].forEach(function (v, idx) {
                 var td = document.createElement('td');
                 td.textContent = v;
                 if (idx === 0 || idx === 3 || idx === 4) {
                     td.style.textAlign = 'center';
+                } else if (idx === 5) {
+                    td.style.textAlign = 'left';
                 }
                 tr.appendChild(td);
             });

@@ -132,17 +132,20 @@ class Ticket_model extends CI_Model {
         }
     }
 
-    /* ── EMAIL SELESAI ── */
+    /* ── EMAIL SELESAI & PROSES PENGAJUAN PERSEDIAAN ── */
     if (($data['status'] ?? '') === 'Selesai') {
+        $this->load->model('Barang_persediaan_model');
+        $this->Barang_persediaan_model->proses_pengajuan_persediaan_selesai($id);
+
         if ($isRuangRapat) {
-    if (preg_match('/\[ref:peminjaman_id=(\d+)\]/', $ticket['jenis_kerusakan'], $m_ref)) {
-        $this->db->where('id', (int)$m_ref[1])
-                 ->update('peminjaman_ruang_rapat', [
-                     'status'  => 'Selesai',
-                     'selesai' => 'Ya',
-                 ]);
-    }
-}
+            if (preg_match('/\[ref:peminjaman_id=(\d+)\]/', $ticket['jenis_kerusakan'], $m_ref)) {
+                $this->db->where('id', (int)$m_ref[1])
+                         ->update('peminjaman_ruang_rapat', [
+                             'status'  => 'Selesai',
+                             'selesai' => 'Ya',
+                         ]);
+            }
+        }
         send_ticket_email(
             $ticket['email'],
             "[SIPASTI] {$ticket['kode_tiket']} - Telah Diselesaikan",
