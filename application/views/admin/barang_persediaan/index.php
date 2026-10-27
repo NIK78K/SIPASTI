@@ -221,6 +221,23 @@
                 <p class="text-xs header-subtitle">Aktif bisa dipakai transaksi, Nonaktif disembunyikan.</p>
             </div>
 
+            <div>
+                <label class="block text-sm font-medium header-subtitle mb-1.5">
+                    Foto / Gambar Barang <span class="text-xs text-slate-400 font-normal">(Opsional, JPG/PNG/WEBP maks 4MB)</span>
+                </label>
+                <div class="flex items-center gap-4 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                    <div id="gambarPreviewWrap" class="w-16 h-16 rounded-xl border border-slate-700/60 bg-slate-800/80 overflow-hidden flex items-center justify-center flex-shrink-0">
+                        <img id="gambarPreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                        <span id="gambarPlaceholder" class="text-2xl text-slate-500">📦</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <input type="file" id="gambar" name="gambar" accept="image/*"
+                               class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30 cursor-pointer">
+                        <p class="text-[11px] header-subtitle mt-1">Pilih foto produk barang untuk ditampilkan di katalog.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex justify-end gap-3 mt-6">
                 <button type="button" onclick="tutupModal()"
                         class="px-4 py-2 header-subtitle hover:text-white transition-colors">
@@ -246,6 +263,7 @@
                 <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-slate-900/95 z-10">
                         <tr class="header-subtitle border-b border-slate-800/50 text-left">
+                            <th class="px-3 py-3 font-semibold" style="width: 55px;">Foto</th>
                             <th class="px-3 py-3 font-semibold">Nama Barang</th>
                             <th class="px-3 py-3 font-semibold" style="width: 140px;">Kode</th>
                             <th class="px-3 py-3 font-semibold" style="width: 90px;">Satuan</th>
@@ -474,6 +492,10 @@ function tambahBarang() {
     document.getElementById('satuan').value = 'pcs';
     document.getElementById('stok_minimum').value = '0';
     document.getElementById('status').value = 'Aktif';
+    document.getElementById('gambar').value = '';
+    document.getElementById('gambarPreview').src = '';
+    document.getElementById('gambarPreview').classList.add('hidden');
+    document.getElementById('gambarPlaceholder').classList.remove('hidden');
     document.getElementById('modalBarang').classList.remove('hidden');
 }
 
@@ -487,6 +509,23 @@ document.getElementById('kategori_id').addEventListener('change', function() {
     .then(r => r.json())
     .then(d => { kodeEl.value = (d && d.status === 'success' && d.kode) ? d.kode : ''; })
     .catch(() => { kodeEl.value = ''; });
+});
+
+document.getElementById('gambar').addEventListener('change', function() {
+    const file = this.files && this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('gambarPreview').src = e.target.result;
+            document.getElementById('gambarPreview').classList.remove('hidden');
+            document.getElementById('gambarPlaceholder').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('gambarPreview').src = '';
+        document.getElementById('gambarPreview').classList.add('hidden');
+        document.getElementById('gambarPlaceholder').classList.remove('hidden');
+    }
 });
 
 function editBarang(id) {
@@ -512,6 +551,16 @@ function editBarang(id) {
         document.getElementById('satuan').value = d.satuan;
         document.getElementById('stok_minimum').value = (d.stok_minimum !== undefined && d.stok_minimum !== null) ? d.stok_minimum : 0;
         document.getElementById('status').value = d.status;
+        document.getElementById('gambar').value = '';
+        if (d.gambar) {
+            document.getElementById('gambarPreview').src = '<?= base_url("uploads/persediaan/") ?>' + d.gambar;
+            document.getElementById('gambarPreview').classList.remove('hidden');
+            document.getElementById('gambarPlaceholder').classList.add('hidden');
+        } else {
+            document.getElementById('gambarPreview').src = '';
+            document.getElementById('gambarPreview').classList.add('hidden');
+            document.getElementById('gambarPlaceholder').classList.remove('hidden');
+        }
         document.getElementById('modalBarang').classList.remove('hidden');
     });
 }
@@ -652,7 +701,7 @@ function lihatKategori(kategoriId) {
         document.getElementById('lihatSubdeskripsi').textContent = first.kategori_deskripsi || '';
         const tbody = document.getElementById('lihatRows');
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-6 text-center header-subtitle">Belum ada barang di kategori ini.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-6 text-center header-subtitle">Belum ada barang di kategori ini.</td></tr>';
         } else {
             tbody.innerHTML = rows.map(function(b) {
                 const aktif = (b.status === 'Aktif');
@@ -661,7 +710,15 @@ function lihatKategori(kategoriId) {
                     : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
                 const dotCls = aktif ? 'bg-emerald-400' : 'bg-red-400';
                 const minStok = parseInt(b.stok_minimum || 0, 10);
+                let fotoHtml = '';
+                if (b.gambar) {
+                    const imgUrl = '<?= base_url("uploads/persediaan/") ?>' + b.gambar;
+                    fotoHtml = '<img src="' + imgUrl + '" class="w-10 h-10 object-cover rounded-lg border border-slate-700/60 cursor-pointer hover:scale-110 transition-transform shadow" onclick="previewGambarModal(\'' + imgUrl + '\', \'' + esc(b.nama_barang) + '\')" title="Klik untuk perbesar">';
+                } else {
+                    fotoHtml = '<div class="w-10 h-10 rounded-lg bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-sm text-slate-500">📦</div>';
+                }
                 return '<tr class="border-b border-slate-800/50 hover:bg-slate-800/50 transition-all duration-200">'
+                    + '<td class="px-3 py-2.5">' + fotoHtml + '</td>'
                     + '<td class="px-3 py-3 header-title font-medium">' + esc(b.nama_barang) + '</td>'
                     + '<td class="px-3 py-3"><span class="px-2.5 py-1 bg-slate-800/80 text-cyan-300 rounded text-xs font-mono border border-slate-700/50 whitespace-nowrap">' + esc(b.kode_barang) + '</span></td>'
                     + '<td class="px-3 py-3 header-subtitle">' + esc(b.satuan) + '</td>'
@@ -684,6 +741,20 @@ function lihatKategori(kategoriId) {
 function tutupLihat() {
     document.getElementById('modalLihat').classList.add('hidden');
     lihatKategoriId = null;
+}
+
+function previewGambarModal(url, title) {
+    const c = getSwalColors();
+    Swal.fire({
+        title: title || 'Foto Barang',
+        imageUrl: url,
+        imageAlt: title,
+        imageWidth: 400,
+        imageHeight: 300,
+        showConfirmButton: false,
+        showCloseButton: true,
+        ...c
+    });
 }
 
 function openKategoriEdit(id) {

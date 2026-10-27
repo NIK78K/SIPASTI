@@ -7,6 +7,28 @@ class Barang_persediaan_model extends CI_Model {
 
     public function __construct() {
         parent::__construct();
+        if (!$this->db->field_exists('stok_minimum', $this->table)) {
+            $this->load->dbforge();
+            $this->dbforge->add_column($this->table, [
+                'stok_minimum' => [
+                    'type' => 'INT',
+                    'constraint' => 11,
+                    'default' => 0,
+                    'after' => 'satuan'
+                ]
+            ]);
+        }
+        if (!$this->db->field_exists('gambar', $this->table)) {
+            $this->load->dbforge();
+            $this->dbforge->add_column($this->table, [
+                'gambar' => [
+                    'type' => 'VARCHAR',
+                    'constraint' => 255,
+                    'null' => TRUE,
+                    'after' => 'satuan'
+                ]
+            ]);
+        }
     }
 
     public function get_all_with_kategori() {
@@ -183,12 +205,18 @@ class Barang_persediaan_model extends CI_Model {
                             }
                             $raw = trim(preg_replace('/\[Kategori:[^\]]+\]/i', '', $raw));
                         }
+                        $parsed_img = null;
+                        if (preg_match('/\[img:\s*([^\]]+)\]/i', $raw, $img_m)) {
+                            $parsed_img = trim($img_m[1]);
+                            $raw = trim(preg_replace('/\[img:[^\]]+\]/i', '', $raw));
+                        }
                         if (preg_match('/^(.*?)(?:\s*\((.*?)\))?$/', $raw, $m)) {
                             $nm = trim($m[1]);
                             $kt = isset($m[2]) ? trim($m[2]) : '';
                             if ($nm !== '') {
                                 $item_entry = ['nama' => $nm, 'ket' => $kt];
                                 if ($parsed_kat_id) $item_entry['kategori_id'] = $parsed_kat_id;
+                                if ($parsed_img) $item_entry['gambar'] = $parsed_img;
                                 $items[] = $item_entry;
                             }
                         }
@@ -275,8 +303,15 @@ class Barang_persediaan_model extends CI_Model {
 
             if ($existing) {
                 $barang_id = $existing->id;
+                $upd_existing = [];
                 if ($existing->status !== 'Aktif') {
-                    $this->db->where('id', $existing->id)->update($this->table, ['status' => 'Aktif']);
+                    $upd_existing['status'] = 'Aktif';
+                }
+                if (empty($existing->gambar) && !empty($it['gambar'])) {
+                    $upd_existing['gambar'] = $it['gambar'];
+                }
+                if (!empty($upd_existing)) {
+                    $this->db->where('id', $existing->id)->update($this->table, $upd_existing);
                 }
             } else {
                 $kode = $this->next_kode($target_kat_id);
@@ -297,6 +332,7 @@ class Barang_persediaan_model extends CI_Model {
                     'kode_barang'  => $kode,
                     'nama_barang'  => $clean_name,
                     'satuan'       => $satuan,
+                    'gambar'       => !empty($it['gambar']) ? $it['gambar'] : null,
                     'stok_minimum' => 0,
                     'status'       => 'Aktif',
                     'created_at'   => date('Y-m-d H:i:s'),

@@ -30,6 +30,7 @@ class Barang_persediaan extends CI_Controller {
         header('Content-Type: application/json');
         $barang = $this->Barang_persediaan_model->get_by_id($id);
         if ($barang) {
+            $barang->gambar_url = !empty($barang->gambar) ? base_url('uploads/persediaan/' . $barang->gambar) : null;
             echo json_encode($barang);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Data barang tidak ditemukan!']);
@@ -119,11 +120,33 @@ class Barang_persediaan extends CI_Controller {
             return;
         }
 
+        $gambar = null;
+        if (!empty($_FILES['gambar']['name'])) {
+            $upload_dir = FCPATH . 'uploads/persediaan/';
+            if (!is_dir($upload_dir)) {
+                @mkdir($upload_dir, 0755, true);
+            }
+            $config = [
+                'upload_path'   => $upload_dir,
+                'allowed_types' => 'jpg|jpeg|png|webp|gif',
+                'encrypt_name'  => true,
+                'max_size'      => 4096,
+            ];
+            $this->load->library('upload', $config);
+            if ($this->upload->do_upload('gambar')) {
+                $gambar = $this->upload->data('file_name');
+            } else {
+                echo json_encode(['status' => 'error', 'message' => strip_tags($this->upload->display_errors())]);
+                return;
+            }
+        }
+
         $ok = $this->Barang_persediaan_model->insert([
             'kategori_id' => $kategori_id,
             'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
+            'gambar' => $gambar,
             'stok_minimum' => $stok_minimum,
             'status' => $status
         ]);
@@ -175,11 +198,43 @@ class Barang_persediaan extends CI_Controller {
             return;
         }
 
+        $gambar = $lama->gambar ?? null;
+        if (!empty($_FILES['gambar']['name'])) {
+            $upload_dir = FCPATH . 'uploads/persediaan/';
+            if (!is_dir($upload_dir)) {
+                @mkdir($upload_dir, 0755, true);
+            }
+            $config = [
+                'upload_path'   => $upload_dir,
+                'allowed_types' => 'jpg|jpeg|png|webp|gif',
+                'encrypt_name'  => true,
+                'max_size'      => 4096,
+            ];
+            $this->load->library('upload', $config);
+            if ($this->upload->do_upload('gambar')) {
+                if (!empty($lama->gambar)) {
+                    $old_file = $upload_dir . $lama->gambar;
+                    if (file_exists($old_file)) @unlink($old_file);
+                }
+                $gambar = $this->upload->data('file_name');
+            } else {
+                echo json_encode(['status' => 'error', 'message' => strip_tags($this->upload->display_errors())]);
+                return;
+            }
+        } elseif ($this->input->post('hapus_gambar') === '1') {
+            if (!empty($lama->gambar)) {
+                $old_file = FCPATH . 'uploads/persediaan/' . $lama->gambar;
+                if (file_exists($old_file)) @unlink($old_file);
+            }
+            $gambar = null;
+        }
+
         $ok = $this->Barang_persediaan_model->update($id, [
             'kategori_id' => $kategori_id,
             'kode_barang' => $kode_barang,
             'nama_barang' => $nama_barang,
             'satuan' => $satuan,
+            'gambar' => $gambar,
             'stok_minimum' => $stok_minimum,
             'status' => $status
         ]);
@@ -224,6 +279,12 @@ class Barang_persediaan extends CI_Controller {
         if (empty($id) || !is_numeric($id)) {
             echo json_encode(['status' => 'error', 'message' => 'ID tidak valid!']);
             return;
+        }
+
+        $lama = $this->Barang_persediaan_model->get_by_id($id);
+        if ($lama && !empty($lama->gambar)) {
+            $old_file = FCPATH . 'uploads/persediaan/' . $lama->gambar;
+            if (file_exists($old_file)) @unlink($old_file);
         }
 
         $ok = $this->Barang_persediaan_model->delete($id);
