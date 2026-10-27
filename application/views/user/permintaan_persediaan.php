@@ -91,28 +91,26 @@
         <p class="text-sm text-gray-500">Coba kata kunci atau kategori lain.</p>
     </div>
 
-    <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         <?php foreach (($barang_list ?? []) as $b): ?>
-        <div class="barang-card group bg-white rounded-2xl border border-gray-100 shadow hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col cursor-pointer"
+        <div class="barang-card group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col cursor-pointer"
               onclick="openUlasanBarang(<?= (int) $b['id'] ?>, event)"
               data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
               data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
-            <div class="h-1 bg-gradient-to-r from-blue-900 to-blue-700"></div>
             <?php if (!empty($b['gambar']) && file_exists(FCPATH . 'uploads/persediaan/' . $b['gambar'])): ?>
-                <div class="w-full h-36 bg-slate-50 flex items-center justify-center overflow-hidden border-b border-gray-100 relative group-hover:bg-slate-100/60 transition-colors">
-                    <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>" alt="<?= htmlspecialchars($b['nama_barang'] ?? '-') ?>" class="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300">
+                <div class="catalog-image-frame">
+                    <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>" alt="<?= htmlspecialchars($b['nama_barang'] ?? '-') ?>" class="catalog-image group-hover:scale-105 transition-transform duration-300">
                 </div>
             <?php else: ?>
-                <div class="w-full h-36 bg-gradient-to-br from-slate-50 to-slate-100/70 flex flex-col items-center justify-center overflow-hidden border-b border-gray-100 relative group-hover:from-blue-50/40 transition-colors">
-                    <div class="w-11 h-11 rounded-2xl bg-white/90 shadow-sm border border-slate-200/60 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                        📦
-                    </div>
-                    <span class="text-[10px] font-medium text-slate-400 mt-1.5">Persediaan</span>
+                <div class="catalog-image-frame catalog-image-fallback">
+                    <svg class="w-12 h-12 text-blue-200" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7v10l8 4m0-10v10"/>
+                    </svg>
                 </div>
             <?php endif; ?>
-            <div class="p-4 flex flex-col gap-2 flex-1">
+            <div class="p-4 pt-3 flex flex-col gap-2 flex-1">
                 <div class="flex items-center justify-between gap-2">
-                    <span class="font-mono text-[11px] text-slate-500 truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
+                    <span class="font-mono text-[10px] tracking-wide text-slate-400 truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
                 </div>
                 <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-blue-900 transition-colors"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
                 <p class="text-[11px] text-slate-500 truncate"><?= htmlspecialchars(($b['kategori_kode'] ?? '') . ($b['kategori_nama'] ? ' • ' . $b['kategori_nama'] : '')) ?> &bull; per <?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></p>
@@ -124,18 +122,18 @@
                     <?php else: ?>
                     <span class="text-slate-400 text-[10px]">Belum ada rating</span>
                     <?php endif ?>
-                    <span class="text-blue-900 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
-                        Lihat Ulasan &rarr;
+                    <span class="text-blue-800 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
+                        Ulasan &rarr;
                     </span>
                 </div>
-                <div class="mt-auto pt-2 flex items-center gap-2" onclick="event.stopPropagation()">
+                <div class="mt-auto pt-3 flex items-center gap-2" onclick="event.stopPropagation()">
                     <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none" onclick="event.stopPropagation()">
                         <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, -1)"
-                            class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">−</button>
+                            class="w-8 h-9 font-extrabold text-blue-800 hover:bg-blue-50 transition">−</button>
                         <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
                             class="w-11 h-9 text-center text-sm font-bold text-gray-800 border-x-2 border-gray-200 focus:outline-none">
                         <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, 1)"
-                            class="w-8 h-9 font-extrabold text-slate-600 hover:bg-slate-100 transition">+</button>
+                            class="w-8 h-9 font-extrabold text-blue-800 hover:bg-blue-50 transition">+</button>
                     </div>
                     <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="event.stopPropagation();cartAdd(<?= (int) $b['id'] ?>)"
                         class="flex-1 h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95">
@@ -247,6 +245,24 @@
 }
 .catalog-page .barang-card:hover {
     box-shadow: 0 8px 18px rgba(15, 23, 42, .12);
+}
+.catalog-image-frame {
+    height: 190px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #fff;
+    border-bottom: 1px solid #f1f5f9;
+}
+.catalog-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 14px;
+}
+.catalog-image-fallback {
+    background: linear-gradient(145deg, #f8fafc, #eff6ff);
 }
 .catalog-page .barang-card .p-4 {
     padding: 12px;
