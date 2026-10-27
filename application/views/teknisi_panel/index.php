@@ -2619,8 +2619,8 @@ foreach ($tickets_my as $t):
         <div class="pm-print-kop">
             <img id="print_logo_bps" src="<?= base_url('assets/img/bps.png') ?>" alt="Logo BPS">
             <div class="pm-print-kop-text">
-                <div style="font-size:14pt;font-weight:bold;text-transform:uppercase;">BPS PROVINSI RIAU</div>
-                <div style="font-size:6pt;font-weight:normal;margin-top:2px;">Jl. Pattimura No.12, Cinta Raja, Kecamatan Sail, Kota Pekanbaru, Riau 28131</div>
+                <div style="font-size:14pt;font-weight:bold;text-transform:uppercase;"><i>BADAN PUSAT STATISTIK <br>PROVINSI RIAU</i></div>
+                <div style="font-size:6pt;font-weight:normal;margin-top:8px;text-transform:none;">Jalan Pattimura No. 12, Pekanbaru 28131, Telepon:(0761) 23042 <br>Laman: riau.bps.go.id, Pos-el: riau@bps.go.id</div>
             </div>
         </div>
         <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
