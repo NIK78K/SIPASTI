@@ -635,6 +635,27 @@ public function pengajuan_persediaan()
         $kat_map[(int)$k['id']] = $k['kode'] . ' - ' . $k['nama'];
     }
 
+    // Upload gambar per item jika ada
+    $upload_dir = FCPATH . 'uploads/persediaan/';
+    if (!is_dir($upload_dir)) {
+        @mkdir($upload_dir, 0755, true);
+    }
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    $uploaded_gambar = [];
+    if (!empty($_FILES['gambar_item']['name']) && is_array($_FILES['gambar_item']['name'])) {
+        foreach ($_FILES['gambar_item']['name'] as $idx => $fname) {
+            if (!empty($fname) && isset($_FILES['gambar_item']['error'][$idx]) && $_FILES['gambar_item']['error'][$idx] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+                if (in_array($ext, $allowed_exts)) {
+                    $new_fname = md5(uniqid(mt_rand(), true)) . '.' . $ext;
+                    if (move_uploaded_file($_FILES['gambar_item']['tmp_name'][$idx], $upload_dir . $new_fname)) {
+                        $uploaded_gambar[$idx] = $new_fname;
+                    }
+                }
+            }
+        }
+    }
+
     $items = [];
     if (is_array($nama_arr)) {
         foreach ($nama_arr as $i => $n) {
@@ -648,6 +669,7 @@ public function pengajuan_persediaan()
                 'kategori_id'   => $kid,
                 'kategori_nama' => $knama,
                 'ket'           => substr($k, 0, 255),
+                'gambar'        => $uploaded_gambar[$i] ?? null,
             ];
         }
     }
@@ -682,6 +704,7 @@ public function pengajuan_persediaan()
             $ln .= ' [Kategori: ' . $it['kategori_nama'] . ']';
         }
         if ($it['ket'] !== '') $ln .= ' (' . $it['ket'] . ')';
+        if (!empty($it['gambar'])) $ln .= ' [img:' . $it['gambar'] . ']';
         $lines[] = $ln;
     }
 

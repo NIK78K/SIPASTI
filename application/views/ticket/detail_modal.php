@@ -90,7 +90,9 @@ $status = $ticket['status'] ?? 'Menunggu';
     <div class="dtck-text text-sm leading-relaxed">
         <?php 
             $jk_clean = (string) preg_replace('/\[pengajuan_items_json:[^\]]*\]/s', '', $ticket['jenis_kerusakan'] ?? '-');
-            echo nl2br(htmlspecialchars(trim($jk_clean)));
+            $jk_html = htmlspecialchars(trim($jk_clean));
+            $jk_html = preg_replace('/\[img:([a-zA-Z0-9_\-\.]+)\]/', '<a href="' . base_url('uploads/persediaan/$1') . '" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 text-xs hover:bg-blue-500/25 transition">🖼️ Lihat Foto</a>', $jk_html);
+            echo nl2br($jk_html);
         ?>
     </div>
 </div>

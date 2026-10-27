@@ -38,7 +38,7 @@
 
     <!-- ================= FORM ================= -->
     <div class="bg-white rounded-3xl p-8 md:p-10 shadow-2xl border border-gray-100">
-        <form method="post" action="<?= base_url('user_ticket/pengajuan_persediaan') ?>" onsubmit="return validPengajuan()" class="space-y-6">
+        <form method="post" action="<?= base_url('user_ticket/pengajuan_persediaan') ?>" enctype="multipart/form-data" onsubmit="return validPengajuan()" class="space-y-6">
 
             <!-- STEP 1: DAFTAR BARANG DIAJUKAN -->
             <div class="space-y-3">
@@ -132,6 +132,17 @@
             <input name="keterangan[]" type="text" placeholder="cth: warna hitam, botol 65ml"
                 class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
         </div>
+        <div>
+            <label class="text-[11px] font-bold text-gray-600 mb-1 block">Foto / Gambar Barang (Opsional, JPG/PNG/WEBP)</label>
+            <div class="flex items-center gap-3">
+                <div class="row-img-preview-wrap w-12 h-12 rounded-xl border border-gray-300 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <img class="row-img-preview w-full h-full object-cover hidden" src="" alt="Preview">
+                    <span class="row-img-placeholder text-lg text-gray-400">📷</span>
+                </div>
+                <input name="gambar_item[]" type="file" accept="image/*" onchange="previewRowImage(this)"
+                    class="flex-1 text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-900 hover:file:bg-blue-200 cursor-pointer">
+            </div>
+        </div>
     </div>
 </template>
 
@@ -142,6 +153,31 @@ function pengajuanAddRow() {
     var clone = tpl.content.cloneNode(true);
     box.appendChild(clone);
     pengajuanReindex();
+}
+
+function previewRowImage(input) {
+    var row = input.closest('.pengajuan-row');
+    if (!row) return;
+    var preview = row.querySelector('.row-img-preview');
+    var placeholder = row.querySelector('.row-img-placeholder');
+    var file = input.files && input.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            if (preview) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            }
+            if (placeholder) placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        if (preview) {
+            preview.src = '';
+            preview.classList.add('hidden');
+        }
+        if (placeholder) placeholder.classList.remove('hidden');
+    }
 }
 
 function pengajuanReindex() {

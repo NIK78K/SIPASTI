@@ -16,6 +16,9 @@ $barang = $barang ?? (object)[];
 
     <!-- HEADER / DETAIL BARANG CARD -->
     <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+        <?php if (!empty($barang->gambar) && file_exists(FCPATH . 'uploads/persediaan/' . $barang->gambar)): ?>
+            <img src="<?= base_url('uploads/persediaan/' . $barang->gambar) ?>" alt="<?= htmlspecialchars($barang->nama_barang ?? '-') ?>" class="w-24 h-24 md:w-28 md:h-28 object-cover rounded-2xl border border-gray-200 shadow-sm flex-shrink-0">
+        <?php endif; ?>
         <div class="space-y-3 flex-1">
             <div class="flex flex-wrap items-center gap-2">
                 <span class="font-mono text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-900">
