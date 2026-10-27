@@ -1179,11 +1179,21 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
         foreach ($q->result_array() as $r) $agg[(int) $r['barang_id']] = $r;
     }
 
+    // Agregat terlaris (total unit yang pernah diminta)
+    $terlaris_map = [];
+    if ($this->db->table_exists('ticket_persediaan_items')) {
+        $q_terlaris = $this->db->query('SELECT barang_id, COALESCE(SUM(jumlah), 0) AS total_diminta FROM ticket_persediaan_items GROUP BY barang_id');
+        foreach ($q_terlaris->result_array() as $rt) {
+            $terlaris_map[(int) $rt['barang_id']] = (int) $rt['total_diminta'];
+        }
+    }
+
     foreach ($rows as &$r) {
         $r['sisa'] = $this->get_sisa_persediaan($r['id'], $bulan, $tahun);
         $a = $agg[(int) $r['id']] ?? null;
         $r['rating_avg'] = $a ? round((float) $a['rating_avg'], 1) : null;
         $r['rating_count'] = $a ? (int) $a['rating_count'] : 0;
+        $r['total_terlaris'] = $terlaris_map[(int) $r['id']] ?? 0;
     }
     unset($r);
 
