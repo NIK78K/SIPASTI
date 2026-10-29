@@ -374,6 +374,11 @@ $openToolsMenu      = in_array($current, ['inventory/scan_camera']);
     align-items:center; padding:12px 16px; border-radius:10px;
     color:#d1d5db; font-weight:500; transition:all .2s ease;
 }
+.menu-btn > div:first-child {
+    min-width:0;
+    flex:1;
+    white-space:nowrap;
+}
 .menu-btn:hover, .menu-btn.active { background:#1f2937; color:white; }
 
 .submenu {

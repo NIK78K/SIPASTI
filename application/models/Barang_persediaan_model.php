@@ -40,6 +40,58 @@ class Barang_persediaan_model extends CI_Model {
         return $this->db->get()->result();
     }
 
+    public function get_dashboard_stok($bulan, $tahun, $keyword = null, $kategori_id = null) {
+        $this->db->select("
+            b.id,
+            b.kode_barang,
+            b.nama_barang,
+            b.satuan,
+            b.stok_minimum,
+            k.id AS kategori_id,
+            k.kode AS kategori_kode,
+            k.nama AS kategori_nama,
+            COALESCE(sa.jumlah, 0) AS stok_awal,
+            COALESCE(tx.masuk, 0) AS masuk,
+            COALESCE(tx.keluar, 0) AS keluar,
+            COALESCE(sa.jumlah, 0) + COALESCE(tx.masuk, 0) - COALESCE(tx.keluar, 0) AS stok_akhir
+        ", false);
+        $this->db->from($this->table . ' b');
+        $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
+        $this->db->join(
+            "(SELECT barang_id, jumlah
+              FROM stok_awal_persediaan
+              WHERE bulan = " . (int) $bulan . " AND tahun = " . (int) $tahun . ") sa",
+            'sa.barang_id = b.id',
+            'left',
+            false
+        );
+        $this->db->join(
+            "(SELECT barang_id,
+                     SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END) AS masuk,
+                     SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END) AS keluar
+              FROM transaksi_persediaan
+              WHERE MONTH(tanggal) = " . (int) $bulan . " AND YEAR(tanggal) = " . (int) $tahun . "
+              GROUP BY barang_id) tx",
+            'tx.barang_id = b.id',
+            'left',
+            false
+        );
+        $this->db->where('b.status', 'Aktif');
+        if ($keyword !== null && $keyword !== '') {
+            $this->db->group_start();
+            $this->db->like('b.kode_barang', $keyword);
+            $this->db->or_like('b.nama_barang', $keyword);
+            $this->db->or_like('k.nama', $keyword);
+            $this->db->group_end();
+        }
+        if ($kategori_id !== null && $kategori_id !== '') {
+            $this->db->where('b.kategori_id', (int) $kategori_id);
+        }
+        $this->db->order_by('k.kode', 'ASC');
+        $this->db->order_by('b.nama_barang', 'ASC');
+        return $this->db->get()->result();
+    }
+
     public function get_by_id($id) {
         $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
         $this->db->from($this->table . ' b');

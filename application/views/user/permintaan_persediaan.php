@@ -9,13 +9,13 @@
     </a>
 </div>
 
-<div class="catalog-page max-w-7xl mx-auto mt-6 mb-24 space-y-6 px-4">
+<div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">
 
     <!-- ================= WEBSHOP HERO BANNER ================= -->
     <div class="webshop-hero-banner relative rounded-3xl overflow-hidden border border-slate-200/80 shadow-md min-h-[300px] lg:min-h-[340px] flex items-center bg-slate-900">
         
-        <!-- FULL BACKGROUND IMAGE (BPS RIAU.JPG) -->
-        <img src="<?= base_url('assets/img/bps_riau.jpg') ?>"
+        <!-- FULL BACKGROUND IMAGE (BPS.JPG) -->
+        <img src="<?= base_url('assets/img/BPS.jpg') ?>"
              alt="Background Gedung BPS Provinsi Riau"
              class="absolute inset-0 w-full h-full object-cover object-center filter brightness-95">
 
