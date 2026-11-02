@@ -118,13 +118,52 @@
             </div>
             <div>
                 <label class="text-[11px] font-bold text-gray-600 mb-1 block">Kategori Barang <span class="text-red-500">*</span></label>
-                <select name="kategori_id[]"
-                    class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
-                    <option value="">-- Pilih Kategori --</option>
-                    <?php foreach (($kategori_persediaan ?? []) as $kp): ?>
-                        <option value="<?= (int) $kp['id'] ?>"><?= htmlspecialchars($kp['kode'] . ' - ' . $kp['nama']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                
+                <!-- Custom Searchable Dropdown -->
+                <div class="custom-dropdown-container relative">
+                    <input type="hidden" name="kategori_id[]" class="kategori-hidden-input" value="">
+                    
+                    <!-- Trigger Button -->
+                    <button type="button" class="dropdown-trigger w-full h-12 rounded-xl px-4 border-2 border-gray-200 bg-white hover:border-gray-300 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm font-medium transition-all flex items-center justify-between text-left">
+                        <span class="dropdown-label text-gray-400 truncate">Pilih Kategori</span>
+                        <svg class="dropdown-chevron w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Panel -->
+                    <div class="dropdown-panel hidden absolute left-0 right-0 top-full mt-1.5 z-40 bg-white rounded-2xl shadow-xl border border-gray-200 p-3 space-y-2">
+                        <!-- Search Box (Q Search X) -->
+                        <div class="flex items-center bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-blue-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" class="dropdown-search w-full bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none" placeholder="Search" autocomplete="off">
+                            <button type="button" class="dropdown-clear hidden text-gray-400 hover:text-gray-600 p-0.5 ml-1 transition" title="Clear">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Options List -->
+                        <div class="dropdown-options max-h-52 overflow-y-auto space-y-0.5 pr-1 text-sm">
+                            <?php foreach (($kategori_persediaan ?? []) as $kp): ?>
+                                <div class="dropdown-opt px-3 py-2.5 rounded-xl text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-900 cursor-pointer transition-colors flex items-center justify-between"
+                                     data-value="<?= (int) $kp['id'] ?>"
+                                     data-label="<?= htmlspecialchars($kp['kode'] . ' - ' . $kp['nama']) ?>">
+                                    <span class="truncate"><?= htmlspecialchars($kp['kode'] . ' - ' . $kp['nama']) ?></span>
+                                    <svg class="opt-check hidden w-4 h-4 text-blue-900 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                            <?php endforeach; ?>
+                            <div class="dropdown-empty hidden py-4 text-center text-xs text-gray-400 font-medium">
+                                Kategori tidak ditemukan
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div>
@@ -133,7 +172,7 @@
                 class="w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
         </div>
         <div>
-            <label class="text-[11px] font-bold text-gray-600 mb-1 block">Foto / Gambar Barang (Opsional, JPG/PNG/WEBP)</label>
+            <label class="text-[11px] font-bold text-gray-600 mb-1 block">Foto / Gambar Barang (Opsional, JPG/PNG/WEBP, Maks 2MB)</label>
             <div class="flex items-center gap-3">
                 <div class="row-img-preview-wrap w-12 h-12 rounded-xl border border-gray-300 bg-white overflow-hidden flex items-center justify-center flex-shrink-0">
                     <img class="row-img-preview w-full h-full object-cover hidden" src="" alt="Preview">
@@ -146,12 +185,180 @@
     </div>
 </template>
 
+<style>
+.dropdown-options::-webkit-scrollbar {
+    width: 6px;
+}
+.dropdown-options::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+</style>
+
 <script>
+function initRowDropdown(row) {
+    if (!row) return;
+    var container = row.querySelector('.custom-dropdown-container');
+    if (!container) return;
+
+    var hiddenInput = container.querySelector('.kategori-hidden-input');
+    var trigger = container.querySelector('.dropdown-trigger');
+    var label = container.querySelector('.dropdown-label');
+    var chevron = container.querySelector('.dropdown-chevron');
+    var panel = container.querySelector('.dropdown-panel');
+    var search = container.querySelector('.dropdown-search');
+    var clearBtn = container.querySelector('.dropdown-clear');
+    var options = container.querySelectorAll('.dropdown-opt');
+    var emptyMsg = container.querySelector('.dropdown-empty');
+
+    function closeDropdown() {
+        panel.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        container.style.zIndex = '';
+        if (row) row.style.zIndex = '';
+    }
+
+    function openDropdown() {
+        document.querySelectorAll('.custom-dropdown-container .dropdown-panel').forEach(function(p) {
+            if (p !== panel) {
+                p.classList.add('hidden');
+                var otherContainer = p.closest('.custom-dropdown-container');
+                if (otherContainer) {
+                    var otherChevron = otherContainer.querySelector('.dropdown-chevron');
+                    if (otherChevron) otherChevron.classList.remove('rotate-180');
+                    otherContainer.style.zIndex = '';
+                    var otherRow = otherContainer.closest('.pengajuan-row');
+                    if (otherRow) otherRow.style.zIndex = '';
+                }
+            }
+        });
+
+        if (row) {
+            row.style.position = 'relative';
+            row.style.zIndex = '30';
+        }
+        container.style.zIndex = '50';
+        panel.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        setTimeout(function() { search.focus(); }, 50);
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (panel.classList.contains('hidden')) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    });
+
+    function filterOptions(q) {
+        q = (q || '').trim().toLowerCase();
+        var matchCount = 0;
+        options.forEach(function(opt) {
+            var text = (opt.getAttribute('data-label') || '').toLowerCase();
+            if (!q || text.indexOf(q) !== -1) {
+                opt.classList.remove('hidden');
+                matchCount++;
+            } else {
+                opt.classList.add('hidden');
+            }
+        });
+        if (matchCount === 0) {
+            emptyMsg.classList.remove('hidden');
+        } else {
+            emptyMsg.classList.add('hidden');
+        }
+    }
+
+    search.addEventListener('input', function() {
+        var val = this.value;
+        if (val.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+        filterOptions(val);
+    });
+
+    search.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        search.focus();
+    });
+
+    options.forEach(function(opt) {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var val = opt.getAttribute('data-value');
+            var txt = opt.getAttribute('data-label');
+
+            hiddenInput.value = val;
+            label.textContent = txt;
+            label.classList.remove('text-gray-400');
+            label.classList.add('text-gray-800');
+
+            options.forEach(function(o) {
+                var check = o.querySelector('.opt-check');
+                if (o === opt) {
+                    o.classList.add('bg-blue-50', 'text-blue-900');
+                    if (check) check.classList.remove('hidden');
+                } else {
+                    o.classList.remove('bg-blue-50', 'text-blue-900');
+                    if (check) check.classList.add('hidden');
+                }
+            });
+
+            closeDropdown();
+        });
+    });
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-dropdown-container')) {
+        document.querySelectorAll('.custom-dropdown-container .dropdown-panel').forEach(function(p) {
+            p.classList.add('hidden');
+        });
+        document.querySelectorAll('.custom-dropdown-container .dropdown-chevron').forEach(function(c) {
+            c.classList.remove('rotate-180');
+        });
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.custom-dropdown-container .dropdown-panel').forEach(function(p) {
+            p.classList.add('hidden');
+        });
+        document.querySelectorAll('.custom-dropdown-container .dropdown-chevron').forEach(function(c) {
+            c.classList.remove('rotate-180');
+        });
+    }
+});
+
 function pengajuanAddRow() {
     var box = document.getElementById('pengajuanRows');
     var tpl = document.getElementById('pengajuanRowTemplate');
     var clone = tpl.content.cloneNode(true);
     box.appendChild(clone);
+    var newRow = box.lastElementChild;
+    initRowDropdown(newRow);
     pengajuanReindex();
 }
 
@@ -161,7 +368,24 @@ function previewRowImage(input) {
     var preview = row.querySelector('.row-img-preview');
     var placeholder = row.querySelector('.row-img-placeholder');
     var file = input.files && input.files[0];
+    var maxBytes = 2 * 1024 * 1024; // 2MB
+
     if (file) {
+        if (file.size > maxBytes) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Ukuran Gambar Terlalu Besar',
+                text: 'Ukuran file gambar maksimal 2 MB. Silakan pilih file yang lebih kecil.'
+            });
+            input.value = '';
+            if (preview) {
+                preview.src = '';
+                preview.classList.add('hidden');
+            }
+            if (placeholder) placeholder.classList.remove('hidden');
+            return;
+        }
+
         var reader = new FileReader();
         reader.onload = function(e) {
             if (preview) {
@@ -206,9 +430,10 @@ function validPengajuan() {
 
     rows.forEach(function (row, idx) {
         var namaInput = row.querySelector('input[name="nama_barang[]"]');
+        var katHidden = row.querySelector('input[name="kategori_id[]"]');
         var katSelect = row.querySelector('select[name="kategori_id[]"]');
         var namaVal = namaInput ? namaInput.value.trim() : '';
-        var katVal = katSelect ? katSelect.value.trim() : '';
+        var katVal = katHidden ? katHidden.value.trim() : (katSelect ? katSelect.value.trim() : '');
 
         if (namaVal !== '') {
             adaNama = true;
@@ -240,6 +465,19 @@ function validPengajuan() {
             return false;
         }
     }
+
+    var maxBytes = 2 * 1024 * 1024;
+    var fileOver = false;
+    document.querySelectorAll('#pengajuanRows input[name="gambar_item[]"]').forEach(function (inp) {
+        if (inp.files && inp.files[0] && inp.files[0].size > maxBytes) {
+            fileOver = true;
+        }
+    });
+    if (fileOver) {
+        Swal.fire({ icon: 'warning', title: 'Ukuran Gambar Terlalu Besar', text: 'Ukuran file gambar maksimal 2 MB.' });
+        return false;
+    }
+
     return true;
 }
 
