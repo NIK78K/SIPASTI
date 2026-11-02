@@ -24,7 +24,53 @@
 </div>
 
 <!-- TABLE CARD -->
-<div class="rounded-2xl border theme-card shadow-xl overflow-hidden">
+<div class="rounded-2xl border theme-card shadow-xl overflow-visible relative z-20">
+
+    <!-- TOOLBAR -->
+    <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between border-b border-slate-800/50 relative z-30">
+        <p id="kategoriCount" class="text-sm header-subtitle">
+            Memuat kategori...
+        </p>
+        <div class="custom-dropdown-container relative z-30 w-full sm:max-w-xs" id="filterKategoriToolbarWrap">
+            <input type="hidden" id="filterKategoriSearch" value="">
+            
+            <!-- Trigger Button -->
+            <button type="button" class="dropdown-trigger w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between text-left">
+                <span class="dropdown-label truncate text-slate-300">Semua Kategori</span>
+                <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <!-- Dropdown Panel -->
+            <div class="dropdown-panel hidden absolute right-0 top-full mt-1.5 z-50 min-w-[280px] w-full max-w-[340px] rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
+                <!-- Search Box (Q Search X) -->
+                <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" class="dropdown-search w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none" placeholder="Search" autocomplete="off">
+                    <button type="button" class="dropdown-clear hidden text-slate-400 hover:text-slate-200 p-0.5 ml-1 transition" title="Clear">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Options List -->
+                <div id="katOptionsList" class="dropdown-options max-h-56 overflow-y-auto space-y-0.5 pr-1 text-sm">
+                    <div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer transition-colors flex items-center justify-between is-selected bg-blue-600/20 text-blue-300 font-semibold"
+                         data-value=""
+                         data-label="Semua Kategori">
+                        <span class="truncate">Semua Kategori</span>
+                        <svg class="opt-check w-4 h-4 text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- HEADER -->
     <div class="grid grid-cols-[60px_120px_1fr_1fr_160px]
@@ -215,6 +261,9 @@ function loadKategori(){
     fetch(baseUrl+'fetch')
     .then(r=>r.json())
     .then(data=>{
+        let countEl = document.getElementById('kategoriCount');
+        if (countEl) countEl.textContent = (data.length || 0) + ' kategori terdaftar';
+
         let html='';
         if(!data.length){
             html = `<div class="px-6 py-10 text-center header-subtitle">
@@ -223,9 +272,10 @@ function loadKategori(){
         } else {
             data.forEach((k,i)=>{
                 html += `
-                <div class="grid grid-cols-[60px_120px_1fr_1fr_160px]
+                <div class="kategori-row grid grid-cols-[60px_120px_1fr_1fr_160px]
                             px-6 py-4 items-center
-                            hover:bg-slate-800/50 transition-colors">
+                            hover:bg-slate-800/50 transition-colors"
+                     data-search="${escHtml((k.kode + ' ' + k.nama + ' ' + (k.deskripsi || '')).toLowerCase())}">
 
                     <div class="header-subtitle">${i+1}</div>
 
@@ -272,9 +322,156 @@ function loadKategori(){
                     </div>
                 </div>`;
             });
+            html += `<div id="kategoriEmptyRow" class="hidden px-6 py-10 text-center header-subtitle">Tidak ada kategori yang cocok</div>`;
         }
         kategoriTable.innerHTML = html;
+
+        // Populate options in searchable dropdown
+        let optHtml = `<div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer transition-colors flex items-center justify-between is-selected bg-blue-600/20 text-blue-300 font-semibold" data-value="" data-label="Semua Kategori"><span class="truncate">Semua Kategori</span><svg class="opt-check w-4 h-4 text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>`;
+        data.forEach(k => {
+            optHtml += `<div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer transition-colors flex items-center justify-between" data-value="${(k.kode + ' ' + k.nama).toLowerCase()}" data-label="${escHtml(k.kode + ' - ' + k.nama)}"><span class="truncate">${escHtml(k.kode + ' - ' + k.nama)}</span><svg class="opt-check hidden w-4 h-4 text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>`;
+        });
+        optHtml += `<div class="dropdown-empty hidden py-4 text-center text-xs text-slate-400 font-medium">Kategori tidak ditemukan</div>`;
+        const optList = document.getElementById('katOptionsList');
+        if (optList) {
+            optList.innerHTML = optHtml;
+            initKategoriToolbarDropdown();
+        }
     });
+}
+
+function filterKategoriTable(q) {
+    q = (q || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#kategoriTable .kategori-row');
+    let shown = 0;
+    rows.forEach(r => {
+        const text = (r.getAttribute('data-search') || '').toLowerCase();
+        if (!q || text.indexOf(q) !== -1) {
+            r.classList.remove('hidden');
+            shown++;
+        } else {
+            r.classList.add('hidden');
+        }
+    });
+    const emptyRow = document.getElementById('kategoriEmptyRow');
+    if (emptyRow) {
+        emptyRow.classList.toggle('hidden', shown > 0 || rows.length === 0);
+    }
+}
+
+function initKategoriToolbarDropdown() {
+    var container = document.getElementById('filterKategoriToolbarWrap');
+    if (!container) return;
+
+    var hiddenInput = document.getElementById('filterKategoriSearch');
+    var trigger = container.querySelector('.dropdown-trigger');
+    var label = container.querySelector('.dropdown-label');
+    var chevron = container.querySelector('.dropdown-chevron');
+    var panel = container.querySelector('.dropdown-panel');
+    var search = container.querySelector('.dropdown-search');
+    var clearBtn = container.querySelector('.dropdown-clear');
+    var options = container.querySelectorAll('.dropdown-opt');
+    var emptyMsg = container.querySelector('.dropdown-empty');
+
+    function closeDropdown() {
+        panel.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        container.style.zIndex = '';
+    }
+
+    function openDropdown() {
+        container.style.zIndex = '60';
+        panel.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        setTimeout(function() { search.focus(); }, 50);
+    }
+
+    trigger.onclick = function(e) {
+        e.stopPropagation();
+        if (panel.classList.contains('hidden')) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    };
+
+    function filterOptions(q) {
+        q = (q || '').trim().toLowerCase();
+        var matchCount = 0;
+        options.forEach(function(opt) {
+            var text = (opt.getAttribute('data-label') || '').toLowerCase();
+            if (!q || text.indexOf(q) !== -1) {
+                opt.classList.remove('hidden');
+                matchCount++;
+            } else {
+                opt.classList.add('hidden');
+            }
+        });
+        if (matchCount === 0) {
+            emptyMsg.classList.remove('hidden');
+        } else {
+            emptyMsg.classList.add('hidden');
+        }
+    }
+
+    search.oninput = function() {
+        var val = this.value;
+        if (val.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+        filterOptions(val);
+    };
+
+    search.onclick = function(e) { e.stopPropagation(); };
+
+    clearBtn.onclick = function(e) {
+        e.stopPropagation();
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        search.focus();
+    };
+
+    options.forEach(function(opt) {
+        opt.onclick = function(e) {
+            e.stopPropagation();
+            var val = opt.getAttribute('data-value');
+            var txt = opt.getAttribute('data-label');
+
+            hiddenInput.value = val;
+            label.textContent = txt;
+            if (val === '') {
+                label.className = 'dropdown-label truncate text-slate-300';
+            } else {
+                label.className = 'dropdown-label truncate text-white font-medium';
+            }
+
+            options.forEach(function(o) {
+                var check = o.querySelector('.opt-check');
+                if (o === opt) {
+                    o.classList.add('bg-blue-600/20', 'text-blue-300', 'font-semibold', 'is-selected');
+                    if (check) check.classList.remove('hidden');
+                } else {
+                    o.classList.remove('bg-blue-600/20', 'text-blue-300', 'font-semibold', 'is-selected');
+                    if (check) check.classList.add('hidden');
+                }
+            });
+
+            closeDropdown();
+            filterKategoriTable(val);
+        };
+    });
+
+    document.onclick = function(e) {
+        if (!container.contains(e.target)) {
+            closeDropdown();
+        }
+    };
 }
 
 /* CRUD */
@@ -451,5 +648,52 @@ html.light .swal2-popup {
 
 .swal2-html-container {
     color: var(--text-secondary) !important;
+}
+
+.dropdown-options::-webkit-scrollbar {
+    width: 6px;
+}
+.dropdown-options::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+html.light #filterKategoriToolbarWrap .dropdown-panel {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-panel .bg-slate-900\/80 {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-search {
+    color: #0f172a !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-opt {
+    color: #334155 !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-opt:hover {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-opt.is-selected {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-empty {
+    color: #94a3b8 !important;
+}
+html.light #filterKategoriToolbarWrap .dropdown-options::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+html.light #filterKategoriToolbarWrap .dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
 }
 </style>

@@ -46,6 +46,7 @@ class Barang_persediaan_model extends CI_Model {
             b.kode_barang,
             b.nama_barang,
             b.satuan,
+            b.gambar,
             b.stok_minimum,
             k.id AS kategori_id,
             k.kode AS kategori_kode,
