@@ -182,17 +182,17 @@
                                 Ulasan &rarr;
                             </span>
                         </div>
-                        <div class="mt-auto pt-3 flex items-center gap-2" onclick="event.stopPropagation()">
-                            <div id="stepper-<?= (int) $b['id'] ?>" class="flex items-center rounded-xl border-2 border-gray-200 overflow-hidden" style="display:none" onclick="event.stopPropagation()">
+                        <div class="mt-auto pt-3 w-full" onclick="event.stopPropagation()">
+                            <div id="stepper-<?= (int) $b['id'] ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
                                 <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, -1)"
-                                    class="w-8 h-9 font-extrabold text-blue-800 hover:bg-blue-50 transition">−</button>
+                                    class="qty-stepper-button" aria-label="Kurangi jumlah">−</button>
                                 <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
-                                    class="w-11 h-9 text-center text-sm font-bold text-gray-800 border-x-2 border-gray-200 focus:outline-none">
+                                    class="qty-stepper-input" aria-label="Jumlah barang">
                                 <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, 1)"
-                                    class="w-8 h-9 font-extrabold text-blue-800 hover:bg-blue-50 transition">+</button>
+                                    class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
                             </div>
-                            <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="event.stopPropagation();cartAdd(<?= (int) $b['id'] ?>)"
-                                class="flex-1 h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95">
+                            <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= (int) $b['id'] ?>)"
+                                class="w-full h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-1.5">
                                 + Keranjang
                             </button>
                         </div>
@@ -384,6 +384,69 @@
 .catalog-page .barang-card .p-4 {
     padding: 12px;
 }
+.qty-stepper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 38px;
+    overflow: hidden;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
+}
+.qty-stepper-button {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 100%;
+    flex: 0 0 42px;
+    border: 0;
+    background: transparent;
+    color: #1e3a8a;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+}
+.qty-stepper-button:hover {
+    background: #dbeafe;
+    color: #172554;
+}
+.qty-stepper-button:active {
+    transform: scale(.88);
+}
+.qty-stepper-button:focus-visible,
+.qty-stepper-input:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+.qty-stepper-input {
+    width: 100%;
+    height: 24px;
+    min-width: 0;
+    border: 0;
+    border-right: 1px solid #bfdbfe;
+    border-left: 1px solid #bfdbfe;
+    background: #fff;
+    color: #172554;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+}
+.qty-stepper-input:focus {
+    outline: none;
+}
+.qty-stepper-input::-webkit-outer-spin-button,
+.qty-stepper-input::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+}
+.qty-stepper-input[type=number] {
+    appearance: textfield;
+}
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 #cartDrawer.open { display: flex !important; }
 #cartOverlay.open { display: block !important; }
@@ -508,6 +571,7 @@ function renderPage() {
     html += '<button type="button" onclick="goPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '')
         + ' class="' + btn + 'border-gray-200 bg-white text-slate-600 disabled:opacity-40 hover:border-blue-800">Next</button>';
     pager.innerHTML = html;
+    syncCards(cartData.items || []);
 }
 
 function goPage(p) {
@@ -524,18 +588,37 @@ function cartQty(id) {
 
 function cardStep(id, d) {
     var inp = document.getElementById('qty-' + id);
-    if (!inp) return;
-    var v = (parseInt(inp.value || '1', 10) || 1) + d;
-    if (v < 1) v = 1;
-    inp.value = v;
+    var current = parseInt(inp ? inp.value : '1', 10) || 1;
+    var next = current + d;
+
+    if (next <= 0) {
+        if (inp) inp.value = 1;
+        var stepper = document.getElementById('stepper-' + id);
+        var addBtn = document.getElementById('add-' + id);
+        if (stepper) stepper.style.display = 'none';
+        if (addBtn) addBtn.style.display = 'flex';
+        cartRemove(id);
+        return;
+    }
+
+    if (inp) inp.value = next;
+    cartSetQty(id, next);
 }
 
 function cardInput(id, v) {
+    var n = parseInt(v, 10);
     var inp = document.getElementById('qty-' + id);
-    if (!inp) return;
-    var n = parseInt(v, 10) || 1;
-    if (n < 1) n = 1;
-    inp.value = n;
+    if (isNaN(n) || n <= 0) {
+        if (inp) inp.value = 1;
+        var stepper = document.getElementById('stepper-' + id);
+        var addBtn = document.getElementById('add-' + id);
+        if (stepper) stepper.style.display = 'none';
+        if (addBtn) addBtn.style.display = 'flex';
+        cartRemove(id);
+    } else {
+        if (inp) inp.value = n;
+        cartSetQty(id, n);
+    }
 }
 
 function postJSON(url, body) {
@@ -544,24 +627,44 @@ function postJSON(url, body) {
     return fetch(url, { method: 'POST', body: fd }).then(function (r) { return r.json(); });
 }
 
-function cartAdd(id) {
+function cartAddFirst(id) {
     var inp = document.getElementById('qty-' + id);
-    var q = inp ? (parseInt(inp.value || '0', 10) || 0) : 0;
-    if (q < 1) {
-        Swal.fire({ icon: 'warning', title: 'Jumlah masih 0', text: 'Naikkan dulu jumlah barang yang diminta.' });
-        return;
-    }
-    var isUpdate = cartQty(id) > 0;
-    postJSON(isUpdate ? "<?= base_url('user_ticket/cart_update') ?>" : "<?= base_url('user_ticket/cart_add') ?>", { barang_id: id, jumlah: q })
+    if (inp) inp.value = 1;
+    var stepper = document.getElementById('stepper-' + id);
+    var addBtn = document.getElementById('add-' + id);
+    if (stepper) stepper.style.display = 'flex';
+    if (addBtn) addBtn.style.display = 'none';
+
+    postJSON("<?= base_url('user_ticket/cart_add') ?>", { barang_id: id, jumlah: 1 })
         .then(function (res) {
             refreshCart();
-            if (res.success) Swal.fire({ icon: 'success', title: 'Masuk keranjang', text: res.message, timer: 1500, showConfirmButton: false });
-            else Swal.fire({ icon: 'warning', title: 'Tidak bisa ditambah', text: res.message });
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Masuk keranjang',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Tidak bisa ditambah', text: res.message });
+            }
         })
-        .catch(function () { Swal.fire({ icon: 'error', title: 'Gagal', text: 'Jaringan bermasalah. Coba lagi.' }); });
+        .catch(function () {
+            refreshCart();
+            Swal.fire({ icon: 'error', title: 'Gagal', text: 'Jaringan bermasalah. Coba lagi.' });
+        });
+}
+
+function cartAdd(id) {
+    cartAddFirst(id);
 }
 
 function cartSetQty(id, qty) {
+    if (qty <= 0) {
+        cartRemove(id);
+        return;
+    }
     postJSON("<?= base_url('user_ticket/cart_update') ?>", { barang_id: id, jumlah: qty })
         .then(function (res) {
             refreshCart();
@@ -604,10 +707,15 @@ function syncCards(items) {
     (items || []).forEach(function (it) { map[String(it.barang_id)] = it.qty; });
     document.querySelectorAll('[id^="stepper-"]').forEach(function (el) {
         var id = el.id.replace('stepper-', '');
-        var has = (map[id] || 0) >= 1;
-        el.style.display = has ? '' : 'none';
+        var qty = map[id] || 0;
+        var has = qty >= 1;
+        el.style.display = has ? 'flex' : 'none';
+        var addBtn = document.getElementById('add-' + id);
+        if (addBtn) {
+            addBtn.style.display = has ? 'none' : 'flex';
+        }
         var inp = document.getElementById('qty-' + id);
-        if (inp) inp.value = has ? map[id] : 1;
+        if (inp) inp.value = has ? qty : 1;
     });
 }
 
