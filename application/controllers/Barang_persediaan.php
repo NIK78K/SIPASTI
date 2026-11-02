@@ -130,7 +130,7 @@ class Barang_persediaan extends CI_Controller {
                 'upload_path'   => $upload_dir,
                 'allowed_types' => 'jpg|jpeg|png|webp|gif',
                 'encrypt_name'  => true,
-                'max_size'      => 4096,
+                'max_size'      => 2048,
             ];
             $this->load->library('upload', $config);
             if ($this->upload->do_upload('gambar')) {
@@ -208,7 +208,7 @@ class Barang_persediaan extends CI_Controller {
                 'upload_path'   => $upload_dir,
                 'allowed_types' => 'jpg|jpeg|png|webp|gif',
                 'encrypt_name'  => true,
-                'max_size'      => 4096,
+                'max_size'      => 2048,
             ];
             $this->load->library('upload', $config);
             if ($this->upload->do_upload('gambar')) {

@@ -627,23 +627,47 @@ public function pengajuan_persediaan()
         $kat_map[(int)$k['id']] = $k['kode'] . ' - ' . $k['nama'];
     }
 
-    // Upload gambar per item jika ada
+    // Upload gambar per item jika ada (maks 2MB)
     $upload_dir = FCPATH . 'uploads/persediaan/';
     if (!is_dir($upload_dir)) {
         @mkdir($upload_dir, 0755, true);
     }
     $allowed_exts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    $max_bytes    = 2 * 1024 * 1024; // 2MB
     $uploaded_gambar = [];
     if (!empty($_FILES['gambar_item']['name']) && is_array($_FILES['gambar_item']['name'])) {
+        // Validasi ukuran dan format file terlebih dahulu
         foreach ($_FILES['gambar_item']['name'] as $idx => $fname) {
-            if (!empty($fname) && isset($_FILES['gambar_item']['error'][$idx]) && $_FILES['gambar_item']['error'][$idx] === UPLOAD_ERR_OK) {
-                $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
-                if (in_array($ext, $allowed_exts)) {
-                    $new_fname = md5(uniqid(mt_rand(), true)) . '.' . $ext;
-                    if (move_uploaded_file($_FILES['gambar_item']['tmp_name'][$idx], $upload_dir . $new_fname)) {
-                        $uploaded_gambar[$idx] = $new_fname;
-                    }
-                }
+            if (empty($fname)) continue;
+
+            $err = $_FILES['gambar_item']['error'][$idx] ?? UPLOAD_ERR_NO_FILE;
+            if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE || (isset($_FILES['gambar_item']['size'][$idx]) && $_FILES['gambar_item']['size'][$idx] > $max_bytes)) {
+                $this->session->set_flashdata('error', 'Ukuran gambar "' . htmlspecialchars($fname) . '" melebihi batas maksimal 2 MB.');
+                redirect($back);
+                exit;
+            }
+
+            if ($err !== UPLOAD_ERR_OK) {
+                $this->session->set_flashdata('error', 'Gagal mengunggah gambar "' . htmlspecialchars($fname) . '".');
+                redirect($back);
+                exit;
+            }
+
+            $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowed_exts)) {
+                $this->session->set_flashdata('error', 'Format gambar "' . htmlspecialchars($fname) . '" tidak didukung. Gunakan JPG, JPEG, PNG, WEBP, atau GIF.');
+                redirect($back);
+                exit;
+            }
+        }
+
+        // Simpan file jika seluruh validasi lolos
+        foreach ($_FILES['gambar_item']['name'] as $idx => $fname) {
+            if (empty($fname)) continue;
+            $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+            $new_fname = md5(uniqid(mt_rand(), true)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['gambar_item']['tmp_name'][$idx], $upload_dir . $new_fname)) {
+                $uploaded_gambar[$idx] = $new_fname;
             }
         }
     }
