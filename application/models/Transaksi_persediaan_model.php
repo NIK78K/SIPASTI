@@ -194,12 +194,13 @@ class Transaksi_persediaan_model extends CI_Model {
                 // Recheck sisa sebagai info (non-blocking, saldo boleh minus).
                 $sisa = $this->User_ticket_model->get_sisa_persediaan((int) $it['barang_id'], $bulan, $tahun);
                 if ($sisa < $qty) $kurang[] = ($it['nama_barang'] ?: ('ID ' . $it['barang_id'])) . ' (sisa ' . (int) $sisa . ')';
+                $clean_uraian = trim((string)($ticket['kebutuhan'] ?: $ticket['jenis_kerusakan']));
                 $row = [
                     'barang_id'       => (int) $it['barang_id'],
                     'jenis'           => 'keluar',
                     'tanggal'         => date('Y-m-d'),
                     'jumlah'          => $qty,
-                    'uraian'          => substr('Penyerahan ' . $ticket['kode_tiket'] . ': ' . ($ticket['kebutuhan'] ?: $ticket['jenis_kerusakan']), 0, 255),
+                    'uraian'          => substr($clean_uraian !== '' ? $clean_uraian : 'Penyerahan barang', 0, 255),
                     'penerima_sumber' => substr($ticket['pelapor'] ?: '-', 0, 100),
                     'no_dokumen'      => $ticket['kode_tiket'],
                     'user_id'         => !empty($tek['user_id']) ? $tek['user_id'] : null,

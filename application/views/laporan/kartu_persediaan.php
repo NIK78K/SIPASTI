@@ -6,18 +6,68 @@
 </p>
 
 <!-- ================= FILTER ================= -->
-<form method="get" action="<?= base_url('laporan/kartu_persediaan') ?>" class="flex flex-wrap items-end gap-3 mb-4 text-sm">
+<form method="get" action="<?= base_url('laporan/kartu_persediaan') ?>" class="flex flex-wrap items-end gap-3 mb-4 text-sm relative z-30" onsubmit="return validKartu()">
     <div>
-        <label class="block text-xs text-gray-400 mb-1">Barang</label>
-        <input type="search" id="barangSearch" name="barang_search" placeholder="Cari kode / nama..."
-               value="<?= htmlspecialchars($barang_search ?? '') ?>"
-               class="bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-gray-200 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all min-w-[260px] mb-1">
-        <select name="barang_id" id="barangSelect" required class="bg-slate-800/80 border border-slate-700/50 rounded-lg px-3 py-2 text-gray-200 hover:border-cyan-500/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all min-w-[260px]">
-            <option value="" class="bg-slate-800 text-slate-400">-- Pilih Barang --</option>
-            <?php foreach(($barang_list ?? []) as $brg): ?>
-                <option value="<?= $brg->id ?>" class="bg-slate-800 text-white" <?= (string)($barang_id ?? '') === (string)$brg->id ? 'selected' : '' ?>><?= htmlspecialchars(($brg->kode_barang ?? '-') . ' - ' . ($brg->nama_barang ?? '-')) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <label class="block text-xs text-gray-400 mb-1">Barang <span class="text-red-400">*</span></label>
+        <div class="custom-dropdown-container relative z-30" id="barangDropdownWrap">
+            <input type="hidden" name="barang_id" id="filterBarangId" class="barang-hidden-input" value="<?= htmlspecialchars($barang_id ?? '') ?>" required>
+            
+            <!-- Trigger Button -->
+            <button type="button" class="dropdown-trigger min-w-[280px] max-w-[340px] w-full rounded-lg bg-slate-800/80 border border-slate-700/50 px-3 py-2 text-sm text-left hover:border-cyan-500/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all flex items-center justify-between">
+                <?php
+                    $selected_label = '-- Pilih Barang --';
+                    foreach (($barang_list ?? []) as $brg) {
+                        if ((string)($barang_id ?? '') === (string)$brg->id) {
+                            $selected_label = ($brg->kode_barang ?? '-') . ' - ' . ($brg->nama_barang ?? '-');
+                            break;
+                        }
+                    }
+                ?>
+                <span class="dropdown-label truncate <?= empty($barang_id) ? 'text-slate-400' : 'text-white font-medium' ?>">
+                    <?= htmlspecialchars($selected_label) ?>
+                </span>
+                <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <!-- Dropdown Panel -->
+            <div class="dropdown-panel hidden absolute left-0 top-full mt-1.5 z-50 min-w-[300px] w-full max-w-[380px] rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
+                <!-- Search Box (Q Search X) -->
+                <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-cyan-500 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" class="dropdown-search w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none" placeholder="Search" autocomplete="off">
+                    <button type="button" class="dropdown-clear hidden text-slate-400 hover:text-slate-200 p-0.5 ml-1 transition" title="Clear">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Options List -->
+                <div class="dropdown-options max-h-56 overflow-y-auto space-y-0.5 pr-1 text-sm">
+                    <?php foreach(($barang_list ?? []) as $brg): ?>
+                        <?php 
+                            $is_sel = (string)($barang_id ?? '') === (string)$brg->id;
+                            $brg_text = ($brg->kode_barang ?? '-') . ' - ' . ($brg->nama_barang ?? '-');
+                        ?>
+                        <div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-cyan-600/20 hover:text-cyan-300 cursor-pointer transition-colors flex items-center justify-between <?= $is_sel ? 'bg-cyan-600/20 text-cyan-300 font-semibold is-selected' : '' ?>"
+                             data-value="<?= $brg->id ?>"
+                             data-label="<?= htmlspecialchars($brg_text) ?>">
+                            <span class="truncate"><?= htmlspecialchars($brg_text) ?></span>
+                            <svg class="opt-check <?= $is_sel ? '' : 'hidden' ?> w-4 h-4 text-cyan-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="dropdown-empty hidden py-4 text-center text-xs text-slate-400 font-medium">
+                        Barang tidak ditemukan
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div>
         <label class="block text-xs text-gray-400 mb-1">Bulan</label>
@@ -42,14 +92,14 @@
 </form>
 
 <?php if (empty($barang)): ?>
-    <div class="border rounded-xl theme-card p-10 text-center">
+    <div class="border rounded-xl theme-card p-10 text-center relative z-10">
         <div class="text-gray-500">Pilih barang untuk menampilkan kartu persediaan.</div>
     </div>
 <?php else: ?>
     <?php $nb = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember']; ?>
 
     <!-- ================= KOP BARANG ================= -->
-    <div class="border rounded-xl theme-card p-4 mb-4 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="border rounded-xl theme-card p-4 mb-4 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 relative z-10">
         <div>
             <div class="text-xs text-gray-500">Kode</div>
             <div class="font-mono text-cyan-400 font-semibold"><?= htmlspecialchars($barang->kode_barang ?? '-') ?></div>
@@ -127,11 +177,21 @@
                 </tr>
                 <?php else: ?>
                 <?php $no = 1; foreach(($rows ?? []) as $t): ?>
+                <?php
+                    $cleanUraian = $t->uraian ?? '-';
+                    if (!empty($t->no_dokumen)) {
+                        $cleanUraian = preg_replace('/^Penyerahan\s+' . preg_quote($t->no_dokumen, '/') . ':\s*/i', '', $cleanUraian);
+                    }
+                    $cleanUraian = preg_replace('/^Penyerahan\s+TKT-[^:]*:\s*/i', '', $cleanUraian);
+                    if (trim((string)$cleanUraian) === '') {
+                        $cleanUraian = '-';
+                    }
+                ?>
                 <tr class="hover:bg-slate-800/50 transition-colors duration-150">
                     <td class="px-4 py-3 text-gray-500"><?= $no++ ?></td>
                     <td class="px-4 py-3 text-gray-400 whitespace-nowrap"><?= htmlspecialchars($t->tanggal ?? '-') ?></td>
                     <td class="px-4 py-3 text-gray-200">
-                        <?= htmlspecialchars($t->uraian ?? '-') ?>
+                        <?= htmlspecialchars($cleanUraian) ?>
                         <?php if (($t->jenis ?? '') === 'masuk'): ?>
                             <span class="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-gradient-to-r from-green-500/15 to-emerald-500/15 text-green-400 ring-1 ring-green-500/30">masuk</span>
                         <?php else: ?>
@@ -237,4 +297,188 @@ html.light .text-red-400 {
 html.light .trx-table-wrap {
     border-color: rgba(226, 232, 240, 0.8) !important;
 }
+
+.dropdown-options::-webkit-scrollbar {
+    width: 6px;
+}
+.dropdown-options::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+html.light #barangDropdownWrap .dropdown-panel {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+html.light #barangDropdownWrap .dropdown-panel .bg-slate-900\/80 {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+html.light #barangDropdownWrap .dropdown-search {
+    color: #0f172a !important;
+}
+html.light #barangDropdownWrap .dropdown-opt {
+    color: #334155 !important;
+}
+html.light #barangDropdownWrap .dropdown-opt:hover {
+    background-color: #ecfeff !important;
+    color: #0891b2 !important;
+}
+html.light #barangDropdownWrap .dropdown-opt.is-selected {
+    background-color: #ecfeff !important;
+    color: #0891b2 !important;
+}
+html.light #barangDropdownWrap .dropdown-empty {
+    color: #94a3b8 !important;
+}
+html.light #barangDropdownWrap .dropdown-options::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+html.light #barangDropdownWrap .dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
 </style>
+
+<script>
+function validKartu() {
+    var val = document.getElementById('filterBarangId').value;
+    if (!val) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: 'warning', title: 'Pilih Barang', text: 'Silakan pilih barang persediaan terlebih dahulu.' });
+        } else {
+            alert('Silakan pilih barang persediaan terlebih dahulu.');
+        }
+        return false;
+    }
+    return true;
+}
+
+(function() {
+    var container = document.getElementById('barangDropdownWrap');
+    if (!container) return;
+
+    var hiddenInput = container.querySelector('.barang-hidden-input');
+    var trigger = container.querySelector('.dropdown-trigger');
+    var label = container.querySelector('.dropdown-label');
+    var chevron = container.querySelector('.dropdown-chevron');
+    var panel = container.querySelector('.dropdown-panel');
+    var search = container.querySelector('.dropdown-search');
+    var clearBtn = container.querySelector('.dropdown-clear');
+    var options = container.querySelectorAll('.dropdown-opt');
+    var emptyMsg = container.querySelector('.dropdown-empty');
+
+    function closeDropdown() {
+        panel.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        container.style.zIndex = '';
+    }
+
+    function openDropdown() {
+        container.style.zIndex = '60';
+        panel.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        setTimeout(function() { search.focus(); }, 50);
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (panel.classList.contains('hidden')) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    });
+
+    function filterOptions(q) {
+        q = (q || '').trim().toLowerCase();
+        var matchCount = 0;
+        options.forEach(function(opt) {
+            var text = (opt.getAttribute('data-label') || '').toLowerCase();
+            if (!q || text.indexOf(q) !== -1) {
+                opt.classList.remove('hidden');
+                matchCount++;
+            } else {
+                opt.classList.add('hidden');
+            }
+        });
+        if (matchCount === 0) {
+            emptyMsg.classList.remove('hidden');
+        } else {
+            emptyMsg.classList.add('hidden');
+        }
+    }
+
+    search.addEventListener('input', function() {
+        var val = this.value;
+        if (val.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+        filterOptions(val);
+    });
+
+    search.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        search.focus();
+    });
+
+    options.forEach(function(opt) {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var val = opt.getAttribute('data-value');
+            var txt = opt.getAttribute('data-label');
+
+            hiddenInput.value = val;
+            label.textContent = txt;
+            if (val === '') {
+                label.className = 'dropdown-label truncate text-slate-400';
+            } else {
+                label.className = 'dropdown-label truncate text-white font-medium';
+            }
+
+            options.forEach(function(o) {
+                var check = o.querySelector('.opt-check');
+                if (o === opt) {
+                    o.classList.add('bg-cyan-600/20', 'text-cyan-300', 'font-semibold', 'is-selected');
+                    if (check) check.classList.remove('hidden');
+                } else {
+                    o.classList.remove('bg-cyan-600/20', 'text-cyan-300', 'font-semibold', 'is-selected');
+                    if (check) check.classList.add('hidden');
+                }
+            });
+
+            closeDropdown();
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDropdown();
+        }
+    });
+})();
+</script>
