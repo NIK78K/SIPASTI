@@ -155,7 +155,7 @@
                                 <div class="text-xs header-subtitle"><?= htmlspecialchars($row->kode_barang ?: '-') ?> · <?= htmlspecialchars($row->satuan) ?></div>
                             </td>
                             <td class="px-5 py-3 header-subtitle"><?= htmlspecialchars($row->kategori_nama ?: '-') ?></td>
-                            <td class="px-5 py-3 text-right header-title"><?= number_format((int) $row->stok_awal) ?></td>
+                            <td class="px-5 py-3 text-right header-title"><?= $row->stok_awal !== null ? number_format((int) $row->stok_awal) : '-' ?></td>
                             <td class="px-5 py-3 text-right text-emerald-400"><?= number_format((int) $row->masuk) ?></td>
                             <td class="px-5 py-3 text-right text-red-400"><?= number_format((int) $row->keluar) ?></td>
                             <td class="px-5 py-3 text-right font-bold header-title"><?= number_format((int) $row->stok_akhir) ?></td>

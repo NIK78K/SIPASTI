@@ -40,7 +40,214 @@ class Barang_persediaan_model extends CI_Model {
         return $this->db->get()->result();
     }
 
+    public function get_base_saldo_barang($barang_id, $bulan, $tahun) {
+        $barang_id   = (int) $barang_id;
+        $bulan       = (int) $bulan;
+        $tahun       = (int) $tahun;
+        $cur_bulan   = (int) date('n');
+        $cur_tahun   = (int) date('Y');
+        $target_date = sprintf('%04d-%02d-01', $tahun, $bulan);
+
+        // Jika bulan di masa depan, belum ada catatan (0)
+        $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+        if ($is_future) {
+            return 0;
+        }
+
+        // 1. Cek apakah ada input manual tepat di bulan & tahun ini
+        $sa_now = $this->db->where('barang_id', $barang_id)
+                           ->where('bulan', $bulan)
+                           ->where('tahun', $tahun)
+                           ->get('stok_awal_persediaan')
+                           ->row();
+        if ($sa_now) {
+            return (int) $sa_now->jumlah;
+        }
+
+        // 2. Cari input stok awal manual terakhir sebelum periode ini
+        $sa_prev = $this->db->where('barang_id', $barang_id)
+                            ->where("(tahun < {$tahun} OR (tahun = {$tahun} AND bulan < {$bulan}))")
+                            ->order_by('tahun', 'DESC')
+                            ->order_by('bulan', 'DESC')
+                            ->limit(1)
+                            ->get('stok_awal_persediaan')
+                            ->row();
+
+        if ($sa_prev) {
+            $base_sa   = (int) $sa_prev->jumlah;
+            $base_date = sprintf('%04d-%02d-01', (int) $sa_prev->tahun, (int) $sa_prev->bulan);
+
+            $ag = $this->db->select("
+                COALESCE(SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END), 0) AS masuk,
+                COALESCE(SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END), 0) AS keluar
+            ", false)
+            ->from('transaksi_persediaan')
+            ->where('barang_id', $barang_id)
+            ->where('tanggal >=', $base_date)
+            ->where('tanggal <', $target_date)
+            ->get()->row();
+
+            return $base_sa + ((int) ($ag->masuk ?? 0)) - ((int) ($ag->keluar ?? 0));
+        }
+
+        // 3. Jika belum pernah ada input stok awal, hitung dari seluruh transaksi sebelum periode ini
+        $ag = $this->db->select("
+            COALESCE(SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END), 0) AS masuk,
+            COALESCE(SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END), 0) AS keluar
+        ", false)
+        ->from('transaksi_persediaan')
+        ->where('barang_id', $barang_id)
+        ->where('tanggal <', $target_date)
+        ->get()->row();
+
+        return ((int) ($ag->masuk ?? 0)) - ((int) ($ag->keluar ?? 0));
+    }
+
+    public function get_stok_awal_barang($barang_id, $bulan, $tahun) {
+        $barang_id   = (int) $barang_id;
+        $bulan       = (int) $bulan;
+        $tahun       = (int) $tahun;
+        $cur_bulan   = (int) date('n');
+        $cur_tahun   = (int) date('Y');
+
+        $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+        if ($is_future) {
+            return 0;
+        }
+
+        // Cek apakah ada input manual tepat di bulan & tahun ini
+        $sa_now = $this->db->where('barang_id', $barang_id)
+                           ->where('bulan', $bulan)
+                           ->where('tahun', $tahun)
+                           ->get('stok_awal_persediaan')
+                           ->row();
+        if ($sa_now) {
+            return (int) $sa_now->jumlah;
+        }
+
+        // Belum diinput manual di bulan baru -> kosongkan (null)
+        return null;
+    }
+
+    public function get_stok_awal_all_map($bulan, $tahun) {
+        $bulan       = (int) $bulan;
+        $tahun       = (int) $tahun;
+        $cur_bulan   = (int) date('n');
+        $cur_tahun   = (int) date('Y');
+        $target_date = sprintf('%04d-%02d-01', $tahun, $bulan);
+
+        $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+
+        $map = [];
+
+        // Ambil daftar semua id barang
+        $all_barang = $this->db->select('id')->from($this->table)->get()->result();
+
+        if ($is_future) {
+            foreach ($all_barang as $b) {
+                $map[(int) $b->id] = [
+                    'stok_awal'  => null,
+                    'base_saldo' => 0,
+                    'is_manual'  => false,
+                    'is_future'  => true,
+                ];
+            }
+            return $map;
+        }
+
+        // 1. Ambil stok awal yang ada tepat di bulan & tahun ini
+        $sa_now = $this->db->where('bulan', $bulan)
+                           ->where('tahun', $tahun)
+                           ->get('stok_awal_persediaan')
+                           ->result();
+        foreach ($sa_now as $s) {
+            $map[(int) $s->barang_id] = [
+                'stok_awal'  => (int) $s->jumlah,
+                'base_saldo' => (int) $s->jumlah,
+                'is_manual'  => true,
+                'is_future'  => false,
+            ];
+        }
+
+        $missing_ids = [];
+        foreach ($all_barang as $b) {
+            if (!isset($map[(int) $b->id])) {
+                $missing_ids[] = (int) $b->id;
+            }
+        }
+
+        if (empty($missing_ids)) {
+            return $map;
+        }
+
+        // 2. Untuk barang yang belum ada input di bulan ini, cari stok awal terakhir sebelum bulan ini
+        $sub_sql = "
+            SELECT s1.barang_id, s1.jumlah, s1.bulan, s1.tahun
+            FROM stok_awal_persediaan s1
+            INNER JOIN (
+                SELECT barang_id, MAX(tahun * 100 + bulan) AS max_period
+                FROM stok_awal_persediaan
+                WHERE (tahun < {$tahun} OR (tahun = {$tahun} AND bulan < {$bulan}))
+                GROUP BY barang_id
+            ) s2 ON s1.barang_id = s2.barang_id AND (s1.tahun * 100 + s1.bulan) = s2.max_period
+            WHERE s1.barang_id IN (" . implode(',', $missing_ids) . ")
+        ";
+        $prev_rows = $this->db->query($sub_sql)->result();
+        $prev_map = [];
+        foreach ($prev_rows as $p) {
+            $prev_map[(int) $p->barang_id] = $p;
+        }
+
+        // 3. Hitung transaksi sebelum target_date per barang untuk mendapatkan carry-over saldo akhir sebelumnya
+        foreach ($missing_ids as $bid) {
+            if (isset($prev_map[$bid])) {
+                $p = $prev_map[$bid];
+                $base_sa   = (int) $p->jumlah;
+                $base_date = sprintf('%04d-%02d-01', (int) $p->tahun, (int) $p->bulan);
+
+                $ag = $this->db->select("
+                    COALESCE(SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END), 0) AS masuk,
+                    COALESCE(SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END), 0) AS keluar
+                ", false)
+                ->from('transaksi_persediaan')
+                ->where('barang_id', $bid)
+                ->where('tanggal >=', $base_date)
+                ->where('tanggal <', $target_date)
+                ->get()->row();
+
+                $carryover = $base_sa + ((int) ($ag->masuk ?? 0)) - ((int) ($ag->keluar ?? 0));
+            } else {
+                $ag = $this->db->select("
+                    COALESCE(SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END), 0) AS masuk,
+                    COALESCE(SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END), 0) AS keluar
+                ", false)
+                ->from('transaksi_persediaan')
+                ->where('barang_id', $bid)
+                ->where('tanggal <', $target_date)
+                ->get()->row();
+
+                $carryover = ((int) ($ag->masuk ?? 0)) - ((int) ($ag->keluar ?? 0));
+            }
+
+            $map[$bid] = [
+                'stok_awal'  => null, // Belum diinput manual untuk bulan ini -> dikosongkan (tampil '-')
+                'base_saldo' => $carryover, // Tapi stok akhir tetap menghitung dari akhir stok sebelumnya
+                'is_manual'  => false,
+                'is_future'  => false,
+            ];
+        }
+
+        return $map;
+    }
+
     public function get_dashboard_stok($bulan, $tahun, $keyword = null, $kategori_id = null) {
+        $bulan         = (int) $bulan;
+        $tahun         = (int) $tahun;
+        $cur_bulan     = (int) date('n');
+        $cur_tahun     = (int) date('Y');
+        $stok_awal_map = $this->get_stok_awal_all_map($bulan, $tahun);
+        $is_future     = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+
         $this->db->select("
             b.id,
             b.kode_barang,
@@ -51,21 +258,13 @@ class Barang_persediaan_model extends CI_Model {
             k.id AS kategori_id,
             k.kode AS kategori_kode,
             k.nama AS kategori_nama,
-            COALESCE(sa.jumlah, 0) AS stok_awal,
+            0 AS stok_awal,
             COALESCE(tx.masuk, 0) AS masuk,
             COALESCE(tx.keluar, 0) AS keluar,
-            COALESCE(sa.jumlah, 0) + COALESCE(tx.masuk, 0) - COALESCE(tx.keluar, 0) AS stok_akhir
+            0 AS stok_akhir
         ", false);
         $this->db->from($this->table . ' b');
         $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
-        $this->db->join(
-            "(SELECT barang_id, jumlah
-              FROM stok_awal_persediaan
-              WHERE bulan = " . (int) $bulan . " AND tahun = " . (int) $tahun . ") sa",
-            'sa.barang_id = b.id',
-            'left',
-            false
-        );
         $this->db->join(
             "(SELECT barang_id,
                      SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END) AS masuk,
@@ -90,7 +289,23 @@ class Barang_persediaan_model extends CI_Model {
         }
         $this->db->order_by('k.kode', 'ASC');
         $this->db->order_by('b.nama_barang', 'ASC');
-        return $this->db->get()->result();
+        $rows = $this->db->get()->result();
+
+        foreach ($rows as $row) {
+            $info = $stok_awal_map[$row->id] ?? null;
+            if ($is_future) {
+                $row->stok_awal  = null;
+                $row->masuk      = 0;
+                $row->keluar     = 0;
+                $row->stok_akhir = 0;
+            } else {
+                $base = $info ? (int) $info['base_saldo'] : 0;
+                $row->stok_awal  = $info ? $info['stok_awal'] : null;
+                $row->stok_akhir = $base + (int) $row->masuk - (int) $row->keluar;
+            }
+        }
+
+        return $rows;
     }
 
     public function get_by_id($id) {

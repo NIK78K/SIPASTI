@@ -1124,16 +1124,16 @@ public function get_sisa_persediaan($barang_id, $bulan, $tahun)
     $barang_id = (int) $barang_id;
     $bulan     = (int) $bulan;
     $tahun     = (int) $tahun;
+    $cur_bulan = (int) date('n');
+    $cur_tahun = (int) date('Y');
 
     if ($barang_id <= 0) return 0;
 
-    $sa = $this->db
-        ->where('barang_id', $barang_id)
-        ->where('bulan', $bulan)
-        ->where('tahun', $tahun)
-        ->get('stok_awal_persediaan')
-        ->row();
-    $awal = $sa ? (int) $sa->jumlah : 0;
+    $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+    if ($is_future) return 0;
+
+    $this->load->model('Barang_persediaan_model');
+    $base = $this->Barang_persediaan_model->get_base_saldo_barang($barang_id, $bulan, $tahun);
 
     $ag = $this->db
         ->select('jenis, COALESCE(SUM(jumlah),0) AS total', false)
@@ -1151,13 +1151,17 @@ public function get_sisa_persediaan($barang_id, $bulan, $tahun)
         else $keluar += (int) $r->total;
     }
 
-    return $awal + $masuk - $keluar;
+    return $base + $masuk - $keluar;
 }
 
 public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
 {
-    $bulan = $bulan ?: (int) date('n');
-    $tahun = $tahun ?: (int) date('Y');
+    $bulan     = (int) ($bulan ?: date('n'));
+    $tahun     = (int) ($tahun ?: date('Y'));
+    $cur_bulan = (int) date('n');
+    $cur_tahun = (int) date('Y');
+
+    $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
 
     $rows = $this->db
         ->select('b.id, b.kode_barang, b.nama_barang, b.satuan, b.gambar, b.stok_minimum, b.status, b.kategori_id, k.kode AS kategori_kode, k.nama AS kategori_nama')
@@ -1170,6 +1174,24 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
     usort($rows, function ($a, $b) {
         return strnatcasecmp($a['kode_barang'] ?? '', $b['kode_barang'] ?? '');
     });
+
+    $this->load->model('Barang_persediaan_model');
+    $stok_awal_map = $this->Barang_persediaan_model->get_stok_awal_all_map($bulan, $tahun);
+
+    $tx_map = [];
+    if (!$is_future) {
+        $ag_all = $this->db
+            ->select('barang_id, jenis, COALESCE(SUM(jumlah),0) AS total', false)
+            ->from('transaksi_persediaan')
+            ->where('MONTH(tanggal)', $bulan)
+            ->where('YEAR(tanggal)', $tahun)
+            ->group_by(['barang_id', 'jenis'])
+            ->get()
+            ->result();
+        foreach ($ag_all as $tx) {
+            $tx_map[(int) $tx->barang_id][$tx->jenis] = (int) $tx->total;
+        }
+    }
 
     // Agregat rating per barang (hanya 1-5, abaikan NULL). Satu query.
     $agg = [];
@@ -1189,11 +1211,21 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
     }
 
     foreach ($rows as &$r) {
-        $r['sisa'] = $this->get_sisa_persediaan($r['id'], $bulan, $tahun);
-        $a = $agg[(int) $r['id']] ?? null;
+        $bid = (int) $r['id'];
+        $info = $stok_awal_map[$bid] ?? null;
+        if ($is_future) {
+            $r['sisa'] = 0;
+        } else {
+            $base = $info ? (int) $info['base_saldo'] : 0;
+            $m = $tx_map[$bid]['masuk'] ?? 0;
+            $k = $tx_map[$bid]['keluar'] ?? 0;
+            $r['sisa'] = $base + $m - $k;
+        }
+
+        $a = $agg[$bid] ?? null;
         $r['rating_avg'] = $a ? round((float) $a['rating_avg'], 1) : null;
         $r['rating_count'] = $a ? (int) $a['rating_count'] : 0;
-        $r['total_terlaris'] = $terlaris_map[(int) $r['id']] ?? 0;
+        $r['total_terlaris'] = $terlaris_map[$bid] ?? 0;
     }
     unset($r);
 
