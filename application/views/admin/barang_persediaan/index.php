@@ -192,132 +192,141 @@
 <!-- Modal Tambah/Edit Barang -->
 <div id="modalBarang" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
     <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
-        <h3 id="modalTitle" class="text-lg font-semibold header-title mb-1">Tambah Barang</h3>
-        <p class="text-sm header-subtitle mb-5">Lengkapi data barang lalu simpan</p>
-
-        <form id="formBarang" class="space-y-4 overflow-y-auto flex-1 min-h-0">
-            <input type="hidden" id="barang_id" name="id">
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-30">
+        <div class="flex items-start justify-between pb-3 border-b border-slate-700/50 flex-shrink-0">
             <div>
-                <label for="kategori_id" class="block text-sm font-medium header-subtitle mb-1.5">
-                    Kategori <span class="text-red-400">*</span>
-                </label>
-                <div class="custom-dropdown-container relative z-30" id="kategoriDropdownWrap">
-                    <input type="hidden" id="kategori_id" name="kategori_id" class="kategori-hidden-input" required>
-                    
-                    <!-- Trigger Button -->
-                    <button type="button" class="dropdown-trigger w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between text-left">
-                        <span class="dropdown-label truncate text-slate-400 text-sm">-- Pilih Kategori --</span>
-                        <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
+                <h3 id="modalTitle" class="text-lg font-semibold header-title mb-0.5">Tambah Barang</h3>
+                <p id="modalSubtitle" class="text-xs header-subtitle">Lengkapi data barang lalu simpan</p>
+            </div>
+            <button type="button" onclick="tutupModal()" class="w-8 h-8 rounded-lg header-subtitle hover:text-white hover:bg-slate-800 flex items-center justify-center transition" title="Tutup">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
 
-                    <!-- Dropdown Panel -->
-                    <div class="dropdown-panel hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
-                        <!-- Search Box (Q Search X) -->
-                        <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input type="text" class="dropdown-search w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none" placeholder="Search" autocomplete="off">
-                            <button type="button" class="dropdown-clear hidden text-slate-400 hover:text-slate-200 p-0.5 ml-1 transition" title="Clear">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        <form id="formBarang" class="flex flex-col flex-1 min-h-0 mt-1">
+            <div id="formBarangBody" class="space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 py-3 pr-1.5">
+                <input type="hidden" id="barang_id" name="id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-30">
+                    <div>
+                        <label for="kategori_id" class="block text-sm font-medium header-subtitle mb-1.5">
+                            Kategori <span class="text-red-400">*</span>
+                        </label>
+                        <div class="custom-dropdown-container relative z-30" id="kategoriDropdownWrap">
+                            <input type="hidden" id="kategori_id" name="kategori_id" class="kategori-hidden-input" required>
+                            
+                            <!-- Trigger Button -->
+                            <button type="button" class="dropdown-trigger w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between text-left">
+                                <span class="dropdown-label truncate text-slate-400 text-sm">-- Pilih Kategori --</span>
+                                <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
-                        </div>
 
-                        <!-- Options List -->
-                        <div class="dropdown-options max-h-52 overflow-y-auto space-y-0.5 pr-1 text-sm">
-                            <?php foreach(($kategori_list ?? []) as $kat): ?>
-                                <div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer transition-colors flex items-center justify-between"
-                                     data-value="<?= $kat->id ?>"
-                                     data-label="<?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?>">
-                                    <span class="truncate"><?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?></span>
-                                    <svg class="opt-check hidden w-4 h-4 text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            <!-- Dropdown Panel -->
+                            <div class="dropdown-panel hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
+                                <!-- Search Box (Q Search X) -->
+                                <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                     </svg>
+                                    <input type="text" class="dropdown-search w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none" placeholder="Search" autocomplete="off">
+                                    <button type="button" class="dropdown-clear hidden text-slate-400 hover:text-slate-200 p-0.5 ml-1 transition" title="Clear">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
                                 </div>
-                            <?php endforeach; ?>
-                            <div class="dropdown-empty hidden py-4 text-center text-xs text-slate-400 font-medium">
-                                Kategori tidak ditemukan
+
+                                <!-- Options List -->
+                                <div class="dropdown-options max-h-52 overflow-y-auto space-y-0.5 pr-1 text-sm">
+                                    <?php foreach(($kategori_list ?? []) as $kat): ?>
+                                        <div class="dropdown-opt px-3 py-2 rounded-xl text-slate-300 font-medium hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer transition-colors flex items-center justify-between"
+                                             data-value="<?= $kat->id ?>"
+                                             data-label="<?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?>">
+                                            <span class="truncate"><?= htmlspecialchars($kat->kode . ' - ' . $kat->nama) ?></span>
+                                            <svg class="opt-check hidden w-4 h-4 text-blue-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <div class="dropdown-empty hidden py-4 text-center text-xs text-slate-400 font-medium">
+                                        Kategori tidak ditemukan
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        <p class="text-xs header-subtitle">Pilih kategori induk barang, wajib diisi.</p>
+                    </div>
+
+                    <div>
+                        <label for="kode_barang" class="block text-sm font-medium header-subtitle mb-1.5">
+                            Kode Barang <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" id="kode_barang" name="kode_barang" readonly maxlength="50"
+                               class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                               placeholder="Otomatis dari kategori">
+                        <p class="text-xs header-subtitle">Terisi otomatis saat kategori dipilih.</p>
                     </div>
                 </div>
-                <p class="text-xs header-subtitle">Pilih kategori induk barang, wajib diisi.</p>
-            </div>
 
-            <div>
-                <label for="kode_barang" class="block text-sm font-medium header-subtitle mb-1.5">
-                    Kode Barang <span class="text-red-400">*</span>
-                </label>
-                <input type="text" id="kode_barang" name="kode_barang" readonly maxlength="50"
-                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
-                       placeholder="Otomatis dari kategori">
-                <p class="text-xs header-subtitle">Terisi otomatis saat kategori dipilih.</p>
-            </div>
-            </div>
+                <div>
+                    <label for="nama_barang" class="block text-sm font-medium header-subtitle mb-1.5">
+                        Nama Barang <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="nama_barang" name="nama_barang" required
+                           class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                           placeholder="Contoh: Kertas HVS A4 80gr">
+                    <p class="text-xs header-subtitle">Nama lengkap barang, contoh: Kertas HVS A4 80gr.</p>
+                </div>
 
-            <div>
-                <label for="nama_barang" class="block text-sm font-medium header-subtitle mb-1.5">
-                    Nama Barang <span class="text-red-400">*</span>
-                </label>
-                <input type="text" id="nama_barang" name="nama_barang" required
-                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                       placeholder="Contoh: Kertas HVS A4 80gr">
-                <p class="text-xs header-subtitle">Nama lengkap barang, contoh: Kertas HVS A4 80gr.</p>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label for="satuan" class="block text-sm font-medium header-subtitle mb-1.5">Satuan</label>
-                <input type="text" id="satuan" name="satuan"
-                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                       placeholder="pcs" value="pcs">
-                <p class="text-xs header-subtitle">Satuan jumlah barang, contoh: pcs, rim, atau box.</p>
-            </div>
-
-            <div>
-                <label for="stok_minimum" class="block text-sm font-medium header-subtitle mb-1.5">
-                    Stok Minimum <span class="text-xs text-slate-400 font-normal">(Batas Min)</span>
-                </label>
-                <input type="number" id="stok_minimum" name="stok_minimum" min="0" value="0"
-                       class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
-                       placeholder="0">
-                <p class="text-xs header-subtitle">Jumlah batas minimum stok per barang (default: 0).</p>
-            </div>
-            </div>
-
-            <div>
-                <label for="status" class="block text-sm font-medium header-subtitle mb-1.5">Status</label>
-                <select id="status" name="status" class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                    <option value="Aktif" class="bg-slate-800 text-white">Aktif</option>
-                    <option value="Nonaktif" class="bg-slate-800 text-white">Nonaktif</option>
-                </select>
-                <p class="text-xs header-subtitle">Aktif bisa dipakai transaksi, Nonaktif disembunyikan.</p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium header-subtitle mb-1.5">
-                    Foto / Gambar Barang <span class="text-xs text-slate-400 font-normal">(Opsional, JPG/PNG/WEBP maks 2MB)</span>
-                </label>
-                <div class="flex items-center gap-4 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50">
-                    <div id="gambarPreviewWrap" class="w-16 h-16 rounded-xl border border-slate-700/60 bg-slate-800/80 overflow-hidden flex items-center justify-center flex-shrink-0">
-                        <img id="gambarPreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
-                        <span id="gambarPlaceholder" class="text-2xl text-slate-500">📦</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="satuan" class="block text-sm font-medium header-subtitle mb-1.5">Satuan</label>
+                        <input type="text" id="satuan" name="satuan"
+                               class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                               placeholder="pcs" value="pcs">
+                        <p class="text-xs header-subtitle">Satuan jumlah barang, contoh: pcs, rim, atau box.</p>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <input type="file" id="gambar" name="gambar" accept="image/*"
-                               class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30 cursor-pointer">
-                        <p class="text-[11px] header-subtitle mt-1">Pilih foto produk barang untuk ditampilkan di katalog.</p>
+
+                    <div>
+                        <label for="stok_minimum" class="block text-sm font-medium header-subtitle mb-1.5">
+                            Stok Minimum <span class="text-xs text-slate-400 font-normal">(Batas Min)</span>
+                        </label>
+                        <input type="number" id="stok_minimum" name="stok_minimum" min="0" value="0"
+                               class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                               placeholder="0">
+                        <p class="text-xs header-subtitle">Jumlah batas minimum stok per barang (default: 0).</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="status" class="block text-sm font-medium header-subtitle mb-1.5">Status</label>
+                    <select id="status" name="status" class="w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <option value="Aktif" class="bg-slate-800 text-white">Aktif</option>
+                        <option value="Nonaktif" class="bg-slate-800 text-white">Nonaktif</option>
+                    </select>
+                    <p class="text-xs header-subtitle">Aktif bisa dipakai transaksi, Nonaktif disembunyikan.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium header-subtitle mb-1.5">
+                        Foto / Gambar Barang <span class="text-xs text-slate-400 font-normal">(Opsional, JPG/PNG/WEBP maks 2MB)</span>
+                    </label>
+                    <div class="flex items-center gap-4 p-3 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                        <div id="gambarPreviewWrap" class="w-16 h-16 rounded-xl border border-slate-700/60 bg-slate-800/80 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            <img id="gambarPreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                            <span id="gambarPlaceholder" class="text-2xl text-slate-500">📦</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="file" id="gambar" name="gambar" accept="image/*"
+                                   class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30 cursor-pointer">
+                            <p class="text-[11px] header-subtitle mt-1">Pilih foto produk barang untuk ditampilkan di katalog.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 mt-6">
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-700/50 flex-shrink-0 mt-2">
                 <button type="button" onclick="tutupModal()"
                         class="px-4 py-2 header-subtitle hover:text-white transition-colors">
                     Batal
@@ -678,6 +687,8 @@ renderBarang();
 function tambahBarang() {
     editMode = false;
     document.getElementById('modalTitle').textContent = 'Tambah Barang';
+    var sub = document.getElementById('modalSubtitle');
+    if (sub) sub.textContent = 'Lengkapi data barang lalu simpan';
     document.getElementById('formBarang').reset();
     document.getElementById('barang_id').value = '';
     document.getElementById('kode_barang').value = '';
@@ -689,6 +700,8 @@ function tambahBarang() {
     document.getElementById('gambarPreview').src = '';
     document.getElementById('gambarPreview').classList.add('hidden');
     document.getElementById('gambarPlaceholder').classList.remove('hidden');
+    var b = document.getElementById('formBarangBody');
+    if (b) b.scrollTop = 0;
     document.getElementById('modalBarang').classList.remove('hidden');
 }
 
@@ -752,6 +765,8 @@ function editBarang(id) {
         }
         editMode = true;
         document.getElementById('modalTitle').textContent = 'Edit Barang';
+        var sub = document.getElementById('modalSubtitle');
+        if (sub) sub.textContent = 'Lengkapi data barang lalu simpan';
         document.getElementById('barang_id').value = d.id;
         document.getElementById('kategori_id').value = d.kategori_id;
         setKategoriDropdownValue(d.kategori_id);
@@ -770,6 +785,8 @@ function editBarang(id) {
             document.getElementById('gambarPreview').classList.add('hidden');
             document.getElementById('gambarPlaceholder').classList.remove('hidden');
         }
+        var b = document.getElementById('formBarangBody');
+        if (b) b.scrollTop = 0;
         document.getElementById('modalBarang').classList.remove('hidden');
     });
 }
@@ -902,6 +919,8 @@ function toggleStatus(id, currentStatus) {
 
 function tutupModal() {
     document.getElementById('modalBarang').classList.add('hidden');
+    var b = document.getElementById('formBarangBody');
+    if (b) b.scrollTop = 0;
     if (returnToLihatKategoriId) {
         const kid = returnToLihatKategoriId;
         returnToLihatKategoriId = null;
@@ -1213,6 +1232,29 @@ html.light #kategoriDropdownWrap .dropdown-options::-webkit-scrollbar-track {
     background: #f1f5f9;
 }
 html.light #kategoriDropdownWrap .dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+#formBarangBody {
+    overflow-x: hidden !important;
+}
+#formBarangBody::-webkit-scrollbar {
+    width: 6px;
+}
+#formBarangBody::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 9999px;
+}
+#formBarangBody::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 9999px;
+}
+#formBarangBody::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+html.light #formBarangBody::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+html.light #formBarangBody::-webkit-scrollbar-thumb {
     background: #cbd5e1;
 }
 </style>

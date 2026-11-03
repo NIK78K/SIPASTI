@@ -200,34 +200,42 @@
 <!-- Modal Tambah/Edit Stok Awal -->
 <div id="modalBarang" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur flex items-center justify-center p-4">
     <div class="theme-card w-full max-w-2xl rounded-2xl border p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
-        <h3 id="modalTitle" class="text-lg font-semibold header-title mb-1">Tambah Stok Awal</h3>
-        <p id="modalSubtitle" class="text-sm header-subtitle mb-5">Isi stok awal barang per periode bulan dan tahun</p>
-
-        <form id="formBarang" class="space-y-4 overflow-y-auto flex-1 min-h-0">
-            <input type="hidden" id="barang_id" name="id">
-
+        <div class="flex items-start justify-between pb-3 border-b border-slate-700/50 flex-shrink-0">
             <div>
-                <label for="stok_barang_id" class="block text-sm font-medium header-subtitle mb-1.5">
-                    Barang <span class="text-red-400">*</span>
-                </label>
-                <div class="custom-dropdown-container relative z-30" id="stokBarangDropdownWrap">
-                    <input type="hidden" id="stok_barang_id" name="barang_id" class="barang-hidden-input" required>
-                    
-                    <!-- Trigger Button -->
-                    <button type="button" class="dropdown-trigger w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between text-left">
-                        <span class="dropdown-label truncate text-slate-400 text-sm">-- Pilih Barang --</span>
-                        <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
+                <h3 id="modalTitle" class="text-lg font-semibold header-title mb-0.5">Tambah Stok Awal</h3>
+                <p id="modalSubtitle" class="text-xs header-subtitle">Isi stok awal barang per periode bulan dan tahun</p>
+            </div>
+            <button type="button" onclick="tutupModal()" class="w-8 h-8 rounded-lg header-subtitle hover:text-white hover:bg-slate-800 flex items-center justify-center transition" title="Tutup">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
 
-                    <!-- Dropdown Panel -->
-                    <div class="dropdown-panel hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
-                        <!-- Search Box (Q Search X) -->
-                        <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        <form id="formBarang" class="flex flex-col flex-1 min-h-0 mt-1">
+            <div id="formBarangBody" class="space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 py-3 pr-1.5">
+                <input type="hidden" id="barang_id" name="id">
+
+                <div>
+                    <label for="stok_barang_id" class="block text-sm font-medium header-subtitle mb-1.5">
+                        Barang <span class="text-red-400">*</span>
+                    </label>
+                    <div class="custom-dropdown-container relative z-30" id="stokBarangDropdownWrap">
+                        <input type="hidden" id="stok_barang_id" name="barang_id" class="barang-hidden-input" required>
+                        
+                        <!-- Trigger Button -->
+                        <button type="button" class="dropdown-trigger w-full px-4 py-3 rounded-xl mb-1 bg-slate-800/80 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between text-left">
+                            <span class="dropdown-label truncate text-slate-400 text-sm">-- Pilih Barang --</span>
+                            <svg class="dropdown-chevron w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
+                        </button>
+
+                        <!-- Dropdown Panel -->
+                        <div class="dropdown-panel hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl shadow-2xl border border-slate-700 bg-slate-800 p-3 space-y-2">
+                            <!-- Search Box (Q Search X) -->
+                            <div class="flex items-center bg-slate-900/80 border border-slate-700/70 rounded-xl px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                                <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
                             <input type="text" class="dropdown-search w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none" placeholder="Search" autocomplete="off">
                             <button type="button" class="dropdown-clear hidden text-slate-400 hover:text-slate-200 p-0.5 ml-1 transition" title="Clear">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,8 +305,9 @@
                     <p class="text-xs header-subtitle">Keterangan tambahan, boleh dikosongkan.</p>
                 </div>
             </div>
+            </div>
 
-            <div class="flex justify-end gap-3 mt-6">
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-700/50 flex-shrink-0 mt-2">
                 <button type="button" onclick="tutupModal()"
                         class="px-4 py-2 header-subtitle hover:text-white transition-colors">
                     Batal
@@ -577,6 +586,8 @@ function tambahStok() {
     document.getElementById('formBarang').reset();
     document.getElementById('barang_id').value = '';
     setStokBarangDropdownValue('');
+    var b = document.getElementById('formBarangBody');
+    if (b) b.scrollTop = 0;
     document.getElementById('modalBarang').classList.remove('hidden');
 }
 
@@ -598,6 +609,8 @@ function editStok(id) {
         document.getElementById('tahun').value = d.tahun;
         document.getElementById('jumlah').value = d.jumlah;
         document.getElementById('keterangan').value = d.keterangan || '';
+        var b = document.getElementById('formBarangBody');
+        if (b) b.scrollTop = 0;
         document.getElementById('modalBarang').classList.remove('hidden');
     });
 }
@@ -659,6 +672,8 @@ function hapusStok(id, nama) {
 
 function tutupModal() {
     document.getElementById('modalBarang').classList.add('hidden');
+    var b = document.getElementById('formBarangBody');
+    if (b) b.scrollTop = 0;
 }
 
 document.getElementById('modalBarang').addEventListener('click', function(e) {
@@ -847,6 +862,29 @@ html.light #filterStokToolbarWrap .dropdown-options::-webkit-scrollbar-track {
 }
 html.light #stokBarangDropdownWrap .dropdown-options::-webkit-scrollbar-thumb,
 html.light #filterStokToolbarWrap .dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+#formBarangBody {
+    overflow-x: hidden !important;
+}
+#formBarangBody::-webkit-scrollbar {
+    width: 6px;
+}
+#formBarangBody::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 9999px;
+}
+#formBarangBody::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 9999px;
+}
+#formBarangBody::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+html.light #formBarangBody::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+html.light #formBarangBody::-webkit-scrollbar-thumb {
     background: #cbd5e1;
 }
 </style>
