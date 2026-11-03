@@ -146,7 +146,7 @@
 
             <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 <?php foreach (($barang_list ?? []) as $b): ?>
-                <div class="barang-card group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col cursor-pointer"
+                <div class="barang-card group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-shadow duration-300 overflow-hidden flex flex-col cursor-pointer"
                       onclick="openUlasanBarang(<?= (int) $b['id'] ?>, event)"
                       data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
                       data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
@@ -406,10 +406,13 @@
 }
 .catalog-page .barang-card {
     border-radius: 16px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    transform: none !important;
 }
 .catalog-page .barang-card:hover {
-    box-shadow: 0 8px 18px rgba(15, 23, 42, .12);
+    box-shadow: 0 14px 32px -4px rgba(15, 23, 42, .14), 0 6px 12px -2px rgba(15, 23, 42, .06) !important;
+    transform: none !important;
 }
 .catalog-image-frame {
     height: 190px;
@@ -425,9 +428,19 @@
     height: 100%;
     object-fit: contain;
     padding: 14px;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.catalog-page .barang-card:hover .catalog-image {
+    transform: scale(1.08);
 }
 .catalog-image-fallback {
     background: linear-gradient(145deg, #f8fafc, #eff6ff);
+}
+.catalog-image-fallback svg {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.catalog-page .barang-card:hover .catalog-image-fallback svg {
+    transform: scale(1.1);
 }
 .catalog-page .barang-card .p-4 {
     padding: 12px;
