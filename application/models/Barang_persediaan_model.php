@@ -119,6 +119,18 @@ class Barang_persediaan_model extends CI_Model {
         return $this->db->get()->result();
     }
 
+    public function get_related_by_kategori($kategori_id, $exclude_id, $limit = 4) {
+        $this->db->select('b.*, k.kode AS kategori_kode, k.nama AS kategori_nama, k.deskripsi AS kategori_deskripsi');
+        $this->db->from($this->table . ' b');
+        $this->db->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left');
+        $this->db->where('b.kategori_id', (int) $kategori_id);
+        $this->db->where('b.id !=', (int) $exclude_id);
+        $this->db->where('b.status', 'Aktif');
+        $this->db->order_by('b.nama_barang', 'ASC');
+        $this->db->limit(max(1, (int) $limit));
+        return $this->db->get()->result();
+    }
+
     public function insert($data) {
         return $this->db->insert($this->table, $data);
     }

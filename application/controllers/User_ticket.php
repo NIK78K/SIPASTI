@@ -853,9 +853,24 @@ public function history()
         $sisa  = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, $bulan, $tahun);
 
         $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
+        list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+        $barang_terkait = $this->Barang_persediaan_model->get_related_by_kategori(
+            $barang->kategori_id,
+            $barang_id,
+            4
+        );
+        foreach ($barang_terkait as $barangItem) {
+            $relatedRating = $this->User_ticket_model->get_ulasan_barang((int) $barangItem->id);
+            $barangItem->rating_avg = $relatedRating['rating_avg'];
+            $barangItem->rating_count = $relatedRating['rating_count'];
+            $barangItem->detail_url = base_url('user_ticket/ulasan_barang/' . (int) $barangItem->id);
+        }
 
         $data = [
             'barang'       => $barang,
+            'barang_terkait' => $barang_terkait,
+            'unit_kerja_list' => $unit_kerja_list,
+            'unit_kerja_default' => $unit_kerja_default,
             'sisa'         => $sisa,
             'rating_avg'   => $ulasan_data['rating_avg'],
             'rating_count' => $ulasan_data['rating_count'],
