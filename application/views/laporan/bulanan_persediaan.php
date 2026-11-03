@@ -140,21 +140,21 @@
                 </td>
             </tr>
             <?php else: ?>
-            <?php $no = 1; $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0; ?>
+            <?php $no = 1; $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0; $ada_awal = false; ?>
             <?php foreach(($rows ?? []) as $r): ?>
-            <?php $t_awal += (int)($r->stok_awal ?? 0); $t_masuk += (int)($r->masuk ?? 0); $t_keluar += (int)($r->keluar ?? 0); $t_akhir += (int)($r->stok_akhir ?? 0); ?>
+            <?php if ($r->stok_awal !== null) { $t_awal += (int)$r->stok_awal; $ada_awal = true; } $t_masuk += (int)($r->masuk ?? 0); $t_keluar += (int)($r->keluar ?? 0); $t_akhir += (int)($r->stok_akhir ?? 0); ?>
             <tr class="hover:bg-slate-800/50 transition-colors duration-150">
                 <td class="px-4 py-3 text-gray-500"><?= $no++ ?></td>
                 <td class="px-4 py-3 font-mono text-cyan-400"><?= htmlspecialchars($r->kode_barang ?? '-') ?></td>
                 <td class="px-4 py-3 text-gray-200"><?= htmlspecialchars($r->nama_barang ?? '-') ?></td>
                 <td class="px-4 py-3 text-gray-400"><?= htmlspecialchars($r->satuan ?? '-') ?></td>
-                <td class="px-4 py-3 text-right text-gray-200"><?= number_format((int)($r->stok_awal ?? 0)) ?></td>
+                <td class="px-4 py-3 text-right text-gray-200"><?= $r->stok_awal !== null ? number_format((int)$r->stok_awal) : '-' ?></td>
                 <td class="px-4 py-3 text-right text-green-400 font-semibold"><?= number_format((int)($r->masuk ?? 0)) ?></td>
                 <td class="px-4 py-3 text-right text-red-400 font-semibold"><?= number_format((int)($r->keluar ?? 0)) ?></td>
                 <td class="px-4 py-3 text-right font-semibold <?= (int)($r->stok_akhir ?? 0) < 0 ? 'text-red-400 font-bold' : 'text-gray-200' ?>"><?= number_format((int)($r->stok_akhir ?? 0)) ?></td>
                 <td class="px-4 py-3">
                     <?php if (!empty($r->keterangan)): ?>
-                        <?php if ($r->keterangan === 'Stok minimum tercapai'): ?>
+                        <?php if ($r->keterangan === 'Stok Sudah Mencapai Batas Minimum' || $r->keterangan === 'Stok minimum tercapai'): ?>
                             <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/25 whitespace-nowrap">
                                 <?= htmlspecialchars($r->keterangan) ?>
                             </span>
@@ -169,7 +169,7 @@
             <?php endforeach; ?>
             <tr class="bg-slate-800/40 font-semibold">
                 <td class="px-4 py-3 text-gray-500" colspan="4">Total</td>
-                <td class="px-4 py-3 text-right text-gray-200"><?= number_format($t_awal) ?></td>
+                <td class="px-4 py-3 text-right text-gray-200"><?= $ada_awal ? number_format($t_awal) : '-' ?></td>
                 <td class="px-4 py-3 text-right text-green-400"><?= number_format($t_masuk) ?></td>
                 <td class="px-4 py-3 text-right text-red-400"><?= number_format($t_keluar) ?></td>
                 <td class="px-4 py-3 text-right text-gray-200"><?= number_format($t_akhir) ?></td>

@@ -42,8 +42,8 @@ class Laporan extends CI_Controller {
     public function kartu_persediaan(){
         $barang_id = $this->input->get('barang_id');
         $barang_search = trim($this->input->get('barang_search', true) ?: '');
-        $bulan     = $this->input->get('bulan') ?: date('n');
-        $tahun     = $this->input->get('tahun') ?: date('Y');
+        $bulan     = (int) ($this->input->get('bulan') ?: date('n'));
+        $tahun     = (int) ($this->input->get('tahun') ?: date('Y'));
 
         $this->load->model(['Transaksi_persediaan_model', 'Barang_persediaan_model', 'Stok_awal_persediaan_model']);
 
@@ -75,13 +75,17 @@ class Laporan extends CI_Controller {
             rsort($data['tahun_list']);
         }
 
-        if (!empty($barang_id)) {
-            $sa = $this->db->where('barang_id', $barang_id)
-                           ->where('bulan', (int) $bulan)
-                           ->where('tahun', (int) $tahun)
-                           ->get('stok_awal_persediaan')
-                           ->row();
-            $data['stok_awal'] = $sa ? (int) $sa->jumlah : 0;
+        $cur_bulan = (int) date('n');
+        $cur_tahun = (int) date('Y');
+        $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+        if ($is_future) {
+            $data['stok_awal']   = 0;
+            $data['rows']        = [];
+            $data['total_masuk'] = 0;
+            $data['total_keluar'] = 0;
+            $data['saldo_akhir'] = 0;
+        } elseif (!empty($barang_id)) {
+            $data['stok_awal'] = $this->Barang_persediaan_model->get_base_saldo_barang($barang_id, $bulan, $tahun);
 
             $trx = $this->Transaksi_persediaan_model->get_filtered(null, $barang_id, $bulan, $tahun);
             if (!is_array($trx)) $trx = [];
@@ -124,8 +128,8 @@ class Laporan extends CI_Controller {
     }
 
     public function bulanan_persediaan(){
-        $bulan       = $this->input->get('bulan') ?: date('n');
-        $tahun       = $this->input->get('tahun') ?: date('Y');
+        $bulan       = (int) ($this->input->get('bulan') ?: date('n'));
+        $tahun       = (int) ($this->input->get('tahun') ?: date('Y'));
         $kategori_id = $this->input->get('kategori_id');
         $kode        = $this->input->get('kode');
 
@@ -169,27 +173,27 @@ class Laporan extends CI_Controller {
             rsort($tahun_list);
         }
 
-        $sa_map = [];
-        $sa_rows = $this->db->where('bulan', (int) $bulan)
-                            ->where('tahun', (int) $tahun)
-                            ->get('stok_awal_persediaan')
-                            ->result();
-        foreach ($sa_rows as $sa) {
-            $sa_map[$sa->barang_id] = (int) ($sa->jumlah ?? 0);
-        }
+        $bulan = (int) $bulan;
+        $tahun = (int) $tahun;
+        $cur_bulan = (int) date('n');
+        $cur_tahun = (int) date('Y');
+        $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
+        $sa_map = $this->Barang_persediaan_model->get_stok_awal_all_map($bulan, $tahun);
 
         $mut = [];
-        $ag = $this->db->select('barang_id, jenis, SUM(jumlah) AS total', false)
-                       ->from('transaksi_persediaan')
-                       ->where('MONTH(tanggal)', (int) $bulan)
-                       ->where('YEAR(tanggal)', (int) $tahun)
-                       ->group_by(['barang_id', 'jenis'])
-                       ->get()->result();
-        foreach ($ag as $r) {
-            if (($r->jenis ?? '') === 'masuk') {
-                $mut[$r->barang_id]['masuk'] = (int) $r->total;
-            } else {
-                $mut[$r->barang_id]['keluar'] = (int) $r->total;
+        if (!$is_future) {
+            $ag = $this->db->select('barang_id, jenis, SUM(jumlah) AS total', false)
+                           ->from('transaksi_persediaan')
+                           ->where('MONTH(tanggal)', (int) $bulan)
+                           ->where('YEAR(tanggal)', (int) $tahun)
+                           ->group_by(['barang_id', 'jenis'])
+                           ->get()->result();
+            foreach ($ag as $r) {
+                if (($r->jenis ?? '') === 'masuk') {
+                    $mut[$r->barang_id]['masuk'] = (int) $r->total;
+                } else {
+                    $mut[$r->barang_id]['keluar'] = (int) $r->total;
+                }
             }
         }
 
@@ -198,18 +202,30 @@ class Laporan extends CI_Controller {
             if (isset($b->status) && $b->status === 'Nonaktif') continue;
             if (!empty($kategori_id) && (string) ($b->kategori_id ?? '') !== (string) $kategori_id) continue;
             if (!empty($kode) && stripos($b->kode_barang ?? '', $kode) === false) continue;
-            $awal   = $sa_map[$b->id] ?? 0;
-            $masuk  = $mut[$b->id]['masuk'] ?? 0;
-            $keluar = $mut[$b->id]['keluar'] ?? 0;
-            $akhir  = $awal + $masuk - $keluar;
-            $min    = (int) ($b->stok_minimum ?? 0);
 
-            $ket = '';
-            if ($min > 0) {
-                if ($akhir === $min) {
-                    $ket = 'Stok minimum tercapai';
-                } elseif ($akhir < $min) {
-                    $ket = 'Stok sudah melampaui stok minimum';
+            $min = (int) ($b->stok_minimum ?? 0);
+
+            if ($is_future) {
+                $awal   = null;
+                $masuk  = 0;
+                $keluar = 0;
+                $akhir  = 0;
+                $ket    = '';
+            } else {
+                $info   = $sa_map[$b->id] ?? null;
+                $awal   = $info ? $info['stok_awal'] : null;
+                $base   = $info ? (int) $info['base_saldo'] : 0;
+                $masuk  = $mut[$b->id]['masuk'] ?? 0;
+                $keluar = $mut[$b->id]['keluar'] ?? 0;
+                $akhir  = $base + $masuk - $keluar;
+
+                $ket = '';
+                if ($min > 0) {
+                    if ($akhir === $min) {
+                        $ket = 'Stok Sudah Mencapai Batas Minimum';
+                    } elseif ($akhir < $min) {
+                        $ket = 'Stok sudah melampaui stok minimum';
+                    }
                 }
             }
 
@@ -335,13 +351,17 @@ class Laporan extends CI_Controller {
         $row = 4;
         $no = 1;
         $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0;
+        $ada_awal = false;
         if (empty($data['rows'])) {
             $ws->mergeCells('A' . $row . ':I' . $row);
             $ws->setCellValue('A' . $row, 'Belum ada data barang pada periode ini.');
             $row++;
         } else {
             foreach ($data['rows'] as $r) {
-                $t_awal += (int) ($r->stok_awal ?? 0);
+                if ($r->stok_awal !== null) {
+                    $t_awal += (int) $r->stok_awal;
+                    $ada_awal = true;
+                }
                 $t_masuk += (int) ($r->masuk ?? 0);
                 $t_keluar += (int) ($r->keluar ?? 0);
                 $t_akhir += (int) ($r->stok_akhir ?? 0);
@@ -349,7 +369,7 @@ class Laporan extends CI_Controller {
                 $ws->setCellValue('B' . $row, $r->kode_barang ?? '-');
                 $ws->setCellValue('C' . $row, $r->nama_barang ?? '-');
                 $ws->setCellValue('D' . $row, $r->satuan ?? '-');
-                $ws->setCellValue('E' . $row, (int) ($r->stok_awal ?? 0));
+                $ws->setCellValue('E' . $row, $r->stok_awal !== null ? (int) $r->stok_awal : '-');
                 $ws->setCellValue('F' . $row, (int) ($r->masuk ?? 0));
                 $ws->setCellValue('G' . $row, (int) ($r->keluar ?? 0));
                 $ws->setCellValue('H' . $row, (int) ($r->stok_akhir ?? 0));
@@ -360,7 +380,7 @@ class Laporan extends CI_Controller {
 
         $ws->setCellValue('A' . $row, 'Total');
         $ws->mergeCells('A' . $row . ':D' . $row);
-        $ws->setCellValue('E' . $row, $t_awal);
+        $ws->setCellValue('E' . $row, $ada_awal ? $t_awal : '-');
         $ws->setCellValue('F' . $row, $t_masuk);
         $ws->setCellValue('G' . $row, $t_keluar);
         $ws->setCellValue('H' . $row, $t_akhir);
@@ -411,11 +431,15 @@ class Laporan extends CI_Controller {
 
         $no = 1;
         $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0;
+        $ada_awal = false;
         if (empty($data['rows'])) {
             $html .= '<tr><td colspan="9" style="text-align:center;">Belum ada data barang pada periode ini.</td></tr>';
         } else {
             foreach ($data['rows'] as $r) {
-                $t_awal += (int) ($r->stok_awal ?? 0);
+                if ($r->stok_awal !== null) {
+                    $t_awal += (int) $r->stok_awal;
+                    $ada_awal = true;
+                }
                 $t_masuk += (int) ($r->masuk ?? 0);
                 $t_keluar += (int) ($r->keluar ?? 0);
                 $t_akhir += (int) ($r->stok_akhir ?? 0);
@@ -423,7 +447,7 @@ class Laporan extends CI_Controller {
                     . '<td>' . htmlspecialchars($r->kode_barang ?? '-') . '</td>'
                     . '<td>' . htmlspecialchars($r->nama_barang ?? '-') . '</td>'
                     . '<td>' . htmlspecialchars($r->satuan ?? '-') . '</td>'
-                    . '<td class="num">' . number_format((int) ($r->stok_awal ?? 0)) . '</td>'
+                    . '<td class="num">' . ($r->stok_awal !== null ? number_format((int) $r->stok_awal) : '-') . '</td>'
                     . '<td class="num">' . number_format((int) ($r->masuk ?? 0)) . '</td>'
                     . '<td class="num">' . number_format((int) ($r->keluar ?? 0)) . '</td>'
                     . '<td class="num">' . number_format((int) ($r->stok_akhir ?? 0)) . '</td>'
@@ -431,7 +455,7 @@ class Laporan extends CI_Controller {
             }
         }
         $html .= '<tr><td colspan="4"><strong>Total</strong></td>'
-            . '<td class="num"><strong>' . number_format($t_awal) . '</strong></td>'
+            . '<td class="num"><strong>' . ($ada_awal ? number_format($t_awal) : '-') . '</strong></td>'
             . '<td class="num"><strong>' . number_format($t_masuk) . '</strong></td>'
             . '<td class="num"><strong>' . number_format($t_keluar) . '</strong></td>'
             . '<td class="num"><strong>' . number_format($t_akhir) . '</strong></td>'
