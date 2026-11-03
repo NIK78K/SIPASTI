@@ -253,16 +253,64 @@
             <input name="keperluan" id="fKeperluan" type="text" placeholder="cth: Kebutuhan ATK bagian umum"
                 class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-3 relative z-30">
             <div>
                 <label class="text-xs font-bold text-gray-700">Unit kerja</label>
-                <select name="unit_kerja"
-                    class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all bg-white">
-                    <option value="">-- Pilih unit kerja --</option>
-                    <?php foreach (($unit_kerja_list ?? []) as $uk): ?>
-                        <option value="<?= htmlspecialchars($uk) ?>" <?= (string)($unit_kerja_default ?? '') === (string)$uk ? 'selected' : '' ?>><?= htmlspecialchars($uk) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="custom-dropdown-container relative z-30" id="unitKerjaDropdownWrap">
+                    <input type="hidden" name="unit_kerja" id="fUnitKerja" class="unit-kerja-hidden-input" value="<?= htmlspecialchars($unit_kerja_default ?? '') ?>">
+                    
+                    <!-- Trigger Button -->
+                    <button type="button" class="dropdown-trigger mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 bg-white hover:border-gray-300 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm font-medium transition-all flex items-center justify-between text-left">
+                        <span class="dropdown-label truncate <?= empty($unit_kerja_default) ? 'text-gray-400 font-medium' : 'text-gray-800 font-semibold' ?>">
+                            <?= htmlspecialchars(!empty($unit_kerja_default) ? $unit_kerja_default : '-- Pilih unit kerja --') ?>
+                        </span>
+                        <svg class="dropdown-chevron w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Panel (drops up above the trigger) -->
+                    <div class="dropdown-panel hidden absolute left-0 bottom-full mb-1.5 z-50 min-w-[280px] w-[320px] max-w-[85vw] rounded-2xl shadow-2xl border border-gray-200 bg-white p-3 space-y-2">
+                        <!-- Search Box (Q Search X) -->
+                        <div class="flex items-center bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-blue-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" class="dropdown-search w-full bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none" placeholder="Search" autocomplete="off">
+                            <button type="button" class="dropdown-clear hidden text-gray-400 hover:text-gray-600 p-0.5 ml-1 transition" title="Clear">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Options List -->
+                        <div class="dropdown-options max-h-52 overflow-y-auto space-y-0.5 pr-1 text-sm">
+                            <div class="dropdown-opt px-3 py-2 rounded-xl text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-900 cursor-pointer transition-colors flex items-center justify-between <?= empty($unit_kerja_default) ? 'bg-blue-50 text-blue-900 font-semibold is-selected' : '' ?>"
+                                 data-value=""
+                                 data-label="-- Pilih unit kerja --">
+                                <span class="truncate">-- Pilih unit kerja --</span>
+                                <svg class="opt-check <?= empty($unit_kerja_default) ? '' : 'hidden' ?> w-4 h-4 text-blue-900 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <?php foreach (($unit_kerja_list ?? []) as $uk): ?>
+                                <?php $is_sel = (string)($unit_kerja_default ?? '') === (string)$uk; ?>
+                                <div class="dropdown-opt px-3 py-2 rounded-xl text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-900 cursor-pointer transition-colors flex items-center justify-between <?= $is_sel ? 'bg-blue-50 text-blue-900 font-semibold is-selected' : '' ?>"
+                                     data-value="<?= htmlspecialchars($uk) ?>"
+                                     data-label="<?= htmlspecialchars($uk) ?>">
+                                    <span class="truncate"><?= htmlspecialchars($uk) ?></span>
+                                    <svg class="opt-check <?= $is_sel ? '' : 'hidden' ?> w-4 h-4 text-blue-900 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                            <?php endforeach; ?>
+                            <div class="dropdown-empty hidden py-4 text-center text-xs text-gray-400 font-medium">
+                                Unit kerja tidak ditemukan
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
@@ -450,6 +498,21 @@
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 #cartDrawer.open { display: flex !important; }
 #cartOverlay.open { display: block !important; }
+
+.dropdown-options::-webkit-scrollbar {
+    width: 6px;
+}
+.dropdown-options::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+.dropdown-options::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
 </style>
 
 <script>
@@ -772,6 +835,126 @@ function validCheckout() {
     }
     return true;
 }
+
+(function() {
+    var container = document.getElementById('unitKerjaDropdownWrap');
+    if (!container) return;
+
+    var hiddenInput = container.querySelector('.unit-kerja-hidden-input');
+    var trigger = container.querySelector('.dropdown-trigger');
+    var label = container.querySelector('.dropdown-label');
+    var chevron = container.querySelector('.dropdown-chevron');
+    var panel = container.querySelector('.dropdown-panel');
+    var search = container.querySelector('.dropdown-search');
+    var clearBtn = container.querySelector('.dropdown-clear');
+    var options = container.querySelectorAll('.dropdown-opt');
+    var emptyMsg = container.querySelector('.dropdown-empty');
+
+    function closeDropdown() {
+        panel.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        container.style.zIndex = '';
+    }
+
+    function openDropdown() {
+        container.style.zIndex = '60';
+        panel.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        setTimeout(function() { search.focus(); }, 50);
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (panel.classList.contains('hidden')) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    });
+
+    function filterOptions(q) {
+        q = (q || '').trim().toLowerCase();
+        var matchCount = 0;
+        options.forEach(function(opt) {
+            var text = (opt.getAttribute('data-label') || '').toLowerCase();
+            if (!q || text.indexOf(q) !== -1) {
+                opt.classList.remove('hidden');
+                matchCount++;
+            } else {
+                opt.classList.add('hidden');
+            }
+        });
+        if (matchCount === 0) {
+            emptyMsg.classList.remove('hidden');
+        } else {
+            emptyMsg.classList.add('hidden');
+        }
+    }
+
+    search.addEventListener('input', function() {
+        var val = this.value;
+        if (val.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+        filterOptions(val);
+    });
+
+    search.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        search.value = '';
+        clearBtn.classList.add('hidden');
+        filterOptions('');
+        search.focus();
+    });
+
+    options.forEach(function(opt) {
+        opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var val = opt.getAttribute('data-value');
+            var txt = opt.getAttribute('data-label');
+
+            hiddenInput.value = val;
+            label.textContent = txt;
+            if (val === '') {
+                label.className = 'dropdown-label truncate text-gray-400 font-medium';
+            } else {
+                label.className = 'dropdown-label truncate text-gray-800 font-semibold';
+            }
+
+            options.forEach(function(o) {
+                var check = o.querySelector('.opt-check');
+                if (o === opt) {
+                    o.classList.add('bg-blue-50', 'text-blue-900', 'font-semibold', 'is-selected');
+                    if (check) check.classList.remove('hidden');
+                } else {
+                    o.classList.remove('bg-blue-50', 'text-blue-900', 'font-semibold', 'is-selected');
+                    if (check) check.classList.add('hidden');
+                }
+            });
+
+            closeDropdown();
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDropdown();
+        }
+    });
+})();
 
 refreshCart();
 renderPage();
