@@ -100,85 +100,147 @@
         Tampilkan
     </button>
     <?php $q_bul = http_build_query(['bulan' => (int)($bulan ?? date('n')), 'tahun' => (int)($tahun ?? date('Y')), 'kategori_id' => ($kategori_id ?? ''), 'kode' => ($kode ?? '')]); ?>
-    <a href="<?= base_url('laporan/export_excel_bulanan?' . $q_bul) ?>" class="bg-green-600 hover:bg-green-500 text-white font-semibold px-4 py-2 rounded-lg transition">
-        Excel
-    </a>
-    <a href="<?= base_url('laporan/export_pdf_bulanan?' . $q_bul) ?>" target="_blank" class="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2 rounded-lg transition">
-        PDF
-    </a>
+    <?php if (!empty($is_future)): ?>
+        <button type="button" disabled class="bg-slate-800/80 border border-slate-700/50 text-slate-500 font-semibold px-4 py-2 rounded-lg cursor-not-allowed" title="Laporan periode ini belum tersedia">
+            Excel
+        </button>
+        <button type="button" disabled class="bg-slate-800/80 border border-slate-700/50 text-slate-500 font-semibold px-4 py-2 rounded-lg cursor-not-allowed" title="Laporan periode ini belum tersedia">
+            PDF
+        </button>
+    <?php else: ?>
+        <a href="<?= base_url('laporan/export_excel_bulanan?' . $q_bul) ?>" class="bg-green-600 hover:bg-green-500 text-white font-semibold px-4 py-2 rounded-lg transition">
+            Excel
+        </a>
+        <a href="<?= base_url('laporan/export_pdf_bulanan?' . $q_bul) ?>" target="_blank" class="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2 rounded-lg transition">
+            PDF
+        </a>
+    <?php endif; ?>
 </form>
 
 <?php $nb = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember']; ?>
-<p class="text-sm text-gray-400 mb-4">Periode: <span class="text-gray-200 font-medium"><?= htmlspecialchars(($nb[(int)$bulan] ?? $bulan) . ' ' . $tahun) ?></span></p>
-
-<div class="header border rounded-xl theme-card p-4 mb-4 text-center relative z-10">
-    <h2 class="header-title text-lg font-semibold">Laporan STOK &mdash; <?= htmlspecialchars(($nb[(int)$bulan] ?? $bulan) . ' ' . $tahun) ?></h2>
-    <p class="header-subtitle text-sm mt-1">BPS Provinsi Riau</p>
-    <p class="header-subtitle text-sm">Dicetak: <?= date('d M Y, H:i') ?></p>
+<div class="flex items-center gap-2 mb-4 text-sm">
+    <p class="text-gray-400">Periode: <span class="text-white font-bold"><?= htmlspecialchars(($nb[(int)$bulan] ?? $bulan) . ' ' . $tahun) ?></span></p>
+    <?php if (!empty($is_future)): ?>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            Belum berjalan
+        </span>
+    <?php endif; ?>
 </div>
 
-<div class="overflow-x-auto border rounded-xl theme-card trx-table-wrap relative z-10">
-    <table class="w-full text-sm">
-        <thead class="bg-slate-900/90 text-gray-300 border-b border-slate-700/50">
-            <tr>
-                <th class="px-4 py-3 text-left" style="width:50px;">No</th>
-                <th class="px-4 py-3 text-left">Kode Barang</th>
-                <th class="px-4 py-3 text-left">Nama Barang</th>
-                <th class="px-4 py-3 text-left" style="width:90px;">Satuan</th>
-                <th class="px-4 py-3 text-right" style="width:100px;">Stok Awal</th>
-                <th class="px-4 py-3 text-right" style="width:90px;">Masuk</th>
-                <th class="px-4 py-3 text-right" style="width:90px;">Keluar</th>
-                <th class="px-4 py-3 text-right" style="width:100px;">Stok Akhir</th>
-                <th class="px-4 py-3 text-left" style="width:150px;">Keterangan</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800/30">
-            <?php if (empty($rows)): ?>
-            <tr>
-                <td colspan="9" class="px-6 py-10 text-center">
-                    <div class="text-gray-500">Belum ada data barang pada periode ini.</div>
-                </td>
-            </tr>
-            <?php else: ?>
-            <?php $no = 1; $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0; $ada_awal = false; ?>
-            <?php foreach(($rows ?? []) as $r): ?>
-            <?php if ($r->stok_awal !== null) { $t_awal += (int)$r->stok_awal; $ada_awal = true; } $t_masuk += (int)($r->masuk ?? 0); $t_keluar += (int)($r->keluar ?? 0); $t_akhir += (int)($r->stok_akhir ?? 0); ?>
-            <tr class="hover:bg-slate-800/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-gray-500"><?= $no++ ?></td>
-                <td class="px-4 py-3 font-mono text-cyan-400"><?= htmlspecialchars($r->kode_barang ?? '-') ?></td>
-                <td class="px-4 py-3 text-gray-200"><?= htmlspecialchars($r->nama_barang ?? '-') ?></td>
-                <td class="px-4 py-3 text-gray-400"><?= htmlspecialchars($r->satuan ?? '-') ?></td>
-                <td class="px-4 py-3 text-right text-gray-200"><?= $r->stok_awal !== null ? number_format((int)$r->stok_awal) : '-' ?></td>
-                <td class="px-4 py-3 text-right text-green-400 font-semibold"><?= number_format((int)($r->masuk ?? 0)) ?></td>
-                <td class="px-4 py-3 text-right text-red-400 font-semibold"><?= number_format((int)($r->keluar ?? 0)) ?></td>
-                <td class="px-4 py-3 text-right font-semibold <?= (int)($r->stok_akhir ?? 0) < 0 ? 'text-red-400 font-bold' : 'text-gray-200' ?>"><?= number_format((int)($r->stok_akhir ?? 0)) ?></td>
-                <td class="px-4 py-3">
-                    <?php if (!empty($r->keterangan)): ?>
-                        <?php if ($r->keterangan === 'Stok Sudah Mencapai Batas Minimum' || $r->keterangan === 'Stok minimum tercapai'): ?>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/25 whitespace-nowrap">
-                                <?= htmlspecialchars($r->keterangan) ?>
-                            </span>
-                        <?php else: ?>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/25 whitespace-nowrap">
-                                <?= htmlspecialchars($r->keterangan) ?>
-                            </span>
+<?php if (!empty($is_future)): ?>
+    <?php
+        $cur_b = (int) ($cur_bulan ?? date('n'));
+        $cur_t = (int) ($cur_tahun ?? date('Y'));
+        $prev_b = $cur_b - 1;
+        $prev_t = $cur_t;
+        if ($prev_b < 1) { $prev_b = 12; $prev_t--; }
+    ?>
+    <!-- ================= EMPTY STATE KETIKA BELUM MEMASUKI PERIODE ================= -->
+    <div class="border border-slate-800/70 rounded-2xl theme-card p-12 md:p-16 mb-6 text-center space-y-6 max-w-4xl mx-auto shadow-2xl relative z-10">
+        <!-- Icon Circle with Calendar icon -->
+        <div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto shadow-inner">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+        </div>
+
+        <div class="space-y-2.5">
+            <h3 class="text-xl md:text-2xl font-bold header-title">
+                Belum ada laporan untuk <?= htmlspecialchars(($nb[(int)$bulan] ?? $bulan) . ' ' . $tahun) ?>
+            </h3>
+            <p class="text-sm header-subtitle max-w-xl mx-auto leading-relaxed">
+                Periode ini belum dimulai, jadi belum ada data stok awal, mutasi, maupun stok akhir. Laporan baru dapat dilihat sampai periode yang sedang berjalan, yaitu <?= htmlspecialchars(($nb[$cur_b] ?? $cur_b) . ' ' . $cur_t) ?>.
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <a href="<?= base_url('laporan/bulanan_persediaan?bulan=' . $cur_b . '&tahun=' . $cur_t . (!empty($kategori_id) ? '&kategori_id=' . $kategori_id : '')) ?>"
+               class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 transition-all transform hover:scale-105 active:scale-95">
+                Lihat <?= htmlspecialchars(($nb[$cur_b] ?? $cur_b) . ' ' . $cur_t) ?> (periode berjalan)
+            </a>
+            <a href="<?= base_url('laporan/bulanan_persediaan?bulan=' . $prev_b . '&tahun=' . $prev_t . (!empty($kategori_id) ? '&kategori_id=' . $kategori_id : '')) ?>"
+               class="px-5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition-all transform hover:scale-105 active:scale-95">
+                Lihat <?= htmlspecialchars(($nb[$prev_b] ?? $prev_b) . ' ' . $prev_t) ?>
+            </a>
+        </div>
+
+        <!-- Footer Date -->
+        <p class="text-xs header-subtitle pt-2">
+            Hari ini: <?= date('j M Y') ?>
+        </p>
+    </div>
+<?php else: ?>
+    <!-- ================= TABEL LAPORAN JIKA SUDAH BERJALAN ================= -->
+    <div class="header border rounded-xl theme-card p-4 mb-4 text-center relative z-10">
+        <h2 class="header-title text-lg font-semibold">Laporan STOK &mdash; <?= htmlspecialchars(($nb[(int)$bulan] ?? $bulan) . ' ' . $tahun) ?></h2>
+        <p class="header-subtitle text-sm mt-1">BPS Provinsi Riau</p>
+        <p class="header-subtitle text-sm">Dicetak: <?= date('d M Y, H:i') ?></p>
+    </div>
+
+    <div class="overflow-x-auto border rounded-xl theme-card trx-table-wrap relative z-10">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-900/90 text-gray-300 border-b border-slate-700/50">
+                <tr>
+                    <th class="px-4 py-3 text-left" style="width:50px;">No</th>
+                    <th class="px-4 py-3 text-left">Kode Barang</th>
+                    <th class="px-4 py-3 text-left">Nama Barang</th>
+                    <th class="px-4 py-3 text-left" style="width:90px;">Satuan</th>
+                    <th class="px-4 py-3 text-right" style="width:100px;">Stok Awal</th>
+                    <th class="px-4 py-3 text-right" style="width:90px;">Masuk</th>
+                    <th class="px-4 py-3 text-right" style="width:90px;">Keluar</th>
+                    <th class="px-4 py-3 text-right" style="width:100px;">Stok Akhir</th>
+                    <th class="px-4 py-3 text-left" style="width:150px;">Keterangan</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/30">
+                <?php if (empty($rows)): ?>
+                <tr>
+                    <td colspan="9" class="px-6 py-10 text-center">
+                        <div class="text-gray-500">Belum ada data barang pada periode ini.</div>
+                    </td>
+                </tr>
+                <?php else: ?>
+                <?php $no = 1; $t_awal = 0; $t_masuk = 0; $t_keluar = 0; $t_akhir = 0; $ada_awal = false; ?>
+                <?php foreach(($rows ?? []) as $r): ?>
+                <?php if ($r->stok_awal !== null) { $t_awal += (int)$r->stok_awal; $ada_awal = true; } $t_masuk += (int)($r->masuk ?? 0); $t_keluar += (int)($r->keluar ?? 0); $t_akhir += (int)($r->stok_akhir ?? 0); ?>
+                <tr class="hover:bg-slate-800/50 transition-colors duration-150">
+                    <td class="px-4 py-3 text-gray-500"><?= $no++ ?></td>
+                    <td class="px-4 py-3 font-mono text-cyan-400"><?= htmlspecialchars($r->kode_barang ?? '-') ?></td>
+                    <td class="px-4 py-3 text-gray-200"><?= htmlspecialchars($r->nama_barang ?? '-') ?></td>
+                    <td class="px-4 py-3 text-gray-400"><?= htmlspecialchars($r->satuan ?? '-') ?></td>
+                    <td class="px-4 py-3 text-right text-gray-200"><?= $r->stok_awal !== null ? number_format((int)$r->stok_awal) : '-' ?></td>
+                    <td class="px-4 py-3 text-right text-green-400 font-semibold"><?= number_format((int)($r->masuk ?? 0)) ?></td>
+                    <td class="px-4 py-3 text-right text-red-400 font-semibold"><?= number_format((int)($r->keluar ?? 0)) ?></td>
+                    <td class="px-4 py-3 text-right font-semibold <?= (int)($r->stok_akhir ?? 0) < 0 ? 'text-red-400 font-bold' : 'text-gray-200' ?>"><?= number_format((int)($r->stok_akhir ?? 0)) ?></td>
+                    <td class="px-4 py-3">
+                        <?php if (!empty($r->keterangan)): ?>
+                            <?php if ($r->keterangan === 'Stok Sudah Mencapai Batas Minimum' || $r->keterangan === 'Stok minimum tercapai'): ?>
+                                <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/25 whitespace-nowrap">
+                                    <?= htmlspecialchars($r->keterangan) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/25 whitespace-nowrap">
+                                    <?= htmlspecialchars($r->keterangan) ?>
+                                </span>
+                            <?php endif; ?>
                         <?php endif; ?>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            <tr class="bg-slate-800/40 font-semibold">
-                <td class="px-4 py-3 text-gray-500" colspan="4">Total</td>
-                <td class="px-4 py-3 text-right text-gray-200"><?= $ada_awal ? number_format($t_awal) : '-' ?></td>
-                <td class="px-4 py-3 text-right text-green-400"><?= number_format($t_masuk) ?></td>
-                <td class="px-4 py-3 text-right text-red-400"><?= number_format($t_keluar) ?></td>
-                <td class="px-4 py-3 text-right text-gray-200"><?= number_format($t_akhir) ?></td>
-                <td class="px-4 py-3 text-gray-400">-</td>
-            </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <tr class="bg-slate-800/40 font-semibold">
+                    <td class="px-4 py-3 text-gray-500" colspan="4">Total</td>
+                    <td class="px-4 py-3 text-right text-gray-200"><?= $ada_awal ? number_format($t_awal) : '-' ?></td>
+                    <td class="px-4 py-3 text-right text-green-400"><?= number_format($t_masuk) ?></td>
+                    <td class="px-4 py-3 text-right text-red-400"><?= number_format($t_keluar) ?></td>
+                    <td class="px-4 py-3 text-right text-gray-200"><?= number_format($t_akhir) ?></td>
+                    <td class="px-4 py-3 text-gray-400">-</td>
+                </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
 
 <!-- Theme-aware styles -->
 <style>

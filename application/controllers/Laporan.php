@@ -198,20 +198,13 @@ class Laporan extends CI_Controller {
         }
 
         $rows = [];
-        foreach ($this->Barang_persediaan_model->get_all_with_kategori() as $b) {
-            if (isset($b->status) && $b->status === 'Nonaktif') continue;
-            if (!empty($kategori_id) && (string) ($b->kategori_id ?? '') !== (string) $kategori_id) continue;
-            if (!empty($kode) && stripos($b->kode_barang ?? '', $kode) === false) continue;
+        if (!$is_future) {
+            foreach ($this->Barang_persediaan_model->get_all_with_kategori() as $b) {
+                if (isset($b->status) && $b->status === 'Nonaktif') continue;
+                if (!empty($kategori_id) && (string) ($b->kategori_id ?? '') !== (string) $kategori_id) continue;
+                if (!empty($kode) && stripos($b->kode_barang ?? '', $kode) === false) continue;
 
-            $min = (int) ($b->stok_minimum ?? 0);
-
-            if ($is_future) {
-                $awal   = null;
-                $masuk  = 0;
-                $keluar = 0;
-                $akhir  = 0;
-                $ket    = '';
-            } else {
+                $min = (int) ($b->stok_minimum ?? 0);
                 $info   = $sa_map[$b->id] ?? null;
                 $awal   = $info ? $info['stok_awal'] : null;
                 $base   = $info ? (int) $info['base_saldo'] : 0;
@@ -227,24 +220,24 @@ class Laporan extends CI_Controller {
                         $ket = 'Stok sudah melampaui stok minimum';
                     }
                 }
+
+                $rows[] = (object) [
+                    'kode_barang'   => $b->kode_barang ?? '-',
+                    'nama_barang'   => $b->nama_barang ?? '-',
+                    'satuan'        => $b->satuan ?? '-',
+                    'stok_awal'     => $awal,
+                    'masuk'         => $masuk,
+                    'keluar'        => $keluar,
+                    'stok_akhir'    => $akhir,
+                    'stok_minimum'  => $min,
+                    'keterangan'    => $ket,
+                ];
             }
 
-            $rows[] = (object) [
-                'kode_barang'   => $b->kode_barang ?? '-',
-                'nama_barang'   => $b->nama_barang ?? '-',
-                'satuan'        => $b->satuan ?? '-',
-                'stok_awal'     => $awal,
-                'masuk'         => $masuk,
-                'keluar'        => $keluar,
-                'stok_akhir'    => $akhir,
-                'stok_minimum'  => $min,
-                'keterangan'    => $ket,
-            ];
+            usort($rows, function ($a, $b) {
+                return strnatcasecmp($a->kode_barang ?? '', $b->kode_barang ?? '');
+            });
         }
-
-        usort($rows, function ($a, $b) {
-            return strnatcasecmp($a->kode_barang ?? '', $b->kode_barang ?? '');
-        });
 
         return [
             'bulan'         => (int) $bulan,
@@ -254,6 +247,9 @@ class Laporan extends CI_Controller {
             'tahun_list'    => $tahun_list,
             'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
             'rows'          => $rows,
+            'is_future'     => $is_future,
+            'cur_bulan'     => $cur_bulan,
+            'cur_tahun'     => $cur_tahun,
         ];
     }
 
