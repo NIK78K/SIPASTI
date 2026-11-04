@@ -834,9 +834,9 @@ public function history()
     }
 
     /* ===============================
-       HALAMAN PENILAIAN & ULASAN BARANG
+       HALAMAN DETAIL BARANG
     =============================== */
-    public function ulasan_barang($barang_id)
+    public function detail_barang($barang_id)
     {
         $barang_id = (int) $barang_id;
         $this->load->model(['Barang_persediaan_model', 'User_ticket_model']);
@@ -863,20 +863,59 @@ public function history()
             $relatedRating = $this->User_ticket_model->get_ulasan_barang((int) $barangItem->id);
             $barangItem->rating_avg = $relatedRating['rating_avg'];
             $barangItem->rating_count = $relatedRating['rating_count'];
-            $barangItem->detail_url = base_url('user_ticket/ulasan_barang/' . (int) $barangItem->id);
+            $barangItem->detail_url = base_url('user_ticket/detail_barang/' . (int) $barangItem->id);
         }
 
         $data = [
-            'barang'       => $barang,
-            'barang_terkait' => $barang_terkait,
-            'unit_kerja_list' => $unit_kerja_list,
+            'barang'             => $barang,
+            'barang_terkait'     => $barang_terkait,
+            'unit_kerja_list'    => $unit_kerja_list,
             'unit_kerja_default' => $unit_kerja_default,
-            'sisa'         => $sisa,
-            'rating_avg'   => $ulasan_data['rating_avg'],
-            'rating_count' => $ulasan_data['rating_count'],
-            'ulasan_count' => $ulasan_data['ulasan_count'],
-            'star_counts'  => $ulasan_data['star_counts'],
-            'ulasan_list'  => $ulasan_data['ulasan_list'],
+            'sisa'               => $sisa,
+            'rating_avg'         => $ulasan_data['rating_avg'],
+            'rating_count'       => $ulasan_data['rating_count'],
+            'ulasan_count'       => $ulasan_data['ulasan_count'],
+            'star_counts'        => $ulasan_data['star_counts'],
+            'ulasan_list'        => $ulasan_data['ulasan_list'],
+        ];
+
+        $this->load->view('layout/header_user');
+        $this->load->view('user/detail_barang', $data);
+        $this->load->view('layout/footer_user');
+    }
+
+    /* ===============================
+       HALAMAN SEMUA ULASAN PENGGUNA
+    =============================== */
+    public function ulasan_barang($barang_id)
+    {
+        $barang_id = (int) $barang_id;
+        $this->load->model(['Barang_persediaan_model', 'User_ticket_model']);
+
+        $barang = $this->Barang_persediaan_model->get_by_id($barang_id);
+        if (!$barang) {
+            $this->session->set_flashdata('error', 'Barang persediaan tidak ditemukan.');
+            redirect('user_ticket/permintaan_persediaan');
+            exit;
+        }
+
+        $bulan = (int) date('n');
+        $tahun = (int) date('Y');
+        $sisa  = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, $bulan, $tahun);
+
+        $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
+        list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
+        $data = [
+            'barang'             => $barang,
+            'unit_kerja_list'    => $unit_kerja_list,
+            'unit_kerja_default' => $unit_kerja_default,
+            'sisa'               => $sisa,
+            'rating_avg'         => $ulasan_data['rating_avg'],
+            'rating_count'       => $ulasan_data['rating_count'],
+            'ulasan_count'       => $ulasan_data['ulasan_count'],
+            'star_counts'        => $ulasan_data['star_counts'],
+            'ulasan_list'        => $ulasan_data['ulasan_list'],
         ];
 
         $this->load->view('layout/header_user');

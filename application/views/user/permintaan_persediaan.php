@@ -147,7 +147,7 @@
             <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 <?php foreach (($barang_list ?? []) as $b): ?>
                 <div class="barang-card group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-shadow duration-300 overflow-hidden flex flex-col cursor-pointer"
-                      onclick="openUlasanBarang(<?= (int) $b['id'] ?>, event)"
+                      onclick="openDetailBarang(<?= (int) $b['id'] ?>, event)"
                       data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
                       data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
                       data-rating="<?= (float) ($b['rating_avg'] ?? 0) ?>"
@@ -178,9 +178,10 @@
                             <?php else: ?>
                             <span class="text-slate-400 text-[10px]">Belum ada rating</span>
                             <?php endif ?>
-                            <span class="text-blue-800 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
+                            <a href="<?= base_url('user_ticket/ulasan_barang/' . (int) $b['id']) ?>" onclick="event.stopPropagation()"
+                               class="text-blue-800 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
                                 Ulasan &rarr;
-                            </span>
+                            </a>
                         </div>
                         <div class="mt-auto pt-3 w-full" onclick="event.stopPropagation()">
                             <div id="stepper-<?= (int) $b['id'] ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
@@ -532,13 +533,17 @@
 var activeKat = 'all';
 var cartData = { count: 0, total_qty: 0, items: [] };
 
-function openUlasanBarang(id, e) {
+function openDetailBarang(id, e) {
     if (e) {
-        if (e.target.closest('#stepper-' + id) || e.target.closest('#add-' + id) || e.target.closest('button') || e.target.closest('input')) {
+        if (e.target.closest('#stepper-' + id) || e.target.closest('#add-' + id) || e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
             return;
         }
     }
-    window.location.href = '<?= base_url("user_ticket/ulasan_barang/") ?>' + id;
+    window.location.href = '<?= base_url("user_ticket/detail_barang/") ?>' + id;
+}
+
+function openUlasanBarang(id, e) {
+    openDetailBarang(id, e);
 }
 
 function setKategori(id, btn) {
