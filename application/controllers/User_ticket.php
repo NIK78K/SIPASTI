@@ -1009,6 +1009,10 @@ public function edit_ticket($ticket_id)
     }
 
     /* ── Persediaan punya form sendiri agar jenis_kerusakan tak tertimpa form generik ── */
+    if ($this->_is_pengajuan_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_pengajuan_persediaan/' . $ticket_id);
+        exit;
+    }
     if ($this->_is_persediaan_ticket($ticket)) {
         redirect('user_ticket/edit_persediaan/' . $ticket_id);
         exit;
@@ -1181,6 +1185,11 @@ public function edit_persediaan($ticket_id)
         exit;
     }
 
+    if ($this->_is_pengajuan_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_pengajuan_persediaan/' . $ticket_id);
+        exit;
+    }
+
     if (!$this->_is_persediaan_ticket($ticket)) {
         redirect('user_ticket/edit_ticket/' . $ticket_id);
         exit;
@@ -1219,6 +1228,11 @@ public function update_persediaan($ticket_id)
     if (!$ticket) {
         $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
         redirect('user_ticket/history');
+        exit;
+    }
+
+    if ($this->_is_pengajuan_persediaan_ticket($ticket)) {
+        redirect('user_ticket/edit_pengajuan_persediaan/' . $ticket_id);
         exit;
     }
 
@@ -1337,6 +1351,380 @@ public function update_persediaan($ticket_id)
     $this->session->set_flashdata('success', $msg);
     redirect('user_ticket/history');
     exit;
+}
+
+/* ===============================
+   EDIT PENGAJUAN PERSEDIAAN (USER)
+=============================== */
+public function edit_pengajuan_persediaan($ticket_id)
+{
+    $user_id = $this->session->userdata('user_id');
+    $ticket  = $this->User_ticket_model->get_ticket_for_edit($ticket_id, $user_id);
+
+    if (!$ticket) {
+        $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    if (!$this->_is_pengajuan_persediaan_ticket($ticket)) {
+        if ($this->_is_persediaan_ticket($ticket)) {
+            redirect('user_ticket/edit_persediaan/' . $ticket_id);
+        } else {
+            redirect('user_ticket/edit_ticket/' . $ticket_id);
+        }
+        exit;
+    }
+
+    list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
+    $kategori_persediaan = $this->db
+        ->order_by('kode', 'ASC')
+        ->get('master_kategori_persediaan')
+        ->result_array();
+
+    $parsed = $this->_parse_pengajuan_ringkas($ticket['jenis_kerusakan'] ?? '', $ticket['kebutuhan'] ?? '');
+
+    // Map kategori_id jika kosong pada parsed items
+    $kat_name_map = [];
+    foreach ($kategori_persediaan as $kp) {
+        $kat_name_map[strtolower(trim($kp['kode']))] = (int) $kp['id'];
+        $kat_name_map[strtolower(trim($kp['kode'] . ' - ' . $kp['nama']))] = (int) $kp['id'];
+        $kat_name_map[strtolower(trim($kp['nama']))] = (int) $kp['id'];
+    }
+    foreach ($parsed['items'] as &$it) {
+        if (empty($it['kategori_id']) && !empty($it['kategori_nama'])) {
+            $kn = strtolower(trim($it['kategori_nama']));
+            if (isset($kat_name_map[$kn])) {
+                $it['kategori_id'] = $kat_name_map[$kn];
+            } else {
+                foreach ($kat_name_map as $mapKey => $mapVal) {
+                    if (strpos($kn, $mapKey) !== false) {
+                        $it['kategori_id'] = $mapVal;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    unset($it);
+
+    $data = [
+        'ticket'              => $ticket,
+        'parsed'              => $parsed,
+        'unit_kerja_list'     => $unit_kerja_list,
+        'unit_kerja_default'  => $parsed['unit_kerja'] ?: $unit_kerja_default,
+        'kategori_persediaan' => $kategori_persediaan,
+    ];
+
+    $this->load->view('layout/header_user');
+    $this->load->view('user/edit_pengajuan_persediaan', $data);
+    $this->load->view('layout/footer_user');
+}
+
+/* ===============================
+   UPDATE PENGAJUAN PERSEDIAAN (USER)
+=============================== */
+public function update_pengajuan_persediaan($ticket_id)
+{
+    if (!$this->input->post()) { show_404(); }
+
+    $user_id = $this->session->userdata('user_id');
+    $ticket  = $this->User_ticket_model->get_ticket_for_edit($ticket_id, $user_id);
+
+    if (!$ticket) {
+        $this->session->set_flashdata('error', 'Tiket tidak ditemukan atau tidak dapat diedit.');
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    if (!$this->_is_pengajuan_persediaan_ticket($ticket)) {
+        redirect('user_ticket/history');
+        exit;
+    }
+
+    $back = 'user_ticket/edit_pengajuan_persediaan/' . $ticket_id;
+
+    $nama_arr         = $this->input->post('nama_barang');
+    $kategori_arr     = $this->input->post('kategori_id');
+    $ket_arr          = $this->input->post('keterangan');
+    $exist_bid_arr    = $this->input->post('existing_barang_id');
+    $exist_kode_arr   = $this->input->post('existing_kode');
+    $exist_gambar_arr = $this->input->post('existing_gambar');
+
+    $keperluan          = trim($this->input->post('keperluan', true) ?? '');
+    $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
+    $tanggal_permintaan = trim($this->input->post('tanggal_permintaan', true) ?: ($this->input->post('tanggal_dibutuhkan', true) ?? ''));
+
+    if ($keperluan === '') {
+        $this->session->set_flashdata('error', 'Keperluan wajib diisi.');
+        redirect($back);
+        exit;
+    }
+
+    if ($tanggal_permintaan !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $tanggal_permintaan);
+        if (!$d || $d->format('Y-m-d') !== $tanggal_permintaan || $tanggal_permintaan < date('Y-m-d')) {
+            $this->session->set_flashdata('error', 'Tanggal permintaan tidak valid. Pilih hari ini atau tanggal ke depan.');
+            redirect($back);
+            exit;
+        }
+    }
+
+    $all_kat = $this->db->get('master_kategori_persediaan')->result_array();
+    $kat_map = [];
+    foreach ($all_kat as $k) {
+        $kat_map[(int)$k['id']] = $k['kode'] . ' - ' . $k['nama'];
+    }
+    $default_kat_id = !empty($all_kat[0]['id']) ? (int) $all_kat[0]['id'] : 1;
+
+    $upload_dir = FCPATH . 'uploads/persediaan/';
+    if (!is_dir($upload_dir)) {
+        @mkdir($upload_dir, 0755, true);
+    }
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    $max_bytes    = 2 * 1024 * 1024; // 2MB
+    $uploaded_gambar = [];
+
+    if (!empty($_FILES['gambar_item']['name']) && is_array($_FILES['gambar_item']['name'])) {
+        foreach ($_FILES['gambar_item']['name'] as $idx => $fname) {
+            if (empty($fname)) continue;
+            $err = $_FILES['gambar_item']['error'][$idx] ?? UPLOAD_ERR_NO_FILE;
+            if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE || (isset($_FILES['gambar_item']['size'][$idx]) && $_FILES['gambar_item']['size'][$idx] > $max_bytes)) {
+                $this->session->set_flashdata('error', 'Ukuran gambar "' . htmlspecialchars($fname) . '" melebihi 2 MB.');
+                redirect($back);
+                exit;
+            }
+            if ($err !== UPLOAD_ERR_OK) {
+                $this->session->set_flashdata('error', 'Gagal mengunggah gambar "' . htmlspecialchars($fname) . '".');
+                redirect($back);
+                exit;
+            }
+            $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowed_exts)) {
+                $this->session->set_flashdata('error', 'Format gambar "' . htmlspecialchars($fname) . '" tidak didukung.');
+                redirect($back);
+                exit;
+            }
+        }
+        foreach ($_FILES['gambar_item']['name'] as $idx => $fname) {
+            if (empty($fname)) continue;
+            $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+            $new_fname = md5(uniqid(mt_rand(), true)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['gambar_item']['tmp_name'][$idx], $upload_dir . $new_fname)) {
+                $uploaded_gambar[$idx] = $new_fname;
+            }
+        }
+    }
+
+    $this->load->model('Barang_persediaan_model');
+    $items = [];
+    if (is_array($nama_arr)) {
+        foreach ($nama_arr as $i => $n) {
+            $n = trim(strip_tags((string) $n));
+            if ($n === '') continue;
+            $k = trim(strip_tags((string) ($ket_arr[$i] ?? '')));
+            $kid = !empty($kategori_arr[$i]) ? (int) $kategori_arr[$i] : null;
+            if (!$kid || !isset($kat_map[$kid])) {
+                $kid = $default_kat_id;
+            }
+            $knama = isset($kat_map[$kid]) ? $kat_map[$kid] : '';
+            $clean_name = substr($n, 0, 150);
+
+            $gambar_final = $uploaded_gambar[$i] ?? (!empty($exist_gambar_arr[$i]) ? trim($exist_gambar_arr[$i]) : null);
+
+            $satuan = 'Pcs';
+            if (preg_match('/\b(pcs|buah|rim|box|kotak|botol|pack|bungkus|lembar|gulung|lusin|meter|set|unit|roll|bks)\b/i', $clean_name . ' ' . $k, $sat_m)) {
+                $satuan = ucfirst(strtolower($sat_m[1]));
+            }
+
+            $ex_kode = !empty($exist_kode_arr[$i]) ? trim($exist_kode_arr[$i]) : '';
+            $ex_bid  = !empty($exist_bid_arr[$i]) ? (int) $exist_bid_arr[$i] : 0;
+
+            if ($ex_kode !== '') {
+                $kode = $ex_kode;
+                $barang_id = $ex_bid;
+                if ($barang_id) {
+                    $upd_data = [
+                        'nama_barang' => $clean_name,
+                        'kategori_id' => $kid,
+                        'satuan'      => $satuan,
+                    ];
+                    if (!empty($gambar_final)) $upd_data['gambar'] = $gambar_final;
+                    $this->db->where('id', $barang_id)->update('master_barang_persediaan', $upd_data);
+                }
+            } else {
+                $existing = $this->db->where('LOWER(TRIM(nama_barang))', strtolower($clean_name))->get('master_barang_persediaan')->row();
+                if ($existing) {
+                    $kode = $existing->kode_barang;
+                    $barang_id = $existing->id;
+                    if (empty($existing->gambar) && !empty($gambar_final)) {
+                        $this->db->where('id', $existing->id)->update('master_barang_persediaan', ['gambar' => $gambar_final]);
+                    }
+                } else {
+                    $kode = $this->Barang_persediaan_model->next_kode($kid);
+                    if (!$kode) {
+                        $kat_row = $this->db->where('id', $kid)->get('master_kategori_persediaan')->row();
+                        $prefix = $kat_row ? trim($kat_row->kode) . '-' : 'BRG-';
+                        $kode = $prefix . '001';
+                    }
+                    $tries = 0;
+                    while ($this->Barang_persediaan_model->is_kode_used($kode) && $tries < 20) {
+                        $pos = strrpos($kode, '-');
+                        $suf = ($pos === FALSE) ? '' : substr($kode, $pos + 1);
+                        if ($suf === '' || !ctype_digit($suf)) break;
+                        $kode = substr($kode, 0, $pos + 1) . str_pad((string) ((int) $suf + 1), strlen($suf), '0', STR_PAD_LEFT);
+                        $tries++;
+                    }
+
+                    $this->db->insert('master_barang_persediaan', [
+                        'kategori_id'  => $kid,
+                        'kode_barang'  => $kode,
+                        'nama_barang'  => $clean_name,
+                        'satuan'       => $satuan,
+                        'gambar'       => $gambar_final,
+                        'stok_minimum' => 0,
+                        'status'       => 'Nonaktif',
+                        'created_at'   => date('Y-m-d H:i:s'),
+                    ]);
+                    $barang_id = $this->db->insert_id();
+                }
+            }
+
+            $items[] = [
+                'barang_id'     => $barang_id,
+                'kode'          => $kode,
+                'nama'          => $clean_name,
+                'kategori_id'   => $kid,
+                'kategori_nama' => $knama,
+                'ket'           => substr($k, 0, 255),
+                'gambar'        => $gambar_final,
+            ];
+        }
+    }
+
+    if (empty($items)) {
+        $this->session->set_flashdata('error', 'Isi minimal 1 barang yang diajukan.');
+        redirect($back);
+        exit;
+    }
+
+    $lines = [];
+    foreach ($items as $it) {
+        $ln = '- [' . $it['kode'] . '] ' . $it['nama'];
+        if (!empty($it['kategori_nama'])) {
+            $ln .= ' [Kategori: ' . $it['kategori_nama'] . ']';
+        }
+        if ($it['ket'] !== '') $ln .= ' (' . $it['ket'] . ')';
+        if (!empty($it['gambar'])) $ln .= ' [img:' . $it['gambar'] . ']';
+        $lines[] = $ln;
+    }
+
+    $ringkas   = [];
+    $ringkas[] = '[PENGAJUAN BARANG PERSEDIAAN]';
+    $ringkas   = array_merge($ringkas, $lines);
+    $ringkas[] = '';
+    $ringkas[] = 'Keperluan: ' . $keperluan;
+    if ($unit_kerja !== '') $ringkas[] = 'Unit Kerja: ' . $unit_kerja;
+    if ($tanggal_permintaan !== '') $ringkas[] = 'Tanggal permintaan: ' . $tanggal_permintaan;
+    $ringkas[] = 'Total: ' . count($items) . ' jenis diajukan';
+    $ringkas[] = 'Catatan: barang belum ada di daftar persediaan, menunggu verifikasi admin/teknisi.';
+    $ringkas[] = '[pengajuan_items_json:' . json_encode($items) . ']';
+
+    $this->db->where('id', (int) $ticket_id)->update('tickets', [
+        'jenis_kerusakan' => implode("\n", $ringkas),
+        'kebutuhan'       => substr($keperluan, 0, 255),
+    ]);
+
+    $this->session->set_flashdata('success', 'Pengajuan barang persediaan berhasil diperbarui.');
+    redirect('user_ticket/history');
+    exit;
+}
+
+/* ── Tiket pengajuan persediaan? ── */
+private function _is_pengajuan_persediaan_ticket($ticket)
+{
+    if (!is_array($ticket) || empty($ticket['id'])) return false;
+
+    if (!empty($ticket['sub_kategori_id'])) {
+        $row = $this->db
+            ->select('slug, nama_sub_kategori')
+            ->where('id', (int) $ticket['sub_kategori_id'])
+            ->get('master_sub_kategori')
+            ->row();
+        if ($row) {
+            $slug = strtolower($row->slug ?? '');
+            $nama = strtolower($row->nama_sub_kategori ?? '');
+            if (strpos($slug, 'pengajuan') !== false || strpos($nama, 'pengajuan') !== false) return true;
+        }
+    }
+
+    return strpos($ticket['jenis_kerusakan'] ?? '', '[PENGAJUAN BARANG PERSEDIAAN]') !== false;
+}
+
+/* ── Parse ringkasan pengajuan → field form edit ── */
+private function _parse_pengajuan_ringkas($jk, $kebutuhan)
+{
+    $out = [
+        'keperluan'          => trim((string) $kebutuhan),
+        'unit_kerja'         => '',
+        'tanggal_permintaan' => '',
+        'items'              => [],
+    ];
+    if (preg_match('/Keperluan:\s*(.+)/i', $jk, $m)) {
+        $out['keperluan'] = trim($m[1]);
+    }
+    if (preg_match('/Unit Kerja:\s*(.+)/i', $jk, $m)) {
+        $out['unit_kerja'] = trim($m[1]);
+    }
+    if (preg_match('/Tanggal (?:permintaan|dibutuhkan):\s*(.+)/i', $jk, $m)) {
+        $out['tanggal_permintaan'] = trim($m[1]);
+    }
+
+    if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+        $parsed = json_decode($mj[1], true);
+        if (is_array($parsed) && !empty($parsed)) {
+            $out['items'] = $parsed;
+        }
+    }
+
+    if (empty($out['items'])) {
+        foreach (explode("\n", $jk) as $line) {
+            $line = trim($line);
+            if (strpos($line, '- ') !== 0) continue;
+            $raw = trim(substr($line, 2));
+            $kode = '';
+            if (preg_match('/^\[([A-Za-z0-9\-]+)\]\s*(.*)$/', $raw, $kdm)) {
+                $kode = trim($kdm[1]);
+                $raw = trim($kdm[2]);
+            }
+            $cat_name = '';
+            if (preg_match('/\[Kategori:\s*([^\]]+)\]/i', $raw, $cm)) {
+                $cat_name = trim($cm[1]);
+                $raw = trim(preg_replace('/\s*\[Kategori:[^\]]+\]/i', '', $raw));
+            }
+            $img = '';
+            if (preg_match('/\[img:\s*([^\]]+)\]/i', $raw, $im)) {
+                $img = trim($im[1]);
+                $raw = trim(preg_replace('/\s*\[img:[^\]]+\]/i', '', $raw));
+            }
+            $ket = '';
+            if (preg_match('/^(.*?)\s*\(([^()]*)\)\s*$/', $raw, $sm)) {
+                $raw = trim($sm[1]);
+                $ket = trim($sm[2]);
+            }
+            if ($raw !== '') {
+                $out['items'][] = [
+                    'nama'          => $raw,
+                    'kode'          => $kode,
+                    'kategori_nama' => $cat_name,
+                    'gambar'        => $img,
+                    'ket'           => $ket,
+                ];
+            }
+        }
+    }
+    return $out;
 }
 
 /* ── Tiket persediaan? sub slug persediaan ATAU punya items ── */

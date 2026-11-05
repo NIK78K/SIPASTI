@@ -58,7 +58,18 @@ if (!function_exists('isPersediaan')) {
         $slug = strtolower($t['sub_slug'] ?? $t['sub_kategori_slug'] ?? '');
         if ($slug !== '') return strpos($slug, 'persediaan') !== false;
         if (strpos(strtolower($t['nama_sub_kategori'] ?? ''), 'persediaan') !== false) return true;
-        return strpos($t['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false;
+        return strpos($t['jenis_kerusakan'] ?? '', '[PERMINTAAN BARANG PERSEDIAAN]') !== false
+            || strpos($t['jenis_kerusakan'] ?? '', '[PENGAJUAN BARANG PERSEDIAAN]') !== false;
+    }
+}
+
+// Helper: cek apakah tiket khusus pengajuan barang persediaan
+if (!function_exists('isPengajuanPersediaan')) {
+    function isPengajuanPersediaan($t) {
+        $slug = strtolower($t['sub_slug'] ?? $t['sub_kategori_slug'] ?? '');
+        if ($slug !== '' && strpos($slug, 'pengajuan') !== false) return true;
+        if (strpos(strtolower($t['nama_sub_kategori'] ?? ''), 'pengajuan') !== false) return true;
+        return strpos($t['jenis_kerusakan'] ?? '', '[PENGAJUAN BARANG PERSEDIAAN]') !== false;
     }
 }
 
@@ -85,19 +96,45 @@ if (!function_exists('persediaan_ringkas')) {
 }
 
 // Helper: daftar "nama x qty" untuk tiket persediaan (max dipakai 3 + sisa).
-// Sumber: $t['persediaan_items'] dari model, fallback $t['items']. Kembalikan [] bila tak ada.
+// Sumber: $t['persediaan_items'] dari model, fallback $t['items'] atau jenis_kerusakan pengajuan. Kembalikan [] bila tak ada.
 if (!function_exists('persediaan_nama_list')) {
     function persediaan_nama_list($t) {
         $arr = null;
         if (!empty($t['persediaan_items']) && is_array($t['persediaan_items'])) $arr = $t['persediaan_items'];
         elseif (!empty($t['items']) && is_array($t['items'])) $arr = $t['items'];
+
+        if (empty($arr) && !empty($t['jenis_kerusakan'])) {
+            $jk = (string) $t['jenis_kerusakan'];
+            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+                $p_items = json_decode($mj[1], true);
+                if (is_array($p_items) && !empty($p_items)) {
+                    $arr = $p_items;
+                }
+            }
+            if (empty($arr)) {
+                foreach (explode("\n", $jk) as $line) {
+                    $line = trim($line);
+                    if (strpos($line, '- ') === 0) {
+                        $raw = trim(substr($line, 2));
+                        $raw = preg_replace('/^\[[A-Za-z0-9\-]+\]\s*/', '', $raw);
+                        $raw = preg_replace('/\s*\[Kategori:[^\]]+\]/i', '', $raw);
+                        $raw = preg_replace('/\s*\[img:[^\]]+\]/i', '', $raw);
+                        $raw = preg_replace('/\s*\([^)]*\)$/', '', $raw);
+                        if ($raw !== '') {
+                            $arr[] = ['nama' => $raw, 'qty' => 0];
+                        }
+                    }
+                }
+            }
+        }
+
         if (!is_array($arr) || empty($arr)) return [];
         $out = [];
         foreach ($arr as $it) {
             $nama = $it['nama_barang_snapshot'] ?? $it['nama_barang'] ?? $it['nama'] ?? '-';
             $nama = trim((string) $nama) !== '' ? trim((string) $nama) : '-';
             $qty = (int) ($it['jumlah'] ?? $it['qty'] ?? 0);
-            $out[] = $nama . ' x ' . $qty;
+            $out[] = $qty > 0 ? ($nama . ' x ' . $qty) : $nama;
         }
         return $out;
     }
@@ -501,8 +538,15 @@ foreach (($tickets ?? []) as $t) {
             <td class="px-3 py-3 text-center">
                 <div class="flex flex-col gap-1 items-center">
                     <?php if (in_array($status, ['Menunggu', 'On Progress'])): ?>
-                        <?php $edit_url_persediaan = isPersediaan($t); ?>
-                        <a href="<?= base_url(($edit_url_persediaan ? 'user_ticket/edit_persediaan/' : 'user_ticket/edit_ticket/').$t['id']) ?>"
+                        <?php 
+                            $edit_target = 'user_ticket/edit_ticket/';
+                            if (isPengajuanPersediaan($t)) {
+                                $edit_target = 'user_ticket/edit_pengajuan_persediaan/';
+                            } elseif (isPersediaan($t)) {
+                                $edit_target = 'user_ticket/edit_persediaan/';
+                            }
+                        ?>
+                        <a href="<?= base_url($edit_target.$t['id']) ?>"
                            class="inline-flex items-center gap-1 px-3 py-1 rounded-full
                                   bg-blue-100 text-blue-700 hover:bg-blue-200
                                   border border-blue-300 text-[10px] font-semibold transition">
@@ -773,8 +817,15 @@ foreach (($tickets ?? []) as $t) {
 
         <?php if (in_array($status, ['Menunggu', 'On Progress'])): ?>
             <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
-                <?php $edit_url_persediaan_mob = isPersediaan($t); ?>
-                <a href="<?= base_url(($edit_url_persediaan_mob ? 'user_ticket/edit_persediaan/' : 'user_ticket/edit_ticket/').$t['id']) ?>"
+                <?php 
+                    $edit_target_mob = 'user_ticket/edit_ticket/';
+                    if (isPengajuanPersediaan($t)) {
+                        $edit_target_mob = 'user_ticket/edit_pengajuan_persediaan/';
+                    } elseif (isPersediaan($t)) {
+                        $edit_target_mob = 'user_ticket/edit_persediaan/';
+                    }
+                ?>
+                <a href="<?= base_url($edit_target_mob.$t['id']) ?>"
                    class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl
                           bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition">
                     Edit Tiket
