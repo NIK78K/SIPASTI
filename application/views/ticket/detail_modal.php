@@ -19,6 +19,9 @@ if (!empty($ticket['sub_kategori_id']) && isset($this->db)) {
 $is_persediaan = (stripos($sub_nama, 'persediaan') !== false)
     || (stripos($sub_slug, 'persediaan') !== false)
     || (strpos($jk_deteksi, '[PERMINTAAN BARANG PERSEDIAAN]') !== false);
+$is_pengajuan = (stripos($sub_nama, 'pengajuan') !== false)
+    || (stripos($sub_slug, 'pengajuan') !== false)
+    || (strpos($jk_deteksi, '[PENGAJUAN BARANG PERSEDIAAN]') !== false);
 
 $statusLabel = [
     'Menunggu'    => 'Menunggu',
@@ -89,7 +92,21 @@ $status = $ticket['status'] ?? 'Menunggu';
     <div class="text-xs dtck-label mb-2">Deskripsi / Kebutuhan</div>
     <div class="dtck-text text-sm leading-relaxed">
         <?php 
-            $jk_clean = (string) preg_replace('/\[pengajuan_items_json:[^\]]*\]/s', '', $ticket['jenis_kerusakan'] ?? '-');
+            $jk_source = (string) ($ticket['jenis_kerusakan'] ?? '-');
+            if ($is_pengajuan) {
+                $jk_lines = [];
+                foreach (explode("\n", $jk_source) as $jk_line) {
+                    $jk_line = trim($jk_line);
+                    if ($jk_line === '' || strpos($jk_line, '[PENGAJUAN BARANG PERSEDIAAN]') !== false
+                        || strpos($jk_line, '[pengajuan_items_json:') === 0 || strpos($jk_line, '- ') === 0) {
+                        continue;
+                    }
+                    $jk_lines[] = $jk_line;
+                }
+                $jk_clean = implode("\n", $jk_lines);
+            } else {
+                $jk_clean = (string) preg_replace('/\[pengajuan_items_json:[^\]]*\]/s', '', $jk_source);
+            }
             $jk_html = htmlspecialchars(trim($jk_clean));
             $jk_html = preg_replace('/\[img:([a-zA-Z0-9_\-\.]+)\]/', '<a href="' . base_url('uploads/persediaan/$1') . '" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 text-xs hover:bg-blue-500/25 transition">🖼️ Lihat Foto</a>', $jk_html);
             echo nl2br($jk_html);
@@ -130,23 +147,66 @@ if ($is_persediaan && isset($this->db) && $this->db->table_exists('ticket_persed
         ->result_array();
 }
 if (empty($persediaan_items_ticket) && $is_persediaan) {
-    foreach (explode("\n", $ticket['jenis_kerusakan'] ?? '') as $pl) {
-        $pl = trim($pl);
-        if (strpos($pl, '- ') !== 0) continue;
-        if (preg_match('/^-\s*(.+?)\s*-\s*(.+?)\s*x\s*(\d+)\s*(.*)$/i', $pl, $mm)) {
+    $jk_items_json = [];
+    if ($is_pengajuan && preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $ticket['jenis_kerusakan'] ?? '', $mj)) {
+        $jk_items_json = json_decode($mj[1], true);
+    }
+    if ($is_pengajuan && is_array($jk_items_json)) {
+        foreach ($jk_items_json as $item) {
             $persediaan_items_ticket[] = [
-                'kode_barang' => trim($mm[1]) ?: '-',
-                'nama_barang_snapshot' => trim($mm[2]), 'nama_barang' => trim($mm[2]),
-                'jumlah' => (int)$mm[3],
-                'satuan_snapshot' => trim($mm[4]), 'satuan' => trim($mm[4]),
+                'kode_barang' => '-',
+                'nama_barang_snapshot' => $item['nama'] ?? '-',
+                'nama_barang' => $item['nama'] ?? '-',
+                'kategori_nama' => $item['kategori_nama'] ?? '-',
+                'gambar' => $item['gambar'] ?? '',
+                'keterangan' => $item['ket'] ?? '',
+                'jumlah' => 0,
+                'satuan_snapshot' => '',
+                'satuan' => '',
             ];
-        } else {
-            $pl_nama = preg_replace('/^-\s*/', '', $pl);
-            $persediaan_items_ticket[] = [
-                'kode_barang' => '-', 'nama_barang_snapshot' => $pl_nama,
-                'nama_barang' => $pl_nama, 'jumlah' => 0,
-                'satuan_snapshot' => '', 'satuan' => '',
-            ];
+        }
+    } else {
+        foreach (explode("\n", $ticket['jenis_kerusakan'] ?? '') as $pl) {
+            $pl = trim($pl);
+            if (strpos($pl, '- ') !== 0) continue;
+            if ($is_pengajuan) {
+                $raw = trim(substr($pl, 2));
+                $category = '';
+                $gambar = '';
+                $spesifikasi = '';
+                if (preg_match('/\[Kategori:\s*([^\]]+)\]/i', $raw, $cm)) {
+                    $category = trim($cm[1]);
+                    $raw = trim(preg_replace('/\s*\[Kategori:[^\]]+\]/i', '', $raw));
+                }
+                if (preg_match('/\[img:\s*([^\]]+)\]/i', $raw, $im)) {
+                    $gambar = trim($im[1]);
+                    $raw = trim(preg_replace('/\s*\[img:[^\]]+\]/i', '', $raw));
+                }
+                if (preg_match('/^(.*?)\s*\(([^()]*)\)\s*$/', $raw, $sm)) {
+                    $raw = trim($sm[1]);
+                    $spesifikasi = trim($sm[2]);
+                }
+                if ($raw !== '') {
+                    $persediaan_items_ticket[] = [
+                        'kode_barang' => '-',
+                        'nama_barang_snapshot' => $raw,
+                        'nama_barang' => $raw,
+                        'kategori_nama' => $category ?: '-',
+                        'gambar' => $gambar,
+                        'keterangan' => $spesifikasi,
+                        'jumlah' => 0,
+                        'satuan_snapshot' => '',
+                        'satuan' => '',
+                    ];
+                }
+            } elseif (preg_match('/^-\s*(.+?)\s*-\s*(.+?)\s*x\s*(\d+)\s*(.*)$/i', $pl, $mm)) {
+                $persediaan_items_ticket[] = [
+                    'kode_barang' => trim($mm[1]) ?: '-',
+                    'nama_barang_snapshot' => trim($mm[2]), 'nama_barang' => trim($mm[2]),
+                    'jumlah' => (int)$mm[3],
+                    'satuan_snapshot' => trim($mm[4]), 'satuan' => trim($mm[4]),
+                ];
+            }
         }
     }
 }
@@ -168,6 +228,10 @@ foreach ($persediaan_items_ticket as $it) {
     $tckt_print_items[] = [
         'kode'       => ($it['kode_barang'] ?? '') !== '' ? $it['kode_barang'] : '-',
         'nama'       => ($it['nama_barang_snapshot'] ?? '') !== '' ? $it['nama_barang_snapshot'] : ($it['nama_barang'] ?? '-'),
+        'kategori'   => ($it['kategori_nama'] ?? '') !== '' ? $it['kategori_nama'] : '-',
+        'gambar'     => ($it['gambar'] ?? '') !== '' ? base_url('uploads/persediaan/' . $it['gambar']) : '',
+        'gambar_nama'=> ($it['gambar'] ?? '') !== '' ? $it['gambar'] : '',
+        'spesifikasi'=> ($it['keterangan'] ?? '') !== '' ? $it['keterangan'] : '-',
         'jumlah'     => $qty > 0 ? $qty . ($sat !== '' ? ' ' . $sat : '') : '',
         'disetujui'  => $acc !== null ? $acc . ($sat !== '' ? ' ' . $sat : '') : '-',
         'keterangan' => ($it['keterangan'] ?? '') !== '' ? $it['keterangan'] : '-',
@@ -180,28 +244,49 @@ foreach ($persediaan_items_ticket as $it) {
 <div class="mt-5">
     <div class="text-xs dtck-label mb-2">Daftar Barang Persediaan</div>
     <div class="dtck-photo-wrap rounded-lg border p-3 overflow-x-auto">
-        <table class="w-full text-sm min-w-[560px]">
+        <table class="w-full text-sm min-w-[700px]">
             <thead>
                 <tr class="dtck-label text-[11px] uppercase tracking-wider text-left">
                     <th class="pb-2 pr-3 font-semibold w-10 text-center">No</th>
                     <th class="pb-2 pr-3 font-semibold">Kode</th>
                     <th class="pb-2 pr-3 font-semibold">Nama Barang</th>
+                    <?php if ($is_pengajuan): ?>
+                    <th class="pb-2 pr-3 font-semibold">Kategori</th>
+                    <th class="pb-2 pr-3 font-semibold">Gambar</th>
+                    <th class="pb-2 pr-3 font-semibold">Spesifikasi/Keterangan</th>
+                    <?php else: ?>
                     <th class="pb-2 font-semibold text-right">Diminta</th>
                     <th class="pb-2 font-semibold text-right">Disetujui</th>
                     <th class="pb-2 pl-3 font-semibold text-left">Keterangan</th>
+                    <?php endif; ?>
                 </tr>
             </thead>
-            <tbody id="tckt-persediaan-items">
+            <tbody id="tckt-persediaan-items" data-pengajuan="<?= $is_pengajuan ? '1' : '0' ?>">
                 <?php if (empty($tckt_print_items)): ?>
-                <tr><td colspan="6" class="text-xs text-center py-4 dtck-muted">Data barang tidak tersedia</td></tr>
+                <tr><td colspan="<?= $is_pengajuan ? 6 : 6 ?>" class="text-xs text-center py-4 dtck-muted">Data barang tidak tersedia</td></tr>
                 <?php else: foreach ($tckt_print_items as $idx => $pi): ?>
                 <tr>
                     <td class="py-2 pr-3 text-center text-xs dtck-muted"><?= $idx + 1 ?></td>
                     <td class="py-2 pr-3 font-mono text-xs dtck-text"><?= htmlspecialchars($pi['kode']) ?></td>
                     <td class="py-2 pr-3 text-xs dtck-text"><?= htmlspecialchars($pi['nama']) ?></td>
+                    <?php if ($is_pengajuan): ?>
+                    <td class="py-2 pr-3 text-xs dtck-text"><?= htmlspecialchars($pi['kategori']) ?></td>
+                    <td class="py-2 pr-3 text-xs">
+                        <?php if ($pi['gambar']): ?>
+                            <a href="<?= htmlspecialchars($pi['gambar']) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300">
+                                <img src="<?= htmlspecialchars($pi['gambar']) ?>" alt="Gambar <?= htmlspecialchars($pi['nama']) ?>" class="w-12 h-12 rounded object-cover border border-slate-600">
+                                <span>Lihat</span>
+                            </a>
+                        <?php else: ?>
+                            <span class="dtck-muted">-</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="py-2 pr-3 text-xs dtck-muted"><?= htmlspecialchars($pi['spesifikasi']) ?></td>
+                    <?php else: ?>
                     <td class="py-2 text-right text-xs dtck-text"><?= htmlspecialchars($pi['jumlah']) ?></td>
                     <td class="py-2 text-right text-xs dtck-text font-semibold"><?= htmlspecialchars($pi['disetujui']) ?></td>
                     <td class="py-2 pl-3 text-left text-xs dtck-muted"><?= htmlspecialchars($pi['keterangan']) ?></td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; endif ?>
             </tbody>
@@ -232,40 +317,69 @@ foreach ($persediaan_items_ticket as $it) {
 <script type="application/json" id="tckt-persediaan-data"><?= json_encode($tckt_print_items, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
 <!-- SHEET CETAK (server-rendered, min 6 baris) -->
 <div id="pmPrintSheetTicket" aria-hidden="true">
+    <div class="pm-print-kop">
+        <img id="print_logo_bps_ticket" src="<?= base_url('assets/img/bps.png') ?>" alt="Logo BPS">
+        <div class="pm-print-kop-text">
+            <div style="font-size:14pt;font-weight:bold;text-transform:uppercase;"><i>BADAN PUSAT STATISTIK <br>PROVINSI RIAU</i></div>
+            <div style="font-size:6pt;font-weight:normal;margin-top:8px;text-transform:none;">Jalan Pattimura No. 12, Pekanbaru 28131, Telepon:(0761) 23042 <br>Laman: riau.bps.go.id, Pos-el: riau@bps.go.id</div>
+        </div>
+    </div>
     <div class="pm-print-title">Form Persetujuan Permintaan Persediaan</div>
-    <div class="pm-print-meta">No Faktur: <strong id="print_faktur_ticket"><?= htmlspecialchars($tckt_faktur) ?></strong></div>
-    <div class="pm-print-meta">Tanggal: <strong id="print_tanggal_ticket"><?= htmlspecialchars($tckt_tanggal) ?></strong></div>
-    <div class="pm-print-meta">Tim Kerja: <strong id="print_unit_ticket"><?= htmlspecialchars($tckt_unit) ?></strong></div>
-    <div class="pm-print-meta">Tanggal Permintaan: <strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
-    <div class="pm-print-meta">Pemohon: <strong id="print_pemohon_ticket"><?= htmlspecialchars($tckt_pemohon) ?></strong></div>
+    <div class="pm-print-grid">
+        <div><span class="label">No. Faktur</span><span class="sep">:</span><strong id="print_faktur_ticket"><?= htmlspecialchars($tckt_faktur) ?></strong></div>
+        <div><span class="label">Tim Kerja</span><span class="sep">:</span><strong id="print_unit_ticket"><?= htmlspecialchars($tckt_unit) ?></strong></div>
+        <div><span class="label">Tanggal</span><span class="sep">:</span><strong id="print_tanggal_ticket"><?= htmlspecialchars($tckt_tanggal) ?></strong></div>
+        <div><span class="label">Tanggal Permintaan</span><span class="sep">:</span><strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
+        <div><span class="label">Pemohon</span><span class="sep">:</span><strong id="print_pemohon_ticket"><?= htmlspecialchars($tckt_pemohon) ?></strong></div>
+    </div>
     <table class="pm-print-table">
         <thead>
             <tr>
                 <th>NO</th>
                 <th>Kode barang</th>
                 <th>NAMA BARANG</th>
+                <?php if ($is_pengajuan): ?>
+                <th>KATEGORI</th>
+                <th>GAMBAR</th>
+                <th>SPESIFIKASI/KETERANGAN</th>
+                <?php else: ?>
                 <th>Diminta</th>
                 <th>Disetujui</th>
                 <th>Keterangan</th>
+                <?php endif; ?>
             </tr>
         </thead>
         <tbody id="print_items_ticket">
             <?php for ($i = 0; $i < max(count($tckt_print_items), 6); $i++):
-                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'jumlah' => '', 'disetujui' => '', 'keterangan' => '']; ?>
+                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'kategori' => '', 'gambar_nama' => '', 'spesifikasi' => '', 'jumlah' => '', 'disetujui' => '', 'keterangan' => '']; ?>
             <tr>
                 <td><?= $i + 1 ?></td>
                 <td><?= htmlspecialchars($pr['kode']) ?></td>
                 <td><?= htmlspecialchars($pr['nama']) ?></td>
+                <?php if ($is_pengajuan): ?>
+                <td><?= htmlspecialchars($pr['kategori']) ?></td>
+                <td><?= htmlspecialchars($pr['gambar_nama']) ?></td>
+                <td><?= htmlspecialchars($pr['spesifikasi']) ?></td>
+                <?php else: ?>
                 <td><?= htmlspecialchars($pr['jumlah']) ?></td>
                 <td><?= htmlspecialchars($pr['disetujui']) ?></td>
                 <td><?= htmlspecialchars($pr['keterangan']) ?></td>
+                <?php endif; ?>
             </tr>
             <?php endfor ?>
         </tbody>
     </table>
     <div class="pm-print-signature">
-        <div><div>Petugas / Teknisi</div><strong id="print_teknisi_nama_ticket"><?= htmlspecialchars($tckt_teknisi ?: '-') ?></strong></div>
-        <div><div>Pemohon</div><strong id="print_pemohon_nama_ticket"><?= htmlspecialchars($tckt_pemohon ?: '-') ?></strong></div>
+        <div>
+            <div>Petugas / Teknisi</div>
+            <div class="space"></div>
+            <strong id="print_teknisi_nama_ticket"><?= htmlspecialchars($tckt_teknisi ?: '-') ?></strong>
+        </div>
+        <div>
+            <div>Pemohon</div>
+            <div class="space"></div>
+            <strong id="print_pemohon_nama_ticket"><?= htmlspecialchars($tckt_pemohon ?: '-') ?></strong>
+        </div>
     </div>
 </div>
 <?php endif ?>

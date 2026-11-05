@@ -697,32 +697,43 @@ html.light .swal2-popup { background-color: #ffffff !important; border-color: rg
 .swal2-html-container { color: var(--text-secondary) !important; }
 
 /* ══════════════════════════════════════
-   CETAK FORM PERSEDIAAN (tiruan sisi user/teknisi)
+   CETAK FORM PERSEDIAAN
 ══════════════════════════════════════ */
-.pm-print-title { display:block; width:100%; height:26px; padding:2px 0; font-size:16px; font-weight:700; text-align:center; }
-.pm-print-meta { position:relative; height:26px; padding:2px 0; font-size:16px; }
-.pm-print-meta strong { font-weight:400; }
-.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:16px; }
-.pm-print-table th, .pm-print-table td { height:24px; padding:2px 5px; border:1px solid #000; text-align:left; font-weight:400; }
-.pm-print-table th:first-child, .pm-print-table td:first-child { width:7%; text-align:center; }
-.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:22%; }
-.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:43%; }
-.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:28%; }
-.pm-print-signature { height:130px; padding-top:8px; font-size:16px; display:flex; justify-content:space-between; text-align:center; }
-.pm-print-signature strong { display:block; margin-top:48px; font-weight:400; }
+.pm-print-kop { display:flex; align-items:center; border-bottom:1.5px solid #000; padding-bottom:10px; margin-bottom:15px; }
+.pm-print-kop img { height:64px; width:auto; object-fit:contain; margin-right:15px; }
+.pm-print-kop-text { font-size:14pt; font-weight:bold; text-transform:uppercase; line-height:1.2; }
+.pm-print-title { display:block; width:100%; font-size:13pt; font-weight:bold; text-align:center; text-transform:uppercase; margin-bottom:15px; }
+.pm-print-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 20px; margin-bottom:15px; font-size:12px; }
+.pm-print-grid div { display:flex; }
+.pm-print-grid span.label { width:130px; font-weight:normal; }
+.pm-print-grid span.sep { width:10px; }
+.pm-print-grid strong { font-weight:normal; }
+.pm-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; margin-bottom:25px; }
+.pm-print-table th, .pm-print-table td { padding:6px 8px; border:1px solid #000; text-align:left; font-weight:normal; overflow-wrap:anywhere; }
+.pm-print-table th { background-color:#e5e7eb !important; font-weight:bold; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.pm-print-table th:first-child, .pm-print-table td:first-child { width:6%; text-align:center; }
+.pm-print-table th:nth-child(2), .pm-print-table td:nth-child(2) { width:14%; }
+.pm-print-table th:nth-child(3), .pm-print-table td:nth-child(3) { width:25%; }
+.pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:17%; }
+.pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width:14%; text-align:center; }
+.pm-print-table th:nth-child(6), .pm-print-table td:nth-child(6) { width:24%; }
+.pm-print-signature { display:flex; justify-content:space-between; font-size:12px; margin-top:20px; page-break-inside:avoid !important; }
+.pm-print-signature > div { width:200px; text-align:center; }
+.pm-print-signature .space { height:60px; }
+.pm-print-signature strong { display:block; font-weight:bold; }
 @media screen {
     #pmPrintSheetTicket { display:none; }
 }
 @media print {
-    @page { size:A4 landscape; margin:0; }
-    html, body { width:297mm; height:210mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
+    @page { size:A4 portrait; margin:15mm; }
+    html, body { width:210mm; height:297mm; margin:0 !important; padding:0 !important; overflow:hidden !important; }
     body * { visibility:hidden !important; }
     #modal, #modal > div, #modal-content, #pmPrintSheetTicket, #pmPrintSheetTicket * { visibility:visible !important; }
-    #modal { position:absolute !important; inset:0 !important; display:block !important; width:297mm !important; height:210mm !important; padding:0 !important; background:#fff !important; }
+    #modal { position:absolute !important; inset:0 !important; display:block !important; width:210mm !important; height:297mm !important; padding:0 !important; background:#fff !important; }
     #modal > div { display:block !important; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border:0 !important; box-shadow:none !important; border-radius:0 !important; }
     #modal > div > *:not(#modal-content) { display:none !important; }
     #modal-content > *:not(#pmPrintSheetTicket) { display:none !important; }
-    #pmPrintSheetTicket { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,sans-serif; padding:10mm 12mm !important; box-sizing:border-box !important; page-break-after:avoid !important; }
+    #pmPrintSheetTicket { display:block !important; width:100%; height:100%; overflow:hidden !important; color:#000; font-family:Arial,Helvetica,sans-serif; padding:0 !important; box-sizing:border-box !important; page-break-after:avoid !important; }
     #pmPrintSheetTicket, #pmPrintSheetTicket * { page-break-inside:avoid !important; }
     #pmPrintSheetTicket .pm-print-signature { page-break-inside:avoid !important; }
 }
@@ -761,17 +772,26 @@ function fillPersediaanPrintTicket() {
     // ponytail: DOM on-screen is source of truth; JSON fallback covers empty-table only.
     var items = [];
     var tb = document.getElementById('tckt-persediaan-items');
+    var isPengajuan = tb && tb.getAttribute('data-pengajuan') === '1';
     if (tb) {
         Array.prototype.forEach.call(tb.querySelectorAll('tr'), function (tr) {
             if (!tr.cells || tr.cells.length < 4) return;
             if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
             var k = (tr.cells[1].textContent || '').trim();
             var n = (tr.cells[2].textContent || '').trim();
-            var j = (tr.cells[3].textContent || '').trim();
-            var d = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : j;
-            var ket = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
-            if (!k && !n && !j) return;
-            items.push({ kode: k || '-', nama: n || '-', jumlah: j || '', disetujui: d || '', keterangan: ket || '' });
+            if (isPengajuan) {
+                var kat = (tr.cells[3].textContent || '').trim();
+                var gambar = (tr.cells[4].textContent || '').trim();
+                var spesifikasi = (tr.cells[5].textContent || '').trim();
+                if (!k && !n) return;
+                items.push({ kode: k || '-', nama: n || '-', kategori: kat || '-', gambar_nama: gambar || '-', spesifikasi: spesifikasi || '-' });
+            } else {
+                var j = (tr.cells[3].textContent || '').trim();
+                var d = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : j;
+                var ket = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
+                if (!k && !n && !j) return;
+                items.push({ kode: k || '-', nama: n || '-', jumlah: j || '', disetujui: d || '', keterangan: ket || '' });
+            }
         });
     }
     if (!items.length) {
@@ -798,10 +818,13 @@ function fillPersediaanPrintTicket() {
     for (var i = 0; i < n; i++) {
         var it = items[i] || {};
         var tr = document.createElement('tr');
-        [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''].forEach(function (v, idx) {
+        var values = isPengajuan
+            ? [i + 1, it.kode || '', it.nama || '', it.kategori || '', it.gambar_nama || '', it.spesifikasi || '']
+            : [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''];
+        values.forEach(function (v, idx) {
             var td = document.createElement('td');
             td.textContent = v;
-            if (idx === 0 || idx === 3 || idx === 4) {
+            if (idx === 0 || (!isPengajuan && (idx === 3 || idx === 4))) {
                 td.style.textAlign = 'center';
             }
             tr.appendChild(td);
@@ -811,8 +834,23 @@ function fillPersediaanPrintTicket() {
     return true;
 }
 function exportPersediaanPdfTicket() {
-    fillPersediaanPrintTicket();
-    window.print();
+    if (!fillPersediaanPrintTicket()) return;
+    var fakturEl = document.getElementById('print_faktur_ticket');
+    var faktur = fakturEl ? (fakturEl.textContent || '').trim() : '';
+    var cleanFaktur = faktur.replace(/[^a-zA-Z0-9\-]/g, '');
+    var originalTitle = document.title;
+    document.title = cleanFaktur || 'Form-Persetujuan';
+    var doPrint = function() {
+        window.print();
+        setTimeout(function() { document.title = originalTitle; }, 1000);
+    };
+    var img = document.getElementById('print_logo_bps_ticket');
+    if (img && !img.complete) {
+        img.onload = doPrint;
+        img.onerror = doPrint;
+    } else {
+        doPrint();
+    }
 }
 window.fillPersediaanPrintTicket = fillPersediaanPrintTicket;
 window.exportPersediaanPdfTicket = exportPersediaanPdfTicket;
