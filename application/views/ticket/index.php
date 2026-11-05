@@ -717,6 +717,9 @@ html.light .swal2-popup { background-color: #ffffff !important; border-color: rg
 .pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:17%; }
 .pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width:14%; text-align:center; }
 .pm-print-table th:nth-child(6), .pm-print-table td:nth-child(6) { width:24%; }
+.pm-print-table.is-pengajuan th:nth-child(3), .pm-print-table.is-pengajuan td:nth-child(3) { width:26%; }
+.pm-print-table.is-pengajuan th:nth-child(4), .pm-print-table.is-pengajuan td:nth-child(4) { width:24%; text-align:left; }
+.pm-print-table.is-pengajuan th:nth-child(5), .pm-print-table.is-pengajuan td:nth-child(5) { width:30%; text-align:left; }
 .pm-print-signature { display:flex; justify-content:space-between; font-size:12px; margin-top:20px; page-break-inside:avoid !important; }
 .pm-print-signature > div { width:200px; text-align:center; }
 .pm-print-signature .space { height:60px; }
@@ -811,6 +814,11 @@ function fillPersediaanPrintTicket() {
     set('print_pemohon_ticket', pemohon || '-');
     set('print_pemohon_nama_ticket', pemohon || '-');
     set('print_teknisi_nama_ticket', (teknisi && teknisi !== '-') ? teknisi : '-');
+    var printTable = document.querySelector('#pmPrintSheetTicket .pm-print-table');
+    if (printTable) {
+        if (isPengajuan) printTable.classList.add('is-pengajuan');
+        else printTable.classList.remove('is-pengajuan');
+    }
     var printRows = document.getElementById('print_items_ticket');
     if (!printRows) return false;
     printRows.innerHTML = '';
@@ -819,7 +827,7 @@ function fillPersediaanPrintTicket() {
         var it = items[i] || {};
         var tr = document.createElement('tr');
         var values = isPengajuan
-            ? [i + 1, it.kode || '', it.nama || '', it.kategori || '', it.gambar_nama || '', it.spesifikasi || '']
+            ? [i + 1, it.kode || '', it.nama || '', it.kategori || '', it.spesifikasi || '']
             : [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''];
         values.forEach(function (v, idx) {
             var td = document.createElement('td');

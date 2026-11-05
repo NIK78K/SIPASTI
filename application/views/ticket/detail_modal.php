@@ -332,7 +332,7 @@ foreach ($persediaan_items_ticket as $it) {
         <div><span class="label">Tanggal Permintaan</span><span class="sep">:</span><strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
         <div><span class="label">Pemohon</span><span class="sep">:</span><strong id="print_pemohon_ticket"><?= htmlspecialchars($tckt_pemohon) ?></strong></div>
     </div>
-    <table class="pm-print-table">
+    <table class="pm-print-table<?= $is_pengajuan ? ' is-pengajuan' : '' ?>">
         <thead>
             <tr>
                 <th>NO</th>
@@ -340,7 +340,6 @@ foreach ($persediaan_items_ticket as $it) {
                 <th>NAMA BARANG</th>
                 <?php if ($is_pengajuan): ?>
                 <th>KATEGORI</th>
-                <th>GAMBAR</th>
                 <th>SPESIFIKASI/KETERANGAN</th>
                 <?php else: ?>
                 <th>Diminta</th>
@@ -358,7 +357,6 @@ foreach ($persediaan_items_ticket as $it) {
                 <td><?= htmlspecialchars($pr['nama']) ?></td>
                 <?php if ($is_pengajuan): ?>
                 <td><?= htmlspecialchars($pr['kategori']) ?></td>
-                <td><?= htmlspecialchars($pr['gambar_nama']) ?></td>
                 <td><?= htmlspecialchars($pr['spesifikasi']) ?></td>
                 <?php else: ?>
                 <td><?= htmlspecialchars($pr['jumlah']) ?></td>
