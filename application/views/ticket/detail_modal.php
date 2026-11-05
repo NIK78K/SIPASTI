@@ -134,7 +134,7 @@ $status = $ticket['status'] ?? 'Menunggu';
 // Items persediaan dibaca langsung di view (fragment dimuat via AJAX innerHTML,
 // jadi sheet cetak di-render server-side agar selalu terisi walau JS gagal).
 $persediaan_items_ticket = [];
-if ($is_persediaan && isset($this->db) && $this->db->table_exists('ticket_persediaan_items')) {
+if (!$is_pengajuan && $is_persediaan && isset($this->db) && $this->db->table_exists('ticket_persediaan_items')) {
     $hasAcc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
     $hasKet = $this->db->field_exists('keterangan', 'ticket_persediaan_items');
     $persediaan_items_ticket = $this->db
@@ -153,8 +153,15 @@ if (empty($persediaan_items_ticket) && $is_persediaan) {
     }
     if ($is_pengajuan && is_array($jk_items_json)) {
         foreach ($jk_items_json as $item) {
+            $kode = !empty($item['kode']) ? $item['kode'] : (!empty($item['kode_barang']) ? $item['kode_barang'] : '');
+            if ((empty($kode) || $kode === '-') && !empty($item['nama']) && isset($this->db)) {
+                $mb = $this->db->select('kode_barang')->where('LOWER(TRIM(nama_barang))', strtolower(trim($item['nama'])))->get('master_barang_persediaan')->row();
+                if ($mb && !empty($mb->kode_barang)) {
+                    $kode = $mb->kode_barang;
+                }
+            }
             $persediaan_items_ticket[] = [
-                'kode_barang' => '-',
+                'kode_barang' => !empty($kode) ? $kode : '-',
                 'nama_barang_snapshot' => $item['nama'] ?? '-',
                 'nama_barang' => $item['nama'] ?? '-',
                 'kategori_nama' => $item['kategori_nama'] ?? '-',
@@ -171,6 +178,11 @@ if (empty($persediaan_items_ticket) && $is_persediaan) {
             if (strpos($pl, '- ') !== 0) continue;
             if ($is_pengajuan) {
                 $raw = trim(substr($pl, 2));
+                $kode = '';
+                if (preg_match('/^\[([A-Za-z0-9\-]+)\]\s*(.*)$/', $raw, $kdm)) {
+                    $kode = trim($kdm[1]);
+                    $raw = trim($kdm[2]);
+                }
                 $category = '';
                 $gambar = '';
                 $spesifikasi = '';
@@ -187,8 +199,14 @@ if (empty($persediaan_items_ticket) && $is_persediaan) {
                     $spesifikasi = trim($sm[2]);
                 }
                 if ($raw !== '') {
+                    if (empty($kode) && isset($this->db)) {
+                        $mb = $this->db->select('kode_barang')->where('LOWER(TRIM(nama_barang))', strtolower(trim($raw)))->get('master_barang_persediaan')->row();
+                        if ($mb && !empty($mb->kode_barang)) {
+                            $kode = $mb->kode_barang;
+                        }
+                    }
                     $persediaan_items_ticket[] = [
-                        'kode_barang' => '-',
+                        'kode_barang' => !empty($kode) ? $kode : '-',
                         'nama_barang_snapshot' => $raw,
                         'nama_barang' => $raw,
                         'kategori_nama' => $category ?: '-',

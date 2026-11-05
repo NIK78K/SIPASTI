@@ -672,6 +672,9 @@ public function pengajuan_persediaan()
         }
     }
 
+    $this->load->model('Barang_persediaan_model');
+    $default_kat_id = !empty($all_kat[0]['id']) ? (int) $all_kat[0]['id'] : 1;
+
     $items = [];
     if (is_array($nama_arr)) {
         foreach ($nama_arr as $i => $n) {
@@ -679,9 +682,62 @@ public function pengajuan_persediaan()
             if ($n === '') continue;
             $k = trim(strip_tags((string) ($ket_arr[$i] ?? '')));
             $kid = !empty($kategori_arr[$i]) ? (int) $kategori_arr[$i] : null;
-            $knama = ($kid && isset($kat_map[$kid])) ? $kat_map[$kid] : '';
+            if (!$kid || !isset($kat_map[$kid])) {
+                $kid = $default_kat_id;
+            }
+            $knama = isset($kat_map[$kid]) ? $kat_map[$kid] : '';
+            $clean_name = substr($n, 0, 150);
+
+            // Deteksi satuan
+            $satuan = 'Pcs';
+            if (preg_match('/\b(pcs|buah|rim|box|kotak|botol|pack|bungkus|lembar|gulung|lusin|meter|set|unit|roll|bks)\b/i', $clean_name . ' ' . $k, $sat_m)) {
+                $satuan = ucfirst(strtolower($sat_m[1]));
+            }
+
+            // Cek apakah barang sudah ada di master_barang_persediaan
+            $existing = $this->db->where('LOWER(TRIM(nama_barang))', strtolower($clean_name))
+                                 ->get('master_barang_persediaan')->row();
+
+            if ($existing) {
+                $kode = $existing->kode_barang;
+                $barang_id = $existing->id;
+                if (empty($existing->gambar) && !empty($uploaded_gambar[$i])) {
+                    $this->db->where('id', $existing->id)->update('master_barang_persediaan', ['gambar' => $uploaded_gambar[$i]]);
+                }
+            } else {
+                $kode = $this->Barang_persediaan_model->next_kode($kid);
+                if (!$kode) {
+                    $kat_row = $this->db->where('id', $kid)->get('master_kategori_persediaan')->row();
+                    $prefix = $kat_row ? trim($kat_row->kode) . '-' : 'BRG-';
+                    $kode = $prefix . '001';
+                }
+                $tries = 0;
+                while ($this->Barang_persediaan_model->is_kode_used($kode) && $tries < 20) {
+                    $pos = strrpos($kode, '-');
+                    $suf = ($pos === FALSE) ? '' : substr($kode, $pos + 1);
+                    if ($suf === '' || !ctype_digit($suf)) break;
+                    $kode = substr($kode, 0, $pos + 1) . str_pad((string) ((int) $suf + 1), strlen($suf), '0', STR_PAD_LEFT);
+                    $tries++;
+                }
+
+                // Simpan ke master dengan status Nonaktif agar kode terkunci (lompat jika ditolak)
+                $this->db->insert('master_barang_persediaan', [
+                    'kategori_id'  => $kid,
+                    'kode_barang'  => $kode,
+                    'nama_barang'  => $clean_name,
+                    'satuan'       => $satuan,
+                    'gambar'       => $uploaded_gambar[$i] ?? null,
+                    'stok_minimum' => 0,
+                    'status'       => 'Nonaktif',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+                $barang_id = $this->db->insert_id();
+            }
+
             $items[] = [
-                'nama'          => substr($n, 0, 150),
+                'barang_id'     => $barang_id,
+                'kode'          => $kode,
+                'nama'          => $clean_name,
                 'kategori_id'   => $kid,
                 'kategori_nama' => $knama,
                 'ket'           => substr($k, 0, 255),
@@ -715,7 +771,7 @@ public function pengajuan_persediaan()
 
     $lines = [];
     foreach ($items as $it) {
-        $ln = '- ' . $it['nama'];
+        $ln = '- [' . $it['kode'] . '] ' . $it['nama'];
         if (!empty($it['kategori_nama'])) {
             $ln .= ' [Kategori: ' . $it['kategori_nama'] . ']';
         }

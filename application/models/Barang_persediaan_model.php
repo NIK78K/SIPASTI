@@ -577,9 +577,17 @@ class Barang_persediaan_model extends CI_Model {
                 }
             }
 
-            // Cek apakah barang sudah ada di master (case-insensitive)
-            $existing = $this->db->where('LOWER(TRIM(nama_barang))', strtolower($clean_name))
-                                 ->get($this->table)->row();
+            // Cek apakah barang sudah ada di master (utamakan by kode, lalu by ID jika ada, lalu by nama_barang)
+            $existing = null;
+            if (!empty($it['kode'])) {
+                $existing = $this->db->where('kode_barang', trim($it['kode']))->get($this->table)->row();
+            }
+            if (!$existing && !empty($it['barang_id'])) {
+                $existing = $this->db->where('id', (int) $it['barang_id'])->get($this->table)->row();
+            }
+            if (!$existing) {
+                $existing = $this->db->where('LOWER(TRIM(nama_barang))', strtolower($clean_name))->get($this->table)->row();
+            }
 
             if ($existing) {
                 $barang_id = $existing->id;
@@ -593,6 +601,7 @@ class Barang_persediaan_model extends CI_Model {
                 if (!empty($upd_existing)) {
                     $this->db->where('id', $existing->id)->update($this->table, $upd_existing);
                 }
+                $added_count++;
             } else {
                 $kode = $this->next_kode($target_kat_id);
                 if (!$kode) {

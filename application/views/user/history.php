@@ -146,6 +146,25 @@ if (!function_exists('persediaan_form_data')) {
                     'keterangan' => $item['keterangan'] ?? '',
                 ];
             }
+        } elseif (!empty($t['jenis_kerusakan'])) {
+            $jk = (string) $t['jenis_kerusakan'];
+            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+                $p_items = json_decode($mj[1], true);
+                if (is_array($p_items)) {
+                    foreach ($p_items as $item) {
+                        $items[] = [
+                            'barang_id' => (int) ($item['barang_id'] ?? 0),
+                            'kode'   => $item['kode'] ?? ($item['kode_barang'] ?? '-'),
+                            'nama'   => $item['nama'] ?? '-',
+                            'jumlah' => 0,
+                            'satuan' => 'pcs',
+                            'rating' => null,
+                            'disetujui' => null,
+                            'keterangan' => $item['ket'] ?? '-',
+                        ];
+                    }
+                }
+            }
         }
 
         $ringkasan = (string) ($t['jenis_kerusakan'] ?? '');
