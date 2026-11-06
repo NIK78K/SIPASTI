@@ -9,7 +9,8 @@ $detailBase   = base_url('user_ticket/detail_barang/');
 $ulasanUrl    = base_url('user_ticket/ulasan_barang/' . (int) ($barang->id ?? 0));
 $adaGambar    = !empty($barang->gambar) && file_exists(FCPATH . 'uploads/persediaan/' . $barang->gambar);
 $kategoriNama = $barang->kategori_nama ?? ($barang->kategori_kode ?? '');
-$satuan       = $barang->satuan ?? null;
+$satuan          = $barang->satuan ?? null;
+$totalDisetujui  = (int) ($total_disetujui ?? ($total_diminta ?? 0));
 
 // Bintang statis (n dari 5)
 $renderStars = static function (int $n, string $class = 'text-base'): string {
@@ -31,6 +32,11 @@ if (!empty($satuan)) {
     $infoItems[] = ['label' => 'Satuan', 'value' => $satuan,
      'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10L4 17V7'];
 }
+$infoItems[] = [
+    'label' => 'Total disetujui',
+    'value' => ($totalDisetujui > 0 ? number_format($totalDisetujui, 0, ',', '.') . ' ' . ($satuan ?? 'item') : '0 ' . ($satuan ?? 'item')),
+    'icon'  => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+];
 ?>
 
 <div class="sp-detail max-w-6xl mx-auto mt-6 mb-24 px-4 space-y-16" style="--brand:#0B2E6B">
@@ -93,6 +99,12 @@ if (!empty($satuan)) {
                         </a>
                     <?php else: ?>
                         <span class="text-slate-400">Belum ada penilaian</span>
+                    <?php endif; ?>
+                    <?php if ($totalDisetujui > 0): ?>
+                        <span class="text-slate-300" aria-hidden="true">·</span>
+                        <span class="inline-flex items-center gap-1 text-slate-600 font-medium" title="Total unit yang telah disetujui">
+                            <span>Disetujui <?= number_format($totalDisetujui, 0, ',', '.') ?>×</span>
+                        </span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -295,45 +307,96 @@ if (!empty($satuan)) {
             <?php endif; ?>
         </div>
 
-        <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:grid md:grid-cols-4 md:gap-6 md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <?php foreach ($barang_terkait as $b): ?>
                 <?php
-                $bGambar = !empty($b->gambar) && file_exists(FCPATH . 'uploads/persediaan/' . $b->gambar);
-                $bRating = (float) ($b->rating_avg ?? 0);
-                $bCount  = (int) ($b->rating_count ?? 0);
-                $bUrl    = $detailBase . ($b->id ?? '');
+                $bId        = (int) ($b->id ?? 0);
+                $bNama      = $b->nama_barang ?? '-';
+                $bGambar    = !empty($b->gambar) && file_exists(FCPATH . 'uploads/persediaan/' . $b->gambar);
+                $bRating    = (float) ($b->rating_avg ?? 0);
+                $bCount     = (int) ($b->rating_count ?? 0);
+                $bDisetujui = (int) ($b->total_disetujui ?? ($b->total_diminta ?? 0));
+                $bInisial   = strtoupper(mb_substr(trim($bNama), 0, 2));
+                $bAvg       = $bCount > 0 ? rtrim(rtrim(number_format($bRating, 1, ',', '.'), '0'), ',') : '';
+                $bKatNama   = $b->kategori_nama ?? ($kategoriNama ?? '');
                 ?>
-                <a href="<?= $bUrl ?>"
-                   class="group snap-start flex-shrink-0 w-[72%] sm:w-[44%] md:w-auto rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-slate-300 hover:shadow-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)]">
-                    <div class="aspect-[4/3] bg-slate-100 flex items-center justify-center">
+                <div class="barang-card group flex flex-col cursor-pointer"
+                     onclick="openDetailBarang(<?= $bId ?>, event)">
+
+                    <!-- Gambar persegi + label kategori di pojok kiri bawah -->
+                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center transition-shadow duration-300 group-hover:shadow-lg">
                         <?php if ($bGambar): ?>
                             <img src="<?= base_url('uploads/persediaan/' . $b->gambar) ?>"
-                                 alt="<?= htmlspecialchars($b->nama_barang ?? '') ?>"
-                                 class="w-full h-full object-contain p-5 group-hover:scale-105 transition-transform duration-300">
+                                 alt="<?= htmlspecialchars($bNama) ?>" loading="lazy"
+                                 class="w-full h-full object-contain p-3 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
                         <?php else: ?>
-                            <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10L4 17V7"/>
-                            </svg>
+                            <span class="text-3xl font-extrabold tracking-wide text-slate-300 select-none" aria-hidden="true">
+                                <?= htmlspecialchars($bInisial) ?>
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if (!empty($bKatNama)): ?>
+                            <span class="absolute left-0 bottom-0 max-w-[85%] truncate rounded-tr-lg bg-[#0B2E6B] px-2 py-1 text-[10px] font-bold text-white">
+                                <?= htmlspecialchars($bKatNama) ?>
+                            </span>
                         <?php endif; ?>
                     </div>
-                    <div class="p-4 space-y-2">
-                        <p class="text-sm font-medium text-slate-900 leading-snug line-clamp-2 min-h-[2.5rem]">
-                            <?= htmlspecialchars($b->nama_barang ?? '-') ?>
+
+                    <!-- Info -->
+                    <div class="flex flex-col gap-1 pt-2.5 flex-1">
+                        <h3 class="text-[13px] font-medium leading-snug text-slate-800 line-clamp-2 min-h-[2.5rem] group-hover:text-[#0B2E6B] transition-colors">
+                            <?= htmlspecialchars($bNama) ?>
+                        </h3>
+
+                        <!-- Satuan (menggantikan harga) -->
+                        <p class="leading-tight text-slate-900">
+                            <span class="text-[11px] font-medium text-slate-500">per</span>
+                            <span class="text-base font-bold"><?= htmlspecialchars($b->satuan ?? 'pcs') ?></span>
                         </p>
-                        <div class="flex items-center justify-between gap-2 text-xs">
+
+                        <!-- Rating · Disetujui (klik = halaman ulasan) -->
+                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation()"
+                           title="Lihat ulasan barang"
+                           class="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
+                            <span class="<?= $bCount > 0 ? 'text-amber-400' : 'text-slate-300' ?>" aria-hidden="true">★</span>
                             <?php if ($bCount > 0): ?>
-                                <span class="inline-flex items-center gap-1 text-slate-600">
-                                    <span class="text-amber-400" aria-hidden="true">★</span>
-                                    <span class="font-semibold text-slate-800"><?= number_format($bRating, 1, ',', '.') ?></span>
-                                    <span class="text-slate-400">(<?= $bCount ?>)</span>
-                                </span>
+                                <span class="font-medium text-slate-700"><?= $bAvg ?></span>
                             <?php else: ?>
-                                <span class="text-slate-400">Belum ada ulasan</span>
+                                <span>Belum ada rating</span>
                             <?php endif; ?>
-                            <span class="font-mono text-slate-400"><?= htmlspecialchars($b->kode_barang ?? '') ?></span>
+                            <?php if ($bDisetujui > 0): ?>
+                                <span aria-hidden="true">·</span>
+                                <span>Disetujui <?= $bDisetujui ?>×</span>
+                            <?php endif; ?>
+                        </a>
+
+                        <!-- Kode barang -->
+                        <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] text-slate-500">
+                            <span class="w-4 h-4 rounded-full bg-slate-100 text-slate-400 inline-flex items-center justify-center flex-shrink-0">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A2 2 0 015 10V5a2 2 0 012-2z"/>
+                                </svg>
+                            </span>
+                            <span class="font-mono truncate"><?= htmlspecialchars($b->kode_barang ?? '-') ?></span>
+                        </span>
+
+                        <!-- Aksi keranjang -->
+                        <div class="mt-auto pt-2.5 w-full" onclick="event.stopPropagation()">
+                            <div id="stepper-<?= $bId ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
+                                <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, -1)"
+                                    class="qty-stepper-button" aria-label="Kurangi jumlah">−</button>
+                                <input id="qty-<?= $bId ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= $bId ?>, this.value)"
+                                    class="qty-stepper-input" aria-label="Jumlah barang">
+                                <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, 1)"
+                                    class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
+                            </div>
+                            <button id="add-<?= $bId ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= $bId ?>)"
+                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-white text-[#0B2E6B] hover:bg-[#0B2E6B] hover:text-white text-xs font-bold transition-colors active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                                + Keranjang
+                            </button>
                         </div>
                     </div>
-                </a>
+                </div>
             <?php endforeach; ?>
         </div>
     </section>
@@ -397,6 +460,70 @@ if (!empty($satuan)) {
 .detail-stepper input { width: 100%; min-width: 0; height: 32px; border: 0; border-right: 1px solid #bfdbfe; border-left: 1px solid #bfdbfe; background: #fff; color: #173f75; font-size: 16px; font-weight: 850; text-align: center; }
 .detail-stepper input::-webkit-outer-spin-button, .detail-stepper input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .detail-stepper input[type=number] { appearance: textfield; }
+
+.qty-stepper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 38px;
+    overflow: hidden;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
+}
+.qty-stepper-button {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 100%;
+    flex: 0 0 42px;
+    border: 0;
+    background: transparent;
+    color: #1e3a8a;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+}
+.qty-stepper-button:hover {
+    background: #dbeafe;
+    color: #172554;
+}
+.qty-stepper-button:active {
+    transform: scale(.88);
+}
+.qty-stepper-button:focus-visible,
+.qty-stepper-input:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+.qty-stepper-input {
+    width: 100%;
+    height: 24px;
+    min-width: 0;
+    border: 0;
+    border-right: 1px solid #bfdbfe;
+    border-left: 1px solid #bfdbfe;
+    background: #fff;
+    color: #172554;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+}
+.qty-stepper-input:focus {
+    outline: none;
+}
+.qty-stepper-input::-webkit-outer-spin-button,
+.qty-stepper-input::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+}
+.qty-stepper-input[type=number] {
+    appearance: textfield;
+}
 </style>
 
 <script>
@@ -438,7 +565,69 @@ function refreshCart() {
             document.getElementById('cartTotalLabel').textContent = (data.count || 0) + ' jenis • ' + total + ' item';
             renderCartItems(data.items || []);
             syncDetailStepper(data.items || []);
+            syncCards(data.items || []);
         });
+}
+
+function openDetailBarang(id, e) {
+    if (e) {
+        if (e.target.closest('#stepper-' + id) || e.target.closest('#add-' + id) || e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
+            return;
+        }
+    }
+    window.location.href = '<?= base_url("user_ticket/detail_barang/") ?>' + id;
+}
+
+function cardStep(id, d) {
+    var inp = document.getElementById('qty-' + id);
+    var current = parseInt(inp ? inp.value : '1', 10) || 1;
+    var next = current + d;
+
+    if (next <= 0) {
+        if (inp) inp.value = 1;
+        var stepper = document.getElementById('stepper-' + id);
+        var addBtn = document.getElementById('add-' + id);
+        if (stepper) stepper.style.display = 'none';
+        if (addBtn) addBtn.style.display = 'flex';
+        cartRemove(id);
+        return;
+    }
+
+    if (inp) inp.value = next;
+    cartSetQty(id, next);
+}
+
+function cardInput(id, v) {
+    var n = parseInt(v, 10);
+    var inp = document.getElementById('qty-' + id);
+    if (isNaN(n) || n <= 0) {
+        if (inp) inp.value = 1;
+        var stepper = document.getElementById('stepper-' + id);
+        var addBtn = document.getElementById('add-' + id);
+        if (stepper) stepper.style.display = 'none';
+        if (addBtn) addBtn.style.display = 'flex';
+        cartRemove(id);
+    } else {
+        if (inp) inp.value = n;
+        cartSetQty(id, n);
+    }
+}
+
+function syncCards(items) {
+    var map = {};
+    (items || []).forEach(function (it) { map[String(it.barang_id)] = it.qty; });
+    document.querySelectorAll('[id^="stepper-"]').forEach(function (el) {
+        var id = el.id.replace('stepper-', '');
+        var qty = map[id] || 0;
+        var has = qty >= 1;
+        el.style.display = has ? 'flex' : 'none';
+        var addBtn = document.getElementById('add-' + id);
+        if (addBtn) {
+            addBtn.style.display = has ? 'none' : 'flex';
+        }
+        var inp = document.getElementById('qty-' + id);
+        if (inp) inp.value = has ? qty : 1;
+    });
 }
 
 function renderCartItems(items) {
@@ -469,6 +658,13 @@ function syncDetailStepper(items) {
 }
 
 function cartAddFirst(id) {
+    var inp = document.getElementById('qty-' + id);
+    if (inp) inp.value = 1;
+    var stepper = document.getElementById('stepper-' + id);
+    var addBtn = document.getElementById('add-' + id);
+    if (stepper) stepper.style.display = 'flex';
+    if (addBtn) addBtn.style.display = 'none';
+
     postJSON("<?= base_url('user_ticket/cart_add') ?>", { barang_id: id, jumlah: 1 })
         .then(function (response) {
             if (!response.success) throw new Error(response.message || 'Barang tidak dapat ditambahkan.');
@@ -476,6 +672,7 @@ function cartAddFirst(id) {
             Swal.fire({ icon: 'success', title: 'Masuk keranjang', text: response.message, timer: 1400, showConfirmButton: false });
         })
         .catch(function (error) {
+            refreshCart();
             Swal.fire({ icon: 'warning', title: 'Tidak bisa ditambah', text: error.message || 'Terjadi kesalahan.' });
         });
 }
