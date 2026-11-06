@@ -208,7 +208,7 @@
                             <?php endif; ?>
                             <?php if ($bDiminta > 0): ?>
                                 <span aria-hidden="true">·</span>
-                                <span>Disetujui <?= $bDiminta ?>×</span>
+                                <span>Diminta <?= $bDiminta ?>×</span>
                             <?php endif; ?>
                         </a>
 

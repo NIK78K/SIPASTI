@@ -33,7 +33,7 @@ if (!empty($satuan)) {
      'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10L4 17V7'];
 }
 $infoItems[] = [
-    'label' => 'Total disetujui',
+    'label' => 'Total diminta',
     'value' => ($totalDisetujui > 0 ? number_format($totalDisetujui, 0, ',', '.') . ' ' . ($satuan ?? 'item') : '0 ' . ($satuan ?? 'item')),
     'icon'  => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
 ];
@@ -102,8 +102,8 @@ $infoItems[] = [
                     <?php endif; ?>
                     <?php if ($totalDisetujui > 0): ?>
                         <span class="text-slate-300" aria-hidden="true">·</span>
-                        <span class="inline-flex items-center gap-1 text-slate-600 font-medium" title="Total unit yang telah disetujui">
-                            <span>Disetujui <?= number_format($totalDisetujui, 0, ',', '.') ?>×</span>
+                        <span class="inline-flex items-center gap-1 text-slate-600 font-medium" title="Total unit yang pernah diminta">
+                            <span>Diminta <?= number_format($totalDisetujui, 0, ',', '.') ?>×</span>
                         </span>
                     <?php endif; ?>
                 </div>
@@ -366,7 +366,7 @@ $infoItems[] = [
                             <?php endif; ?>
                             <?php if ($bDisetujui > 0): ?>
                                 <span aria-hidden="true">·</span>
-                                <span>Disetujui <?= $bDisetujui ?>×</span>
+                                <span>Diminta <?= $bDisetujui ?>×</span>
                             <?php endif; ?>
                         </a>
 
