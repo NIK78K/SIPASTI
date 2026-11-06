@@ -910,15 +910,67 @@ public function history()
 
         $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
         list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
+        $total_disetujui = 0;
+        if ($this->db->table_exists('ticket_persediaan_items')) {
+            $q_disetujui = $this->db->query("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN t.status = 'Selesai' THEN 
+                            CASE 
+                                WHEN i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN CAST(i.jumlah_disetujui AS SIGNED)
+                                ELSE i.jumlah 
+                            END
+                        WHEN t.status = 'On Progress' AND i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN 
+                            CAST(i.jumlah_disetujui AS SIGNED)
+                        ELSE 0 
+                    END
+                ), 0) AS total_disetujui
+                FROM ticket_persediaan_items i
+                JOIN tickets t ON t.id = i.ticket_id
+                WHERE i.barang_id = ? AND t.status NOT IN ('Menunggu', 'Dibatalkan')
+            ", [$barang_id])->row();
+            $total_disetujui = $q_disetujui ? (int) $q_disetujui->total_disetujui : 0;
+        }
+
         $barang_terkait = $this->Barang_persediaan_model->get_related_by_kategori(
             $barang->kategori_id,
             $barang_id,
             4
         );
+        $terkait_ids = array_map(function($b) { return (int) $b->id; }, $barang_terkait);
+        $terkait_disetujui_map = [];
+        if (!empty($terkait_ids) && $this->db->table_exists('ticket_persediaan_items')) {
+            $ids_str = implode(',', array_map('intval', $terkait_ids));
+            $q_td = $this->db->query("
+                SELECT i.barang_id,
+                       COALESCE(SUM(
+                           CASE 
+                               WHEN t.status = 'Selesai' THEN 
+                                   CASE 
+                                       WHEN i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN CAST(i.jumlah_disetujui AS SIGNED)
+                                       ELSE i.jumlah 
+                                   END
+                               WHEN t.status = 'On Progress' AND i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN 
+                                   CAST(i.jumlah_disetujui AS SIGNED)
+                               ELSE 0 
+                           END
+                       ), 0) AS total_disetujui
+                FROM ticket_persediaan_items i
+                JOIN tickets t ON t.id = i.ticket_id
+                WHERE i.barang_id IN ($ids_str) AND t.status NOT IN ('Menunggu', 'Dibatalkan')
+                GROUP BY i.barang_id
+            ")->result();
+            foreach ($q_td as $td) {
+                $terkait_disetujui_map[(int) $td->barang_id] = (int) $td->total_disetujui;
+            }
+        }
         foreach ($barang_terkait as $barangItem) {
             $relatedRating = $this->User_ticket_model->get_ulasan_barang((int) $barangItem->id);
             $barangItem->rating_avg = $relatedRating['rating_avg'];
             $barangItem->rating_count = $relatedRating['rating_count'];
+            $barangItem->total_disetujui = $terkait_disetujui_map[(int) $barangItem->id] ?? 0;
+            $barangItem->total_diminta = $barangItem->total_disetujui;
             $barangItem->detail_url = base_url('user_ticket/detail_barang/' . (int) $barangItem->id);
         }
 
@@ -928,6 +980,8 @@ public function history()
             'unit_kerja_list'    => $unit_kerja_list,
             'unit_kerja_default' => $unit_kerja_default,
             'sisa'               => $sisa,
+            'total_disetujui'    => $total_disetujui,
+            'total_diminta'      => $total_disetujui,
             'rating_avg'         => $ulasan_data['rating_avg'],
             'rating_count'       => $ulasan_data['rating_count'],
             'ulasan_count'       => $ulasan_data['ulasan_count'],
@@ -962,11 +1016,35 @@ public function history()
         $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
         list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
 
+        $total_disetujui = 0;
+        if ($this->db->table_exists('ticket_persediaan_items')) {
+            $q_disetujui = $this->db->query("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN t.status = 'Selesai' THEN 
+                            CASE 
+                                WHEN i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN CAST(i.jumlah_disetujui AS SIGNED)
+                                ELSE i.jumlah 
+                            END
+                        WHEN t.status = 'On Progress' AND i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN 
+                            CAST(i.jumlah_disetujui AS SIGNED)
+                        ELSE 0 
+                    END
+                ), 0) AS total_disetujui
+                FROM ticket_persediaan_items i
+                JOIN tickets t ON t.id = i.ticket_id
+                WHERE i.barang_id = ? AND t.status NOT IN ('Menunggu', 'Dibatalkan')
+            ", [$barang_id])->row();
+            $total_disetujui = $q_disetujui ? (int) $q_disetujui->total_disetujui : 0;
+        }
+
         $data = [
             'barang'             => $barang,
             'unit_kerja_list'    => $unit_kerja_list,
             'unit_kerja_default' => $unit_kerja_default,
             'sisa'               => $sisa,
+            'total_disetujui'    => $total_disetujui,
+            'total_diminta'      => $total_disetujui,
             'rating_avg'         => $ulasan_data['rating_avg'],
             'rating_count'       => $ulasan_data['rating_count'],
             'ulasan_count'       => $ulasan_data['ulasan_count'],

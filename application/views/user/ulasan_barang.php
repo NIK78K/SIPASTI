@@ -94,6 +94,12 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
                         <?= htmlspecialchars($kategoriLbl) ?>
                     </span>
                 <?php endif; ?>
+                <?php $totalDisetujui = (int) ($total_disetujui ?? ($total_diminta ?? 0)); ?>
+                <?php if ($totalDisetujui > 0): ?>
+                    <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-blue-50 text-[var(--brand)]">
+                        Disetujui <?= number_format($totalDisetujui, 0, ',', '.') ?>×
+                    </span>
+                <?php endif; ?>
             </div>
             <h1 class="mt-2 text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">
                 <?= htmlspecialchars($namaBarang) ?>

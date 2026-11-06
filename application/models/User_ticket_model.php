@@ -1201,12 +1201,30 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
         foreach ($q->result_array() as $r) $agg[(int) $r['barang_id']] = $r;
     }
 
-    // Agregat terlaris (total unit yang pernah diminta)
+    // Agregat terlaris / disetujui (total unit yang sudah disetujui)
     $terlaris_map = [];
     if ($this->db->table_exists('ticket_persediaan_items')) {
-        $q_terlaris = $this->db->query('SELECT barang_id, COALESCE(SUM(jumlah), 0) AS total_diminta FROM ticket_persediaan_items GROUP BY barang_id');
+        $q_terlaris = $this->db->query("
+            SELECT i.barang_id, 
+                   COALESCE(SUM(
+                       CASE 
+                           WHEN t.status = 'Selesai' THEN 
+                               CASE 
+                                   WHEN i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN CAST(i.jumlah_disetujui AS SIGNED)
+                                   ELSE i.jumlah 
+                               END
+                           WHEN t.status = 'On Progress' AND i.jumlah_disetujui IS NOT NULL AND i.jumlah_disetujui != '' THEN 
+                               CAST(i.jumlah_disetujui AS SIGNED)
+                           ELSE 0 
+                       END
+                   ), 0) AS total_disetujui
+            FROM ticket_persediaan_items i
+            JOIN tickets t ON t.id = i.ticket_id
+            WHERE t.status NOT IN ('Menunggu', 'Dibatalkan')
+            GROUP BY i.barang_id
+        ");
         foreach ($q_terlaris->result_array() as $rt) {
-            $terlaris_map[(int) $rt['barang_id']] = (int) $rt['total_diminta'];
+            $terlaris_map[(int) $rt['barang_id']] = (int) $rt['total_disetujui'];
         }
     }
 
@@ -1226,6 +1244,7 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
         $r['rating_avg'] = $a ? round((float) $a['rating_avg'], 1) : null;
         $r['rating_count'] = $a ? (int) $a['rating_count'] : 0;
         $r['total_terlaris'] = $terlaris_map[$bid] ?? 0;
+        $r['total_disetujui'] = $terlaris_map[$bid] ?? 0;
     }
     unset($r);
 

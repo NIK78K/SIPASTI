@@ -144,56 +144,96 @@
                 <p class="text-sm text-gray-500">Coba kata kunci atau kategori lain.</p>
             </div>
 
-            <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Kartu transparan bergaya marketplace: hanya gambar + teks, tanpa kotak kartu -->
+            <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                 <?php foreach (($barang_list ?? []) as $b): ?>
-                <div class="barang-card group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-shadow duration-300 overflow-hidden flex flex-col cursor-pointer"
-                      onclick="openDetailBarang(<?= (int) $b['id'] ?>, event)"
-                      data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
-                      data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
-                      data-rating="<?= (float) ($b['rating_avg'] ?? 0) ?>"
-                      data-terlaris="<?= (int) ($b['total_terlaris'] ?? 0) ?>"
-                      data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
-                    <?php if (!empty($b['gambar']) && file_exists(FCPATH . 'uploads/persediaan/' . $b['gambar'])): ?>
-                        <div class="catalog-image-frame">
-                            <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>" alt="<?= htmlspecialchars($b['nama_barang'] ?? '-') ?>" class="catalog-image group-hover:scale-105 transition-transform duration-300">
-                        </div>
-                    <?php else: ?>
-                        <div class="catalog-image-frame catalog-image-fallback">
-                            <svg class="w-12 h-12 text-blue-200" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7v10l8 4m0-10v10"/>
-                            </svg>
-                        </div>
-                    <?php endif; ?>
-                    <div class="p-4 pt-3 flex flex-col gap-2 flex-1">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="font-mono text-[10px] tracking-wide text-slate-400 truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
-                        </div>
-                        <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-blue-900 transition-colors"><?= htmlspecialchars($b['nama_barang'] ?? '-') ?></h3>
-                        <p class="text-[11px] text-slate-500 truncate"><?= htmlspecialchars(($b['kategori_kode'] ?? '') . ($b['kategori_nama'] ? ' • ' . $b['kategori_nama'] : '')) ?> &bull; per <?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></p>
-                        <div class="flex items-center justify-between gap-1 text-[11px] pt-0.5">
-                            <?php if (!empty($b['rating_count'])): ?>
-                            <span class="font-semibold text-amber-600 flex items-center gap-1">
-                                ★ <?= number_format((float) $b['rating_avg'], 1) ?> (<?= (int) $b['rating_count'] ?>)
+                <?php
+                    $bId      = (int) $b['id'];
+                    $bNama    = $b['nama_barang'] ?? '-';
+                    $bGambar  = !empty($b['gambar']) && file_exists(FCPATH . 'uploads/persediaan/' . $b['gambar']);
+                    $bRCount  = (int) ($b['rating_count'] ?? 0);
+                    $bDiminta = (int) ($b['total_terlaris'] ?? 0);
+                    $bInisial = strtoupper(mb_substr(trim($bNama), 0, 2));
+                    // 5.0 -> "5", 3.5 -> "3,5"
+                    $bAvg     = $bRCount > 0 ? rtrim(rtrim(number_format((float) ($b['rating_avg'] ?? 0), 1, ',', '.'), '0'), ',') : '';
+                ?>
+                <div class="barang-card group flex flex-col cursor-pointer"
+                     onclick="openDetailBarang(<?= $bId ?>, event)"
+                     data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
+                     data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
+                     data-rating="<?= (float) ($b['rating_avg'] ?? 0) ?>"
+                     data-terlaris="<?= (int) ($b['total_terlaris'] ?? 0) ?>"
+                     data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
+
+                    <!-- Gambar persegi + label kategori di pojok kiri bawah -->
+                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center transition-shadow duration-300 group-hover:shadow-lg">
+                        <?php if ($bGambar): ?>
+                            <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>"
+                                 alt="<?= htmlspecialchars($bNama) ?>" loading="lazy"
+                                 class="w-full h-full object-contain p-3 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
+                        <?php else: ?>
+                            <span class="text-3xl font-extrabold tracking-wide text-slate-300 select-none" aria-hidden="true">
+                                <?= htmlspecialchars($bInisial) ?>
                             </span>
+                        <?php endif; ?>
+
+                        <?php if (!empty($b['kategori_nama'])): ?>
+                            <span class="absolute left-0 bottom-0 max-w-[85%] truncate rounded-tr-lg bg-[#0B2E6B] px-2 py-1 text-[10px] font-bold text-white">
+                                <?= htmlspecialchars($b['kategori_nama']) ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex flex-col gap-1 pt-2.5 flex-1">
+                        <h3 class="text-[13px] font-medium leading-snug text-slate-800 line-clamp-2 min-h-[2.5rem] group-hover:text-[#0B2E6B] transition-colors">
+                            <?= htmlspecialchars($bNama) ?>
+                        </h3>
+
+                        <!-- Satuan (menggantikan harga) -->
+                        <p class="leading-tight text-slate-900">
+                            <span class="text-[11px] font-medium text-slate-500">per</span>
+                            <span class="text-base font-bold"><?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></span>
+                        </p>
+
+                        <!-- Rating · Diminta (klik = halaman ulasan) -->
+                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation()"
+                           title="Lihat ulasan barang"
+                           class="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
+                            <span class="<?= $bRCount > 0 ? 'text-amber-400' : 'text-slate-300' ?>" aria-hidden="true">★</span>
+                            <?php if ($bRCount > 0): ?>
+                                <span class="font-medium text-slate-700"><?= $bAvg ?></span>
                             <?php else: ?>
-                            <span class="text-slate-400 text-[10px]">Belum ada rating</span>
-                            <?php endif ?>
-                            <a href="<?= base_url('user_ticket/ulasan_barang/' . (int) $b['id']) ?>" onclick="event.stopPropagation()"
-                               class="text-blue-800 hover:text-blue-950 font-bold text-[10px] flex items-center gap-0.5">
-                                Ulasan &rarr;
-                            </a>
-                        </div>
-                        <div class="mt-auto pt-3 w-full" onclick="event.stopPropagation()">
-                            <div id="stepper-<?= (int) $b['id'] ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
-                                <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, -1)"
+                                <span>Belum ada rating</span>
+                            <?php endif; ?>
+                            <?php if ($bDiminta > 0): ?>
+                                <span aria-hidden="true">·</span>
+                                <span>Disetujui <?= $bDiminta ?>×</span>
+                            <?php endif; ?>
+                        </a>
+
+                        <!-- Kode barang -->
+                        <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] text-slate-500">
+                            <span class="w-4 h-4 rounded-full bg-slate-100 text-slate-400 inline-flex items-center justify-center flex-shrink-0">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A2 2 0 015 10V5a2 2 0 012-2z"/>
+                                </svg>
+                            </span>
+                            <span class="font-mono truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
+                        </span>
+
+                        <!-- Aksi keranjang -->
+                        <div class="mt-auto pt-2.5 w-full" onclick="event.stopPropagation()">
+                            <div id="stepper-<?= $bId ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
+                                <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, -1)"
                                     class="qty-stepper-button" aria-label="Kurangi jumlah">−</button>
-                                <input id="qty-<?= (int) $b['id'] ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= (int) $b['id'] ?>, this.value)"
+                                <input id="qty-<?= $bId ?>" type="number" value="1" min="1" onclick="event.stopPropagation()" onchange="cardInput(<?= $bId ?>, this.value)"
                                     class="qty-stepper-input" aria-label="Jumlah barang">
-                                <button type="button" onclick="event.stopPropagation();cardStep(<?= (int) $b['id'] ?>, 1)"
+                                <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, 1)"
                                     class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
                             </div>
-                            <button id="add-<?= (int) $b['id'] ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= (int) $b['id'] ?>)"
-                                class="w-full h-9 rounded-xl text-xs font-extrabold transition-all bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-1.5">
+                            <button id="add-<?= $bId ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= $bId ?>)"
+                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-white text-[#0B2E6B] hover:bg-[#0B2E6B] hover:text-white text-xs font-bold transition-colors active:scale-95 flex items-center justify-center gap-1.5">
                                 + Keranjang
                             </button>
                         </div>
@@ -404,47 +444,6 @@
 }
 .catalog-alert {
     grid-column: 1 / -1;
-}
-.catalog-page .barang-card {
-    border-radius: 16px;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
-    transform: none !important;
-}
-.catalog-page .barang-card:hover {
-    box-shadow: 0 14px 32px -4px rgba(15, 23, 42, .14), 0 6px 12px -2px rgba(15, 23, 42, .06) !important;
-    transform: none !important;
-}
-.catalog-image-frame {
-    height: 190px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    background: #fff;
-    border-bottom: 1px solid #f1f5f9;
-}
-.catalog-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 14px;
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.catalog-page .barang-card:hover .catalog-image {
-    transform: scale(1.08);
-}
-.catalog-image-fallback {
-    background: linear-gradient(145deg, #f8fafc, #eff6ff);
-}
-.catalog-image-fallback svg {
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.catalog-page .barang-card:hover .catalog-image-fallback svg {
-    transform: scale(1.1);
-}
-.catalog-page .barang-card .p-4 {
-    padding: 12px;
 }
 .qty-stepper {
     display: flex;
