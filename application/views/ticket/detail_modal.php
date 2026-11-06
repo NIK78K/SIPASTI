@@ -320,11 +320,15 @@ foreach ($persediaan_items_ticket as $it) {
             <div class="dtck-text text-xs font-semibold mt-8"><?= htmlspecialchars($tckt_pemohon ?: '-') ?></div>
         </div>
     </div>
+    <?php if (!$is_pengajuan): ?>
     <button type="button" onclick="fillPersediaanPrintTicket();exportPersediaanPdfTicket()"
             class="mt-3 w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-all">
         Export PDF
     </button>
+    <?php endif ?>
 </div>
+
+<?php if (!$is_pengajuan): ?>
 <!-- meta on-screen dibaca fungsi cetak induk -->
 <span id="tckt-faktur" class="hidden"><?= htmlspecialchars($tckt_faktur) ?></span>
 <span id="tckt-tanggal" class="hidden"><?= htmlspecialchars($tckt_tanggal) ?></span>
@@ -350,37 +354,27 @@ foreach ($persediaan_items_ticket as $it) {
         <div><span class="label">Tanggal Permintaan</span><span class="sep">:</span><strong id="print_butuh_ticket"><?= htmlspecialchars($tckt_butuh) ?></strong></div>
         <div><span class="label">Pemohon</span><span class="sep">:</span><strong id="print_pemohon_ticket"><?= htmlspecialchars($tckt_pemohon) ?></strong></div>
     </div>
-    <table class="pm-print-table<?= $is_pengajuan ? ' is-pengajuan' : '' ?>">
+    <table class="pm-print-table">
         <thead>
             <tr>
                 <th>NO</th>
                 <th>Kode barang</th>
                 <th>NAMA BARANG</th>
-                <?php if ($is_pengajuan): ?>
-                <th>KATEGORI</th>
-                <th>SPESIFIKASI/KETERANGAN</th>
-                <?php else: ?>
                 <th>Diminta</th>
                 <th>Disetujui</th>
                 <th>Keterangan</th>
-                <?php endif; ?>
             </tr>
         </thead>
         <tbody id="print_items_ticket">
             <?php for ($i = 0; $i < max(count($tckt_print_items), 6); $i++):
-                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'kategori' => '', 'gambar_nama' => '', 'spesifikasi' => '', 'jumlah' => '', 'disetujui' => '', 'keterangan' => '']; ?>
+                $pr = $tckt_print_items[$i] ?? ['kode' => '', 'nama' => '', 'jumlah' => '', 'disetujui' => '', 'keterangan' => '']; ?>
             <tr>
                 <td><?= $i + 1 ?></td>
                 <td><?= htmlspecialchars($pr['kode']) ?></td>
                 <td><?= htmlspecialchars($pr['nama']) ?></td>
-                <?php if ($is_pengajuan): ?>
-                <td><?= htmlspecialchars($pr['kategori']) ?></td>
-                <td><?= htmlspecialchars($pr['spesifikasi']) ?></td>
-                <?php else: ?>
                 <td><?= htmlspecialchars($pr['jumlah']) ?></td>
                 <td><?= htmlspecialchars($pr['disetujui']) ?></td>
                 <td><?= htmlspecialchars($pr['keterangan']) ?></td>
-                <?php endif; ?>
             </tr>
             <?php endfor ?>
         </tbody>
@@ -398,6 +392,7 @@ foreach ($persediaan_items_ticket as $it) {
         </div>
     </div>
 </div>
+<?php endif ?>
 <?php endif ?>
 
 <!-- ================= STYLES ================= -->

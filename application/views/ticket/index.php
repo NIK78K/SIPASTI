@@ -717,9 +717,6 @@ html.light .swal2-popup { background-color: #ffffff !important; border-color: rg
 .pm-print-table th:nth-child(4), .pm-print-table td:nth-child(4) { width:17%; }
 .pm-print-table th:nth-child(5), .pm-print-table td:nth-child(5) { width:14%; text-align:center; }
 .pm-print-table th:nth-child(6), .pm-print-table td:nth-child(6) { width:24%; }
-.pm-print-table.is-pengajuan th:nth-child(3), .pm-print-table.is-pengajuan td:nth-child(3) { width:26%; }
-.pm-print-table.is-pengajuan th:nth-child(4), .pm-print-table.is-pengajuan td:nth-child(4) { width:24%; text-align:left; }
-.pm-print-table.is-pengajuan th:nth-child(5), .pm-print-table.is-pengajuan td:nth-child(5) { width:30%; text-align:left; }
 .pm-print-signature { display:flex; justify-content:space-between; font-size:12px; margin-top:20px; page-break-inside:avoid !important; }
 .pm-print-signature > div { width:200px; text-align:center; }
 .pm-print-signature .space { height:60px; }
@@ -775,26 +772,17 @@ function fillPersediaanPrintTicket() {
     // ponytail: DOM on-screen is source of truth; JSON fallback covers empty-table only.
     var items = [];
     var tb = document.getElementById('tckt-persediaan-items');
-    var isPengajuan = tb && tb.getAttribute('data-pengajuan') === '1';
     if (tb) {
         Array.prototype.forEach.call(tb.querySelectorAll('tr'), function (tr) {
             if (!tr.cells || tr.cells.length < 4) return;
             if (tr.cells[0].hasAttribute && tr.cells[0].hasAttribute('colspan')) return;
             var k = (tr.cells[1].textContent || '').trim();
             var n = (tr.cells[2].textContent || '').trim();
-            if (isPengajuan) {
-                var kat = (tr.cells[3].textContent || '').trim();
-                var gambar = (tr.cells[4].textContent || '').trim();
-                var spesifikasi = (tr.cells[5].textContent || '').trim();
-                if (!k && !n) return;
-                items.push({ kode: k || '-', nama: n || '-', kategori: kat || '-', gambar_nama: gambar || '-', spesifikasi: spesifikasi || '-' });
-            } else {
-                var j = (tr.cells[3].textContent || '').trim();
-                var d = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : j;
-                var ket = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
-                if (!k && !n && !j) return;
-                items.push({ kode: k || '-', nama: n || '-', jumlah: j || '', disetujui: d || '', keterangan: ket || '' });
-            }
+            var j = (tr.cells[3].textContent || '').trim();
+            var d = tr.cells.length >= 5 ? (tr.cells[4].textContent || '').trim() : j;
+            var ket = tr.cells.length >= 6 ? (tr.cells[5].textContent || '').trim() : '-';
+            if (!k && !n && !j) return;
+            items.push({ kode: k || '-', nama: n || '-', jumlah: j || '', disetujui: d || '', keterangan: ket || '' });
         });
     }
     if (!items.length) {
@@ -814,11 +802,6 @@ function fillPersediaanPrintTicket() {
     set('print_pemohon_ticket', pemohon || '-');
     set('print_pemohon_nama_ticket', pemohon || '-');
     set('print_teknisi_nama_ticket', (teknisi && teknisi !== '-') ? teknisi : '-');
-    var printTable = document.querySelector('#pmPrintSheetTicket .pm-print-table');
-    if (printTable) {
-        if (isPengajuan) printTable.classList.add('is-pengajuan');
-        else printTable.classList.remove('is-pengajuan');
-    }
     var printRows = document.getElementById('print_items_ticket');
     if (!printRows) return false;
     printRows.innerHTML = '';
@@ -826,13 +809,10 @@ function fillPersediaanPrintTicket() {
     for (var i = 0; i < n; i++) {
         var it = items[i] || {};
         var tr = document.createElement('tr');
-        var values = isPengajuan
-            ? [i + 1, it.kode || '', it.nama || '', it.kategori || '', it.spesifikasi || '']
-            : [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''];
-        values.forEach(function (v, idx) {
+        [i + 1, it.kode || '', it.nama || '', it.jumlah || '', it.disetujui || '', it.keterangan || ''].forEach(function (v, idx) {
             var td = document.createElement('td');
             td.textContent = v;
-            if (idx === 0 || (!isPengajuan && (idx === 3 || idx === 4))) {
+            if (idx === 0 || idx === 3 || idx === 4) {
                 td.style.textAlign = 'center';
             }
             tr.appendChild(td);
