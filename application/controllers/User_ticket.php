@@ -1759,7 +1759,7 @@ private function _parse_pengajuan_ringkas($jk, $kebutuhan)
         $out['tanggal_permintaan'] = trim($m[1]);
     }
 
-    if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+    if (preg_match('/\[pengajuan_items_json:\s*(.+?)\s*\](?:\r?\n|$)/s', $jk, $mj)) {
         $parsed = json_decode($mj[1], true);
         if (is_array($parsed) && !empty($parsed)) {
             $out['items'] = $parsed;

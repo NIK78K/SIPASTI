@@ -148,7 +148,7 @@ if (!$is_pengajuan && $is_persediaan && isset($this->db) && $this->db->table_exi
 }
 if (empty($persediaan_items_ticket) && $is_persediaan) {
     $jk_items_json = [];
-    if ($is_pengajuan && preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $ticket['jenis_kerusakan'] ?? '', $mj)) {
+    if ($is_pengajuan && preg_match('/\[pengajuan_items_json:\s*(.+?)\s*\](?:\r?\n|$)/s', $ticket['jenis_kerusakan'] ?? '', $mj)) {
         $jk_items_json = json_decode($mj[1], true);
     }
     if ($is_pengajuan && is_array($jk_items_json)) {

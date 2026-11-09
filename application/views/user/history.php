@@ -105,7 +105,7 @@ if (!function_exists('persediaan_nama_list')) {
 
         if (empty($arr) && !empty($t['jenis_kerusakan'])) {
             $jk = (string) $t['jenis_kerusakan'];
-            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\s*\](?:\r?\n|$)/s', $jk, $mj)) {
                 $p_items = json_decode($mj[1], true);
                 if (is_array($p_items) && !empty($p_items)) {
                     $arr = $p_items;
@@ -185,7 +185,7 @@ if (!function_exists('persediaan_form_data')) {
             }
         } elseif (!empty($t['jenis_kerusakan'])) {
             $jk = (string) $t['jenis_kerusakan'];
-            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+            if (preg_match('/\[pengajuan_items_json:\s*(.+?)\s*\](?:\r?\n|$)/s', $jk, $mj)) {
                 $p_items = json_decode($mj[1], true);
                 if (is_array($p_items)) {
                     foreach ($p_items as $item) {

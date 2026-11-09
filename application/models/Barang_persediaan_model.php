@@ -443,7 +443,7 @@ class Barang_persediaan_model extends CI_Model {
         $items = [];
 
         // 1. Cek JSON jika ada
-        if (preg_match('/\[pengajuan_items_json:\s*(.+?)\]/s', $jk, $mj)) {
+        if (preg_match('/\[pengajuan_items_json:\s*(.+?)\s*\](?:\r?\n|$)/s', $jk, $mj)) {
             $parsed = json_decode($mj[1], true);
             if (is_array($parsed) && !empty($parsed)) {
                 $items = $parsed;
@@ -477,6 +477,11 @@ class Barang_persediaan_model extends CI_Model {
                     if (strpos($line, '-') === 0) {
                         $raw = trim(substr($line, 1));
                         if ($raw === '') continue;
+                        $parsed_kode = null;
+                        if (preg_match('/^\[([A-Za-z0-9\-]+)\]\s*(.*)$/', $raw, $kdm)) {
+                            $parsed_kode = trim($kdm[1]);
+                            $raw = trim($kdm[2]);
+                        }
                         $parsed_kat_id = null;
                         if (preg_match('/\[Kategori:\s*([A-Za-z0-9\-]+)/i', $raw, $km)) {
                             $kat_code = trim($km[1]);
@@ -495,6 +500,7 @@ class Barang_persediaan_model extends CI_Model {
                             $kt = isset($m[2]) ? trim($m[2]) : '';
                             if ($nm !== '') {
                                 $item_entry = ['nama' => $nm, 'ket' => $kt];
+                                if ($parsed_kode) $item_entry['kode'] = $parsed_kode;
                                 if ($parsed_kat_id) $item_entry['kategori_id'] = $parsed_kat_id;
                                 if ($parsed_img) $item_entry['gambar'] = $parsed_img;
                                 $items[] = $item_entry;
