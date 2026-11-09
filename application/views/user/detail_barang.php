@@ -524,6 +524,20 @@ $infoItems[] = [
 .qty-stepper-input[type=number] {
     appearance: textfield;
 }
+
+@keyframes cartShake {
+    0%   { transform: scale(1) rotate(0deg); }
+    15%  { transform: scale(1.15) rotate(-14deg); }
+    30%  { transform: scale(1.15) rotate(14deg); }
+    45%  { transform: scale(1.1) rotate(-10deg); }
+    60%  { transform: scale(1.1) rotate(10deg); }
+    75%  { transform: scale(1.05) rotate(-4deg); }
+    90%  { transform: scale(1.02) rotate(4deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+.cart-shake {
+    animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
 </style>
 
 <script>
@@ -569,6 +583,17 @@ function refreshCart() {
         });
 }
 
+function triggerCartShake() {
+    var btn = document.getElementById('cartBtn');
+    if (!btn) return;
+    btn.classList.remove('cart-shake');
+    void btn.offsetWidth;
+    btn.classList.add('cart-shake');
+    setTimeout(function () {
+        if (btn) btn.classList.remove('cart-shake');
+    }, 650);
+}
+
 function openDetailBarang(id, e) {
     if (e) {
         if (e.target.closest('#stepper-' + id) || e.target.closest('#add-' + id) || e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
@@ -582,6 +607,8 @@ function cardStep(id, d) {
     var inp = document.getElementById('qty-' + id);
     var current = parseInt(inp ? inp.value : '1', 10) || 1;
     var next = current + d;
+
+    triggerCartShake();
 
     if (next <= 0) {
         if (inp) inp.value = 1;
@@ -600,6 +627,7 @@ function cardStep(id, d) {
 function cardInput(id, v) {
     var n = parseInt(v, 10);
     var inp = document.getElementById('qty-' + id);
+    triggerCartShake();
     if (isNaN(n) || n <= 0) {
         if (inp) inp.value = 1;
         var stepper = document.getElementById('stepper-' + id);
@@ -658,6 +686,7 @@ function syncDetailStepper(items) {
 }
 
 function cartAddFirst(id) {
+    triggerCartShake();
     var inp = document.getElementById('qty-' + id);
     if (inp) inp.value = 1;
     var stepper = document.getElementById('stepper-' + id);
@@ -678,11 +707,13 @@ function cartAddFirst(id) {
 }
 
 function detailStep(delta) {
+    triggerCartShake();
     var current = parseInt(document.getElementById('detailQty').value, 10) || 1;
     detailSetQty(current + delta);
 }
 
 function detailInput(value) {
+    triggerCartShake();
     var quantity = parseInt(value, 10);
     detailSetQty(isNaN(quantity) ? 0 : quantity);
 }
@@ -704,6 +735,7 @@ function detailSetQty(quantity) {
 }
 
 function cartSetQty(id, quantity) {
+    triggerCartShake();
     if (quantity <= 0) return cartRemove(id);
     postJSON("<?= base_url('user_ticket/cart_update') ?>", { barang_id: id, jumlah: quantity }).then(function () { refreshCart(); });
 }
