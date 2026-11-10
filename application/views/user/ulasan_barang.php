@@ -73,17 +73,27 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
      class="max-w-6xl mx-auto py-6 px-4 sm:px-6 space-y-5" style="--brand:#0B2E6B">
 
     <!-- ================= NAV ATAS ================= -->
-    <nav class="flex items-center justify-between text-sm" aria-label="Navigasi halaman">
-        <a href="<?= $detailUrl ?>"
-           class="inline-flex items-center gap-2 min-h-[44px] font-semibold text-[var(--brand)] hover:opacity-80 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Kembali ke Detail Barang
-        </a>
-        <a href="<?= $katalogUrl ?>" class="min-h-[44px] inline-flex items-center text-slate-500 hover:text-slate-800 transition">
-            Katalog Permintaan &rarr;
-        </a>
+    <nav aria-label="Breadcrumb">
+        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+            <a href="<?= base_url('user/dashboard') ?>"
+               class="text-slate-500 hover:text-slate-800 font-medium transition">
+                Dashboard
+            </a>
+            <span class="text-slate-300 font-normal">/</span>
+            <a href="<?= $katalogUrl ?>"
+               class="text-slate-500 hover:text-slate-800 font-medium transition">
+                Katalog
+            </a>
+            <span class="text-slate-300 font-normal">/</span>
+            <a href="<?= $detailUrl ?>"
+               class="text-slate-500 hover:text-slate-800 font-medium transition">
+                Detail Barang
+            </a>
+            <span class="text-slate-300 font-normal">/</span>
+            <span class="text-[#0B2E6B] font-bold">
+                Ulasan Barang
+            </span>
+        </div>
     </nav>
 
     <!-- ================= HEADER PRODUK ================= -->

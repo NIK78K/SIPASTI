@@ -1,12 +1,16 @@
 <!-- ================= BACK ================= -->
-<div class="max-w-7xl mx-auto mt-6 px-4">
-    <a href="<?= base_url('user_ticket/create_persediaan') ?>"
-       class="inline-flex items-center gap-2 text-sm text-blue-900 hover:text-blue-950 font-semibold transition">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-        </svg>
-        Pilih layanan lain
-    </a>
+<div class="max-w-7xl mx-auto mt-6 mb-5 px-4">
+    <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+        <a href="<?= base_url('user/dashboard') ?>"
+           class="text-slate-500 hover:text-slate-800 font-medium transition">
+            Dashboard
+        </a>
+        <span class="text-slate-300 font-normal">/</span>
+        <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+           class="text-[#0B2E6B] hover:text-blue-950 font-bold transition">
+            Pilih Layanan Lain
+        </a>
+    </div>
 </div>
 
 <div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">

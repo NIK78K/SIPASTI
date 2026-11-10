@@ -42,18 +42,22 @@ $infoItems[] = [
 <div class="sp-detail max-w-6xl mx-auto mt-6 mb-24 px-4 space-y-16" style="--brand:#0B2E6B">
 
     <!-- ================= BREADCRUMB ================= -->
-    <nav aria-label="Breadcrumb" class="flex items-center gap-3 text-xs text-slate-500">
-        <a href="<?= $katalogUrl ?>" aria-label="Kembali ke katalog"
-           class="inline-flex items-center justify-center w-8 h-8 rounded-full text-slate-700 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)] transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-        </a>
-        <ol class="flex items-center gap-2">
-            <li><a href="<?= $katalogUrl ?>" class="hover:text-slate-800 transition">Katalog</a></li>
-            <li aria-hidden="true" class="w-1 h-1 rounded-full bg-slate-300"></li>
-            <li class="text-slate-700 font-medium" aria-current="page">Detail barang</li>
-        </ol>
+    <nav aria-label="Breadcrumb">
+        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+            <a href="<?= base_url('user/dashboard') ?>"
+               class="text-slate-500 hover:text-slate-800 font-medium transition">
+                Dashboard
+            </a>
+            <span class="text-slate-300 font-normal">/</span>
+            <a href="<?= $katalogUrl ?>"
+               class="text-slate-500 hover:text-slate-800 font-medium transition">
+                Katalog
+            </a>
+            <span class="text-slate-300 font-normal">/</span>
+            <span class="text-[#0B2E6B] font-bold">
+                Detail Barang
+            </span>
+        </div>
     </nav>
 
     <!-- ================= DETAIL: GAMBAR KIRI, INFO KANAN ================= -->
