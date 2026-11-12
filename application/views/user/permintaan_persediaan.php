@@ -163,6 +163,7 @@
                 ?>
                 <div class="barang-card group flex flex-col cursor-pointer"
                      onclick="openDetailBarang(<?= $bId ?>, event)"
+                     data-id="<?= $bId ?>"
                      data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
                      data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
                      data-rating="<?= (float) ($b['rating_avg'] ?? 0) ?>"
@@ -201,7 +202,7 @@
                         </p>
 
                         <!-- Rating · Diminta (klik = halaman ulasan) -->
-                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation()"
+                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation(); saveKatalogState(<?= $bId ?>);"
                            title="Lihat ulasan barang"
                            class="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
                             <span class="<?= $bRCount > 0 ? 'text-amber-400' : 'text-slate-300' ?>" aria-hidden="true">★</span>
@@ -549,6 +550,41 @@
 <script>
 var activeKat = 'all';
 var cartData = { count: 0, total_qty: 0, items: [] };
+var currentPage = 1;
+var pageSize = 12;
+
+function getUrlParam(key) {
+    try {
+        return new URLSearchParams(window.location.search).get(key);
+    } catch (e) {
+        return null;
+    }
+}
+
+function updateKatalogUrl(p, kat) {
+    try {
+        var u = new URL(window.location);
+        if (p > 1) u.searchParams.set('page', p);
+        else u.searchParams.delete('page');
+
+        if (kat && kat !== 'all') u.searchParams.set('kat', kat);
+        else u.searchParams.delete('kat');
+
+        history.replaceState({ page: p, kat: kat }, '', u.toString());
+    } catch (e) {}
+}
+
+function saveKatalogState(id) {
+    try {
+        sessionStorage.setItem('katalog_page', currentPage);
+        sessionStorage.setItem('katalog_kat', activeKat);
+        sessionStorage.setItem('katalog_search', (document.getElementById('searchInput').value || '').trim());
+        sessionStorage.setItem('katalog_sort', (document.getElementById('sortFilter') ? document.getElementById('sortFilter').value : 'name_asc'));
+        if (id) {
+            sessionStorage.setItem('katalog_last_barang_id', id);
+        }
+    } catch (e) {}
+}
 
 function openDetailBarang(id, e) {
     if (e) {
@@ -556,7 +592,12 @@ function openDetailBarang(id, e) {
             return;
         }
     }
-    window.location.href = '<?= base_url("user_ticket/detail_barang/") ?>' + id;
+    saveKatalogState(id);
+    var targetUrl = '<?= base_url("user_ticket/detail_barang/") ?>' + id + '?page=' + currentPage;
+    if (activeKat && activeKat !== 'all') {
+        targetUrl += '&kat=' + encodeURIComponent(activeKat);
+    }
+    window.location.href = targetUrl;
 }
 
 function openUlasanBarang(id, e) {
@@ -569,6 +610,9 @@ function setKategori(id, btn) {
         c.classList.remove('category-item-active');
     });
     if (btn) btn.classList.add('category-item-active');
+    try {
+        sessionStorage.setItem('katalog_kat', activeKat);
+    } catch (e) {}
     applyFilter();
 }
 
@@ -576,6 +620,11 @@ document.getElementById('searchInput').addEventListener('input', applyFilter);
 
 function applyFilter() {
     currentPage = 1;
+    try {
+        sessionStorage.setItem('katalog_page', 1);
+        sessionStorage.setItem('katalog_search', (document.getElementById('searchInput').value || '').trim());
+    } catch (e) {}
+    updateKatalogUrl(currentPage, activeKat);
     renderPage();
 }
 
@@ -613,9 +662,6 @@ function visibleCards() {
 
     return out;
 }
-
-var currentPage = 1;
-var pageSize = 12;
 
 function renderPage() {
     var list = visibleCards();
@@ -672,10 +718,16 @@ function renderPage() {
     syncCards(cartData.items || []);
 }
 
-function goPage(p) {
+function goPage(p, skipScroll) {
     currentPage = p;
+    try {
+        sessionStorage.setItem('katalog_page', p);
+    } catch (e) {}
+    updateKatalogUrl(currentPage, activeKat);
     renderPage();
-    document.getElementById('katalogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!skipScroll) {
+        document.getElementById('katalogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function cartQty(id) {
@@ -1007,6 +1059,102 @@ function validCheckout() {
     });
 })();
 
+// Pemulihan state pagination & filter saat dibuka kembali (back / link katalog)
+(function initKatalogState() {
+    try {
+        var uPage = parseInt(getUrlParam('page'), 10);
+        var sPage = parseInt(sessionStorage.getItem('katalog_page'), 10);
+        var uKat  = getUrlParam('kat');
+        var sKat  = sessionStorage.getItem('katalog_kat');
+        var uSearch = getUrlParam('q');
+        var sSearch = sessionStorage.getItem('katalog_search');
+        var sSort   = sessionStorage.getItem('katalog_sort');
+
+        if (uKat && uKat !== 'all') {
+            activeKat = String(uKat);
+        } else if (sKat && sKat !== 'all') {
+            activeKat = String(sKat);
+        }
+
+        if (activeKat !== 'all') {
+            document.querySelectorAll('.kat-chip').forEach(function (c) {
+                var match = String(c.getAttribute('data-kat')) === activeKat;
+                c.classList.toggle('category-item-active', match);
+            });
+        }
+
+        if (uSearch) {
+            var sInp = document.getElementById('searchInput');
+            if (sInp) sInp.value = uSearch;
+        } else if (sSearch) {
+            var sInp = document.getElementById('searchInput');
+            if (sInp) sInp.value = sSearch;
+        }
+
+        if (sSort) {
+            var sSel = document.getElementById('sortFilter');
+            if (sSel) sSel.value = sSort;
+        }
+
+        if (!isNaN(uPage) && uPage >= 1) {
+            currentPage = uPage;
+        } else if (!isNaN(sPage) && sPage >= 1) {
+            currentPage = sPage;
+        } else {
+            var lastId = sessionStorage.getItem('katalog_last_barang_id');
+            if (lastId) {
+                var allVis = visibleCards();
+                for (var idx = 0; idx < allVis.length; idx++) {
+                    if (String(allVis[idx].getAttribute('data-id')) === String(lastId)) {
+                        currentPage = Math.floor(idx / pageSize) + 1;
+                        break;
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+})();
+
 refreshCart();
 renderPage();
+
+// Jika kembali dari detail_barang, lakukan smooth scroll dan sorot barang yang bersangkutan
+(function scrollToLastViewedBarang() {
+    try {
+        var lastId = sessionStorage.getItem('katalog_last_barang_id');
+        if (lastId) {
+            setTimeout(function() {
+                var card = document.querySelector('.barang-card[data-id="' + lastId + '"]');
+                if (card && card.style.display !== 'none') {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.classList.add('ring-2', 'ring-blue-600', 'ring-offset-2');
+                    setTimeout(function() {
+                        card.classList.remove('ring-2', 'ring-blue-600', 'ring-offset-2');
+                    }, 1800);
+                }
+            }, 180);
+        }
+    } catch (e) {}
+})();
+
+// Tangani tombol browser Back/Forward saat halaman di-restore dari bfcache
+window.addEventListener('pageshow', function () {
+    try {
+        var p = parseInt(getUrlParam('page') || sessionStorage.getItem('katalog_page'), 10);
+        if (!isNaN(p) && p >= 1 && p !== currentPage) {
+            currentPage = p;
+            renderPage();
+        }
+    } catch (e) {}
+});
+
+window.addEventListener('popstate', function () {
+    try {
+        var p = parseInt(getUrlParam('page') || 1, 10);
+        if (p !== currentPage) {
+            currentPage = p;
+            renderPage();
+        }
+    } catch (e) {}
+});
 </script>

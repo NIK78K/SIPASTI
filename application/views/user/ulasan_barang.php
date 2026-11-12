@@ -80,7 +80,7 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
                 Dashboard
             </a>
             <span class="text-slate-300 font-normal">/</span>
-            <a href="<?= $katalogUrl ?>"
+            <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
                class="text-slate-500 hover:text-slate-800 font-medium transition">
                 Katalog
             </a>
@@ -838,4 +838,21 @@ function validCheckout() {
 })();
 
 refreshCart();
+
+(function syncBreadcrumb() {
+    try {
+        var katLink = document.getElementById('katalogBreadcrumb');
+        if (!katLink) return;
+        var sPage = sessionStorage.getItem('katalog_page');
+        var sKat  = sessionStorage.getItem('katalog_kat');
+        var u = new URL(katLink.href, window.location.origin);
+        if (!u.searchParams.get('page') && sPage && parseInt(sPage, 10) > 1) {
+            u.searchParams.set('page', sPage);
+        }
+        if (!u.searchParams.get('kat') && sKat && sKat !== 'all') {
+            u.searchParams.set('kat', sKat);
+        }
+        katLink.href = u.toString();
+    } catch (e) {}
+})();
 </script>

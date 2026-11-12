@@ -908,6 +908,17 @@ public function history()
         $tahun = (int) date('Y');
         $sisa  = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, $bulan, $tahun);
 
+        $fromPage   = (int) $this->input->get('page');
+        $fromKat    = trim($this->input->get('kat', true) ?? '');
+        $katalogUrl = base_url('user_ticket/permintaan_persediaan');
+        $qp = [];
+        if ($fromPage > 1) $qp[] = 'page=' . $fromPage;
+        if ($fromKat !== '' && $fromKat !== 'all') $qp[] = 'kat=' . urlencode($fromKat);
+        if (!empty($qp)) $katalogUrl .= '?' . implode('&', $qp);
+
+        $ulasanUrl = base_url('user_ticket/ulasan_barang/' . $barang_id);
+        if (!empty($qp)) $ulasanUrl .= '?' . implode('&', $qp);
+
         $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
         list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
 
@@ -979,6 +990,10 @@ public function history()
             'barang_terkait'     => $barang_terkait,
             'unit_kerja_list'    => $unit_kerja_list,
             'unit_kerja_default' => $unit_kerja_default,
+            'katalogUrl'         => $katalogUrl,
+            'ulasanUrl'          => $ulasanUrl,
+            'fromPage'           => $fromPage,
+            'fromKat'            => $fromKat,
             'sisa'               => $sisa,
             'total_disetujui'    => $total_disetujui,
             'total_diminta'      => $total_disetujui,
@@ -1013,6 +1028,17 @@ public function history()
         $tahun = (int) date('Y');
         $sisa  = (int) $this->User_ticket_model->get_sisa_persediaan($barang_id, $bulan, $tahun);
 
+        $fromPage   = (int) $this->input->get('page');
+        $fromKat    = trim($this->input->get('kat', true) ?? '');
+        $katalogUrl = base_url('user_ticket/permintaan_persediaan');
+        $qp = [];
+        if ($fromPage > 1) $qp[] = 'page=' . $fromPage;
+        if ($fromKat !== '' && $fromKat !== 'all') $qp[] = 'kat=' . urlencode($fromKat);
+        if (!empty($qp)) $katalogUrl .= '?' . implode('&', $qp);
+
+        $detailUrl = base_url('user_ticket/detail_barang/' . $barang_id);
+        if (!empty($qp)) $detailUrl .= '?' . implode('&', $qp);
+
         $ulasan_data = $this->User_ticket_model->get_ulasan_barang($barang_id);
         list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
 
@@ -1042,6 +1068,10 @@ public function history()
             'barang'             => $barang,
             'unit_kerja_list'    => $unit_kerja_list,
             'unit_kerja_default' => $unit_kerja_default,
+            'katalogUrl'         => $katalogUrl,
+            'detailUrl'          => $detailUrl,
+            'fromPage'           => $fromPage,
+            'fromKat'            => $fromKat,
             'sisa'               => $sisa,
             'total_disetujui'    => $total_disetujui,
             'total_diminta'      => $total_disetujui,
