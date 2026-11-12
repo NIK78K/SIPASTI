@@ -1307,15 +1307,20 @@ public function edit_persediaan($ticket_id)
     $tahun = (int) date('Y');
 
     $this->load->model('Barang_persediaan_model');
+    list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
+
+    $parsed = $this->_parse_persediaan_ringkas($ticket['jenis_kerusakan'] ?? '', $ticket['kebutuhan'] ?? '');
 
     $data = [
-        'ticket'        => $ticket,
-        'items'         => $this->User_ticket_model->get_persediaan_items_for_edit($ticket_id, $user_id),
-        'barang_list'   => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
-        'kategori_list' => $this->Barang_persediaan_model->get_kategori_grouped(),
-        'parsed'        => $this->_parse_persediaan_ringkas($ticket['jenis_kerusakan'] ?? '', $ticket['kebutuhan'] ?? ''),
-        'bulan'         => $bulan,
-        'tahun'         => $tahun,
+        'ticket'             => $ticket,
+        'items'              => $this->User_ticket_model->get_persediaan_items_for_edit($ticket_id, $user_id),
+        'barang_list'        => $this->User_ticket_model->get_katalog_persediaan_with_sisa($bulan, $tahun),
+        'kategori_list'      => $this->Barang_persediaan_model->get_kategori_grouped(),
+        'parsed'             => $parsed,
+        'unit_kerja_list'    => $unit_kerja_list,
+        'unit_kerja_default' => !empty($parsed['unit_kerja']) ? $parsed['unit_kerja'] : $unit_kerja_default,
+        'bulan'              => $bulan,
+        'tahun'              => $tahun,
     ];
 
     $this->load->view('layout/header_user');
