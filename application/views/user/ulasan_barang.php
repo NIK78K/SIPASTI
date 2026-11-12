@@ -63,9 +63,20 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
         90%  { transform: scale(1.02) rotate(4deg); }
         100% { transform: scale(1) rotate(0deg); }
     }
-    .cart-shake {
-        animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
-    }
+.cart-shake {
+    animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+/* Skeleton Loading Shimmer (Gaya Marketplace Lazada) */
+@keyframes skeletonShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 35%, #ffffff 50%, #e2e8f0 65%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
 </style>
 
 <!-- Ganti warna utama di sini (selaras dengan halaman detail barang) -->
@@ -99,6 +110,68 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
             <span class="text-slate-900 font-medium whitespace-nowrap">Ulasan Barang</span>
         </div>
     </nav>
+
+    <!-- ================= SKELETON LOADING ULASAN (ALA MARKETPLACE LAZADA) ================= -->
+    <div id="ulasanSkeleton" class="space-y-5 pointer-events-none select-none">
+        <!-- Header Produk Skeleton -->
+        <div class="bg-white rounded-[20px] border border-slate-200 px-5 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+            <div class="w-[72px] h-[72px] rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0 skeleton-shimmer">
+                <span class="text-xs font-black text-slate-300 uppercase">SIPASTI</span>
+            </div>
+            <div class="min-w-0 flex-1 space-y-2">
+                <div class="flex gap-2">
+                    <div class="w-20 h-5 rounded-full skeleton-shimmer"></div>
+                    <div class="w-24 h-5 rounded-full skeleton-shimmer"></div>
+                </div>
+                <div class="h-6 w-3/4 sm:w-1/2 rounded-lg skeleton-shimmer"></div>
+                <div class="h-4 w-1/3 rounded-md skeleton-shimmer"></div>
+            </div>
+            <div class="w-36 h-12 rounded-full skeleton-shimmer flex-shrink-0"></div>
+        </div>
+
+        <!-- Grid Ringkasan + List Skeleton -->
+        <div class="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] items-start">
+            <!-- Sidebar Ringkasan -->
+            <div class="bg-white rounded-[20px] border border-slate-200 p-6 space-y-4">
+                <div class="w-32 h-4 rounded skeleton-shimmer"></div>
+                <div class="w-24 h-12 rounded-lg skeleton-shimmer"></div>
+                <div class="w-28 h-4 rounded skeleton-shimmer"></div>
+                <div class="space-y-2 pt-2">
+                    <?php for ($s = 0; $s < 5; $s++): ?>
+                    <div class="flex items-center gap-2">
+                        <div class="w-12 h-3 rounded skeleton-shimmer"></div>
+                        <div class="flex-1 h-2.5 rounded-full skeleton-shimmer"></div>
+                        <div class="w-6 h-3 rounded skeleton-shimmer"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- List Skeleton -->
+            <div class="space-y-3">
+                <div class="h-12 w-full rounded-2xl bg-white border border-slate-200 p-2 skeleton-shimmer"></div>
+                <?php for ($k = 0; $k < 3; $k++): ?>
+                <div class="bg-white rounded-[20px] border border-slate-200 p-5 sm:px-6 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full skeleton-shimmer flex-shrink-0"></div>
+                        <div class="space-y-1.5 flex-1">
+                            <div class="w-32 h-4 rounded skeleton-shimmer"></div>
+                            <div class="w-20 h-3 rounded skeleton-shimmer"></div>
+                        </div>
+                        <div class="w-16 h-3 rounded skeleton-shimmer"></div>
+                    </div>
+                    <div class="space-y-1.5 pt-1">
+                        <div class="w-full h-3.5 rounded skeleton-shimmer"></div>
+                        <div class="w-4/5 h-3.5 rounded skeleton-shimmer"></div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= KONTEN ASLI ULASAN ================= -->
+    <div id="ulasanContent" style="display:none" class="space-y-5">
 
     <!-- ================= HEADER PRODUK ================= -->
     <header class="bg-white rounded-[20px] border border-slate-200 px-5 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
@@ -309,6 +382,8 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
             <?php endif; ?>
         </section>
     </div>
+
+    </div><!-- end #ulasanContent -->
 </div>
 
 <!-- ================= FLOATING CART ================= -->
@@ -842,6 +917,20 @@ function validCheckout() {
 })();
 
 refreshCart();
+
+(function initUlasanSkeleton() {
+    var sk = document.getElementById('ulasanSkeleton');
+    var ct = document.getElementById('ulasanContent');
+    setTimeout(function () {
+        if (sk) sk.style.display = 'none';
+        if (ct) ct.style.display = '';
+    }, 280);
+
+    window.addEventListener('pageshow', function () {
+        if (sk) sk.style.display = 'none';
+        if (ct) ct.style.display = '';
+    });
+})();
 
 (function syncBreadcrumb() {
     try {

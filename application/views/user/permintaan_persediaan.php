@@ -147,8 +147,28 @@
                 <p class="text-sm text-gray-500">Coba kata kunci atau kategori lain.</p>
             </div>
 
+            <!-- ================= SKELETON LOADING (ALA MARKETPLACE LAZADA) ================= -->
+            <div id="katalogSkeleton" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+                <?php for ($sk = 0; $sk < 12; $sk++): ?>
+                <div class="skeleton-card flex flex-col p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm pointer-events-none select-none">
+                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center skeleton-shimmer">
+                        <span class="text-xl sm:text-2xl font-black tracking-widest text-slate-300/60 uppercase font-sans">SIPASTI</span>
+                    </div>
+                    <div class="pt-3 flex flex-col gap-2 flex-1">
+                        <div class="h-3.5 w-full rounded-md skeleton-shimmer"></div>
+                        <div class="h-3.5 w-3/5 rounded-md skeleton-shimmer"></div>
+                        <div class="h-3 w-1/3 rounded-md skeleton-shimmer mt-0.5"></div>
+                        <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
+                        <div class="mt-auto pt-2.5 w-full">
+                            <div class="h-[38px] w-full rounded-xl skeleton-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
             <!-- Kartu transparan bergaya marketplace: hanya gambar + teks, tanpa kotak kartu -->
-            <div id="katalogGrid" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+            <div id="katalogGrid" style="display:none" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                 <?php foreach (($barang_list ?? []) as $b): ?>
                 <?php
                     $bId      = (int) $b['id'];
@@ -246,6 +266,24 @@
                 <?php endforeach ?>
             </div>
 
+            <!-- ================= SKELETON APPEND TEMPLATE (SAAT KLIK MUAT LEBIH BANYAK) ================= -->
+            <template id="appendSkeletonTemplate">
+                <div class="append-skeleton-card flex flex-col p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm pointer-events-none select-none">
+                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center skeleton-shimmer">
+                        <span class="text-xl sm:text-2xl font-black tracking-widest text-slate-300/60 uppercase font-sans">SIPASTI</span>
+                    </div>
+                    <div class="pt-3 flex flex-col gap-2 flex-1">
+                        <div class="h-3.5 w-full rounded-md skeleton-shimmer"></div>
+                        <div class="h-3.5 w-3/5 rounded-md skeleton-shimmer"></div>
+                        <div class="h-3 w-1/3 rounded-md skeleton-shimmer mt-0.5"></div>
+                        <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
+                        <div class="mt-auto pt-2.5 w-full">
+                            <div class="h-[38px] w-full rounded-xl skeleton-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
             <?php if (empty($barang_list)): ?>
             <div class="bg-white rounded-3xl p-10 shadow-2xl border border-gray-100 text-center">
                 <div class="text-5xl mb-3">📦</div>
@@ -255,7 +293,18 @@
             </div>
             <?php endif ?>
 
-            <div id="katalogPager" class="flex items-center justify-center gap-2 mt-4"></div>
+            <!-- ================= TOMBOL MUAT LEBIH BANYAK ================= -->
+            <div id="loadMoreContainer" class="flex justify-center mt-8 mb-6">
+                <button type="button" id="btnLoadMore" onclick="loadMoreItems()"
+                    class="min-w-[260px] sm:min-w-[320px] h-12 rounded-xl border-2 border-[#0B2E6B] hover:border-[#08224f] bg-white hover:bg-blue-50/80 text-[#0B2E6B] hover:text-[#08224f] font-extrabold text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                    <span id="btnLoadMoreText">Muat Lebih Banyak</span>
+                    <svg id="btnLoadMoreSpinner" class="hidden w-4 h-4 animate-spin text-[#0B2E6B]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="katalogPager" class="hidden"></div>
 
         </div>
 
@@ -544,6 +593,17 @@
 .cart-shake {
     animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
 }
+
+/* Skeleton Loading Shimmer (Gaya Marketplace Lazada) */
+@keyframes skeletonShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 35%, #ffffff 50%, #e2e8f0 65%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
 </style>
 
 <script>
@@ -612,19 +672,28 @@ function setKategori(id, btn) {
     try {
         sessionStorage.setItem('katalog_kat', activeKat);
     } catch (e) {}
-    applyFilter();
+    applyFilter(true);
 }
 
-document.getElementById('searchInput').addEventListener('input', applyFilter);
+var searchDebounceTimer = null;
+var searchInputEl = document.getElementById('searchInput');
+if (searchInputEl) {
+    searchInputEl.addEventListener('input', function () {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(function () {
+            applyFilter(true);
+        }, 220);
+    });
+}
 
-function applyFilter() {
+function applyFilter(useSkeleton) {
     currentPage = 1;
     try {
         sessionStorage.setItem('katalog_page', 1);
         sessionStorage.setItem('katalog_search', (document.getElementById('searchInput').value || '').trim());
     } catch (e) {}
     updateKatalogUrl(currentPage, activeKat);
-    renderPage();
+    renderPage(useSkeleton !== false);
 }
 
 function visibleCards() {
@@ -662,71 +731,160 @@ function visibleCards() {
     return out;
 }
 
-function renderPage() {
+var skeletonTimer = null;
+
+function renderPage(useSkeleton, callback) {
+    var skeletonEl   = document.getElementById('katalogSkeleton');
+    var gridEl       = document.getElementById('katalogGrid');
+    var loadMoreWrap = document.getElementById('loadMoreContainer');
+    var emptyEl      = document.getElementById('emptyState');
+
+    if (useSkeleton && skeletonEl && gridEl) {
+        if (skeletonTimer) clearTimeout(skeletonTimer);
+        skeletonEl.style.display = 'grid';
+        gridEl.style.display = 'none';
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (loadMoreWrap) loadMoreWrap.classList.add('hidden');
+
+        skeletonTimer = setTimeout(function () {
+            executeRender(callback);
+        }, 280);
+    } else {
+        executeRender(callback);
+    }
+}
+
+function showAppendSkeletons() {
+    removeAppendSkeletons();
+    var gridEl = document.getElementById('katalogGrid');
+    var tpl    = document.getElementById('appendSkeletonTemplate');
+    if (!gridEl || !tpl) return;
+
     var list = visibleCards();
-    var grid = document.getElementById('katalogGrid');
-    if (grid) {
+    var remaining = list.length - (currentPage * pageSize);
+    var count = Math.min(pageSize, Math.max(1, remaining));
+
+    for (var i = 0; i < count; i++) {
+        var clone = tpl.content.cloneNode(true);
+        gridEl.appendChild(clone);
+    }
+}
+
+function removeAppendSkeletons() {
+    var gridEl = document.getElementById('katalogGrid');
+    if (!gridEl) return;
+    gridEl.querySelectorAll('.append-skeleton-card').forEach(function(el) {
+        el.remove();
+    });
+}
+
+function executeRender(callback) {
+    removeAppendSkeletons();
+    var skeletonEl   = document.getElementById('katalogSkeleton');
+    var gridEl       = document.getElementById('katalogGrid');
+    var emptyEl      = document.getElementById('emptyState');
+    var loadMoreWrap = document.getElementById('loadMoreContainer');
+
+    var list = visibleCards();
+    if (gridEl) {
         list.forEach(function(el) {
-            grid.appendChild(el);
+            gridEl.appendChild(el);
         });
     }
 
     var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
     if (currentPage > totalPages) currentPage = totalPages;
+
+    // Tampilkan barang secara bertambah kumulatif (0 sampai currentPage * pageSize)
     document.querySelectorAll('.barang-card').forEach(function (el) { el.style.display = 'none'; });
     list.forEach(function (el, i) {
-        if (i >= (currentPage - 1) * pageSize && i < currentPage * pageSize) el.style.display = '';
+        if (i < currentPage * pageSize) el.style.display = '';
+        else el.style.display = 'none';
     });
-    document.getElementById('emptyState').classList.toggle('hidden', list.length > 0);
 
-    // Info Subtitle
+    if (skeletonEl) skeletonEl.style.display = 'none';
+    if (gridEl) {
+        gridEl.style.display = list.length > 0 ? 'grid' : 'none';
+    }
+    if (emptyEl) emptyEl.classList.toggle('hidden', list.length > 0);
+
+    // Update Info Subtitle
+    var currentShown = Math.min(list.length, currentPage * pageSize);
     var totalAll = document.querySelectorAll('.barang-card').length;
     var infoEl = document.getElementById('katalogInfo');
     if (infoEl) {
-        infoEl.textContent = 'Menampilkan ' + list.length + ' dari ' + totalAll + ' barang';
+        infoEl.textContent = 'Menampilkan ' + currentShown + ' dari ' + totalAll + ' barang';
     }
 
-    var pager = document.getElementById('katalogPager');
-    if (!pager) return;
-    if (totalPages <= 1 || !list.length) { pager.innerHTML = ''; return; }
-    var btn = 'min-w-[2.5rem] h-10 px-3 rounded-xl border-2 text-sm font-bold transition ';
-    var html = '<button type="button" onclick="goPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '')
-        + ' class="' + btn + 'border-gray-200 bg-white text-slate-600 disabled:opacity-40 hover:border-blue-800">Prev</button>';
-    var pages = [];
-    if (totalPages <= 7) {
-        for (var p = 1; p <= totalPages; p++) pages.push(p);
-    } else if (currentPage <= 4) {
-        pages = [1, 2, 3, 4, 5, '...', totalPages];
-    } else if (currentPage >= totalPages - 3) {
-        pages = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    } else {
-        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
-    }
-    pages.forEach(function (p) {
-        if (p === '...') {
-            html += '<span class="px-1 text-sm font-bold text-slate-400">...</span>';
-        } else if (p === currentPage) {
-            html += '<button type="button" class="' + btn + 'border-blue-900 bg-blue-900 text-white">' + p + '</button>';
+    // Toggle Tombol Muat Lebih Banyak (sesuai status jumlah barang yang tampil)
+    if (loadMoreWrap) {
+        if (!list.length || currentShown >= list.length) {
+            loadMoreWrap.classList.add('hidden');
         } else {
-            html += '<button type="button" onclick="goPage(' + p + ')" class="' + btn + 'border-gray-200 bg-white text-slate-600 hover:border-blue-800">' + p + '</button>';
+            loadMoreWrap.classList.remove('hidden');
         }
-    });
-    html += '<button type="button" onclick="goPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '')
-        + ' class="' + btn + 'border-gray-200 bg-white text-slate-600 disabled:opacity-40 hover:border-blue-800">Next</button>';
-    pager.innerHTML = html;
+    }
+
     syncCards(cartData.items || []);
+    if (typeof callback === 'function') callback();
 }
 
-function goPage(p, skipScroll) {
+function loadMoreItems() {
+    var btn = document.getElementById('btnLoadMore');
+    var txt = document.getElementById('btnLoadMoreText');
+    var spinner = document.getElementById('btnLoadMoreSpinner');
+    var list = visibleCards();
+    var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+
+    if (currentPage >= totalPages) return;
+
+    if (btn) btn.disabled = true;
+    if (txt) txt.textContent = 'Memuat...';
+    if (spinner) spinner.classList.remove('hidden');
+
+    // Tampilkan skeleton langsung di slot grid berikutnya di samping barang yang sudah ada
+    showAppendSkeletons();
+
+    setTimeout(function () {
+        removeAppendSkeletons();
+
+        currentPage++;
+        try {
+            sessionStorage.setItem('katalog_page', currentPage);
+        } catch (e) {}
+        updateKatalogUrl(currentPage, activeKat);
+
+        list.forEach(function (el, i) {
+            if (i < currentPage * pageSize) {
+                el.style.display = '';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+
+        var currentShown = Math.min(list.length, currentPage * pageSize);
+        var totalAll = document.querySelectorAll('.barang-card').length;
+        var infoEl = document.getElementById('katalogInfo');
+        if (infoEl) {
+            infoEl.textContent = 'Menampilkan ' + currentShown + ' dari ' + totalAll + ' barang';
+        }
+
+        var loadMoreWrap = document.getElementById('loadMoreContainer');
+        if (loadMoreWrap) {
+            loadMoreWrap.classList.toggle('hidden', currentShown >= list.length);
+        }
+
+        if (btn) btn.disabled = false;
+        if (txt) txt.textContent = 'Muat Lebih Banyak';
+        if (spinner) spinner.classList.add('hidden');
+
+        syncCards(cartData.items || []);
+    }, 350);
+}
+
+function goPage(p) {
     currentPage = p;
-    try {
-        sessionStorage.setItem('katalog_page', p);
-    } catch (e) {}
-    updateKatalogUrl(currentPage, activeKat);
-    renderPage();
-    if (!skipScroll) {
-        document.getElementById('katalogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    renderPage(true);
 }
 
 function cartQty(id) {
@@ -1114,11 +1272,7 @@ function validCheckout() {
     } catch (e) {}
 })();
 
-refreshCart();
-renderPage();
-
-// Jika kembali dari detail_barang, lakukan smooth scroll ke barang yang bersangkutan
-(function scrollToLastViewedBarang() {
+function scrollToLastViewedBarang() {
     try {
         var lastId = sessionStorage.getItem('katalog_last_barang_id');
         if (lastId) {
@@ -1127,10 +1281,13 @@ renderPage();
                 if (card && card.style.display !== 'none') {
                     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-            }, 180);
+            }, 80);
         }
     } catch (e) {}
-})();
+}
+
+refreshCart();
+renderPage(true, scrollToLastViewedBarang);
 
 // Tangani tombol browser Back/Forward saat halaman di-restore dari bfcache
 window.addEventListener('pageshow', function () {

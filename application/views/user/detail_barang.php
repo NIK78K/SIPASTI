@@ -62,6 +62,63 @@ $infoItems[] = [
         </div>
     </nav>
 
+    <!-- ================= SKELETON LOADING DETAIL BARANG (ALA MARKETPLACE LAZADA) ================= -->
+    <div id="detailSkeleton" class="space-y-16 pointer-events-none select-none">
+        <section class="grid gap-8 lg:grid-cols-2 lg:gap-10 items-start">
+            <!-- Gambar Skeleton Kiri -->
+            <div class="rounded-[28px] bg-slate-100 overflow-hidden aspect-square lg:aspect-[4/4.2] flex items-center justify-center skeleton-shimmer">
+                <span class="text-3xl lg:text-4xl font-black tracking-widest text-slate-300/60 uppercase font-sans select-none">SIPASTI</span>
+            </div>
+
+            <!-- Info Skeleton Kanan -->
+            <div class="space-y-5">
+                <div class="w-28 h-7 rounded-full skeleton-shimmer"></div>
+                <div class="space-y-2.5">
+                    <div class="h-8 md:h-10 w-4/5 rounded-xl skeleton-shimmer"></div>
+                    <div class="h-8 md:h-10 w-1/2 rounded-xl skeleton-shimmer"></div>
+                    <div class="h-4 w-2/5 rounded-md skeleton-shimmer mt-2"></div>
+                </div>
+                <div class="pt-2">
+                    <div class="h-14 w-full rounded-full skeleton-shimmer"></div>
+                </div>
+                <div class="space-y-3 pt-2">
+                    <div class="h-14 w-full rounded-2xl skeleton-shimmer"></div>
+                    <div class="h-28 w-full rounded-2xl skeleton-shimmer"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Barang Terkait Skeleton -->
+        <section class="space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-10 h-0.5 bg-slate-200 mx-auto rounded"></div>
+                <div class="w-40 h-6 rounded-md skeleton-shimmer mx-auto"></div>
+                <div class="w-56 h-4 rounded-md skeleton-shimmer mx-auto"></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <?php for ($sk = 0; $sk < 4; $sk++): ?>
+                <div class="skeleton-card flex flex-col p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center skeleton-shimmer">
+                        <span class="text-xl font-black tracking-widest text-slate-300/60 uppercase font-sans">SIPASTI</span>
+                    </div>
+                    <div class="pt-3 flex flex-col gap-2 flex-1">
+                        <div class="h-3.5 w-full rounded-md skeleton-shimmer"></div>
+                        <div class="h-3.5 w-3/5 rounded-md skeleton-shimmer"></div>
+                        <div class="h-3 w-1/3 rounded-md skeleton-shimmer mt-0.5"></div>
+                        <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
+                        <div class="mt-auto pt-2.5 w-full">
+                            <div class="h-[38px] w-full rounded-xl skeleton-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+        </section>
+    </div>
+
+    <!-- ================= KONTEN ASLI DETAIL BARANG ================= -->
+    <div id="detailContent" style="display:none" class="space-y-16">
+
     <!-- ================= DETAIL: GAMBAR KIRI, INFO KANAN ================= -->
     <section class="grid gap-8 lg:grid-cols-2 lg:gap-10 items-start">
 
@@ -408,6 +465,8 @@ $infoItems[] = [
     </section>
     <?php endif; ?>
 
+    </div><!-- end #detailContent -->
+
 </div>
 
 <!-- ================= FLOATING CART ================= -->
@@ -543,6 +602,17 @@ $infoItems[] = [
 }
 .cart-shake {
     animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+/* Skeleton Loading Shimmer (Gaya Marketplace Lazada) */
+@keyframes skeletonShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 35%, #ffffff 50%, #e2e8f0 65%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
 }
 </style>
 
@@ -811,4 +881,18 @@ function validCheckout() {
 }
 
 refreshCart();
+
+(function initDetailSkeleton() {
+    var sk = document.getElementById('detailSkeleton');
+    var ct = document.getElementById('detailContent');
+    setTimeout(function () {
+        if (sk) sk.style.display = 'none';
+        if (ct) ct.style.display = '';
+    }, 280);
+
+    window.addEventListener('pageshow', function () {
+        if (sk) sk.style.display = 'none';
+        if (ct) ct.style.display = '';
+    });
+})();
 </script>
