@@ -1,16 +1,15 @@
-<!-- ================= BACK ================= -->
+<!-- ================= BREADCRUMB ================= -->
 <div class="max-w-7xl mx-auto mt-6 mb-5 px-4">
-    <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+    <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm min-w-0">
         <a href="<?= base_url('user/dashboard') ?>"
-           class="text-slate-500 hover:text-slate-800 font-medium transition">
+           class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
             Dashboard
         </a>
-        <span class="text-slate-300 font-normal">/</span>
-        <a href="<?= base_url('user_ticket/create_persediaan') ?>"
-           class="text-[#0B2E6B] hover:text-blue-950 font-bold transition">
-            Pilih Layanan Lain
-        </a>
-    </div>
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+        </svg>
+        <span class="text-slate-900 font-medium truncate">Katalog Persediaan</span>
+    </nav>
 </div>
 
 <div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">
@@ -1118,7 +1117,7 @@ function validCheckout() {
 refreshCart();
 renderPage();
 
-// Jika kembali dari detail_barang, lakukan smooth scroll dan sorot barang yang bersangkutan
+// Jika kembali dari detail_barang, lakukan smooth scroll ke barang yang bersangkutan
 (function scrollToLastViewedBarang() {
     try {
         var lastId = sessionStorage.getItem('katalog_last_barang_id');
@@ -1127,10 +1126,6 @@ renderPage();
                 var card = document.querySelector('.barang-card[data-id="' + lastId + '"]');
                 if (card && card.style.display !== 'none') {
                     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    card.classList.add('ring-2', 'ring-blue-600', 'ring-offset-2');
-                    setTimeout(function() {
-                        card.classList.remove('ring-2', 'ring-blue-600', 'ring-offset-2');
-                    }, 1800);
                 }
             }, 180);
         }

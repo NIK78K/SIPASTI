@@ -43,20 +43,22 @@ $infoItems[] = [
 
     <!-- ================= BREADCRUMB ================= -->
     <nav aria-label="Breadcrumb">
-        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+        <div class="flex items-center gap-2 text-sm min-w-0">
             <a href="<?= base_url('user/dashboard') ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
+               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
                 Dashboard
             </a>
-            <span class="text-slate-300 font-normal">/</span>
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+            </svg>
             <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
+               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
                 Katalog
             </a>
-            <span class="text-slate-300 font-normal">/</span>
-            <span class="text-[#0B2E6B] font-bold">
-                Detail Barang
-            </span>
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+            </svg>
+            <span class="text-slate-900 font-medium truncate"><?= htmlspecialchars($namaBarang) ?></span>
         </div>
     </nav>
 
@@ -68,7 +70,7 @@ $infoItems[] = [
             <?php if ($adaGambar): ?>
                 <img src="<?= base_url('uploads/persediaan/' . $barang->gambar) ?>"
                      alt="<?= htmlspecialchars($namaBarang) ?>"
-                     class="w-full h-full object-contain p-8 md:p-12">
+                     class="w-full h-full object-contain p-8 md:p-12 mix-blend-multiply">
             <?php else: ?>
                 <div class="flex flex-col items-center gap-3 text-slate-400">
                     <svg class="w-16 h-16" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" aria-hidden="true">

@@ -74,25 +74,29 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
 
     <!-- ================= NAV ATAS ================= -->
     <nav aria-label="Breadcrumb">
-        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+        <div class="flex items-center gap-2 text-sm min-w-0">
             <a href="<?= base_url('user/dashboard') ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
+               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
                 Dashboard
             </a>
-            <span class="text-slate-300 font-normal">/</span>
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+            </svg>
             <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
+               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
                 Katalog
             </a>
-            <span class="text-slate-300 font-normal">/</span>
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+            </svg>
             <a href="<?= $detailUrl ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
-                Detail Barang
+               class="text-[#0B2E6B] hover:text-blue-950 transition truncate">
+                <?= htmlspecialchars($namaBarang) ?>
             </a>
-            <span class="text-slate-300 font-normal">/</span>
-            <span class="text-[#0B2E6B] font-bold">
-                Ulasan Barang
-            </span>
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
+            </svg>
+            <span class="text-slate-900 font-medium whitespace-nowrap">Ulasan Barang</span>
         </div>
     </nav>
 
@@ -100,7 +104,7 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
     <header class="bg-white rounded-[20px] border border-slate-200 px-5 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
         <div class="w-[72px] h-[72px] rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
             <?php if ($has_foto): ?>
-                <img src="<?= $foto_url ?>" alt="<?= htmlspecialchars($namaBarang) ?>" class="w-full h-full object-contain p-1.5">
+                <img src="<?= $foto_url ?>" alt="<?= htmlspecialchars($namaBarang) ?>" class="w-full h-full object-contain p-1.5 mix-blend-multiply">
             <?php else: ?>
                 <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10L4 17V7"/>
