@@ -73,7 +73,7 @@
     <?php endif ?>
 
     <!-- ================= MAIN LAYOUT (SIDEBAR KATEGORI & KATALOG GRID) ================= -->
-    <div class="flex flex-col lg:flex-row items-start gap-6">
+    <div id="katalogMainLayout" class="flex flex-col lg:flex-row items-start gap-6 lg:min-h-[750px] scroll-mt-6">
 
         <!-- ================= SIDEBAR KATEGORI ================= -->
         <div class="category-sidebar w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-6 z-20">
@@ -106,7 +106,7 @@
         </div>
 
         <!-- ================= MAIN CONTENT ================= -->
-        <div class="flex-1 min-w-0 space-y-4">
+        <div class="flex-1 min-w-0 space-y-4 lg:min-h-[750px]">
 
             <!-- SEARCH BAR & FILTER SORT -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -672,6 +672,15 @@ function setKategori(id, btn) {
     try {
         sessionStorage.setItem('katalog_kat', activeKat);
     } catch (e) {}
+
+    var layout = document.getElementById('katalogMainLayout');
+    if (layout) {
+        var rect = layout.getBoundingClientRect();
+        if (rect.top < 24) {
+            layout.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
     applyFilter(true);
 }
 
