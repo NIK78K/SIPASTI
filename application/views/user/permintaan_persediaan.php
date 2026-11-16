@@ -76,85 +76,76 @@
     <!-- ================= MAIN LAYOUT (SIDEBAR KATEGORI & KATALOG GRID) ================= -->
     <div id="katalogMainLayout" class="flex flex-col lg:flex-row items-start gap-6 lg:min-h-[750px] scroll-mt-6">
 
-        <!-- ================= SIDEBAR KATEGORI (SHOPEE STYLE ALA IMAGE 1) ================= -->
+        <!-- ================= SIDEBAR KATEGORI (CLEAN TANPA CARD SESUAI GAMBAR) ================= -->
         <div class="category-sidebar w-full lg:w-56 flex-shrink-0 lg:sticky lg:top-6 z-20">
-            <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
-                <!-- Header FILTER dengan icon corong -->
-                <div class="flex items-center gap-2 pb-3 mb-2 border-b border-slate-200/80 text-slate-800 font-extrabold text-sm tracking-wide">
-                    <svg class="w-4 h-4 text-slate-800 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                    </svg>
-                    <span>FILTER</span>
-                </div>
+            <!-- Header FILTER dengan icon corong -->
+            <div class="flex items-center gap-2 pb-3 mb-2 border-b border-slate-200 text-slate-800 font-extrabold text-sm tracking-wide">
+                <svg class="w-4 h-4 text-slate-800 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+                <span>FILTER</span>
+            </div>
 
-                <p class="text-xs font-bold text-slate-800 mt-3 mb-2 px-1">Kategori</p>
-                <div id="categoryList" class="category-list space-y-0.5">
-                    <!-- Item Semua -->
-                    <button type="button" data-kat="all" onclick="setKategori('all', this)"
-                        class="kat-chip category-item category-item-active w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-semibold transition text-left" aria-label="Tampilkan semua kategori">
-                        <span>Semua</span>
-                        <span class="category-badge"><?= count($barang_list ?? []) ?></span>
-                    </button>
-                    <!-- Item per Kategori -->
-                    <?php 
-                    $kat_counts = [];
-                    foreach (($barang_list ?? []) as $bi) {
-                        $kid = (string)($bi['kategori_id'] ?? '');
-                        $kat_counts[$kid] = ($kat_counts[$kid] ?? 0) + 1;
-                    }
-                    ?>
-                    <?php foreach (($kategori_list ?? []) as $k): ?>
-                    <button type="button" data-kat="<?= (int) $k->id ?>" onclick="setKategori('<?= (int) $k->id ?>', this)"
-                        class="kat-chip category-item w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-medium transition text-left" aria-label="Tampilkan kategori <?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?>">
-                        <span class="truncate pr-2"><?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?></span>
-                        <span class="category-badge"><?= (int)($kat_counts[(string)$k->id] ?? 0) ?></span>
-                    </button>
-                    <?php endforeach ?>
-                </div>
+            <p class="text-xs font-bold text-slate-800 mt-3 mb-2 px-1">Kategori</p>
+            <div id="categoryList" class="category-list space-y-0.5">
+                <!-- Item Semua -->
+                <button type="button" data-kat="all" onclick="setKategori('all', this)"
+                    class="kat-chip category-item category-item-active w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-semibold transition text-left" aria-label="Tampilkan semua kategori">
+                    <span>Semua</span>
+                    <span class="category-badge"><?= count($barang_list ?? []) ?></span>
+                </button>
+                <!-- Item per Kategori -->
+                <?php 
+                $kat_counts = [];
+                foreach (($barang_list ?? []) as $bi) {
+                    $kid = (string)($bi['kategori_id'] ?? '');
+                    $kat_counts[$kid] = ($kat_counts[$kid] ?? 0) + 1;
+                }
+                ?>
+                <?php foreach (($kategori_list ?? []) as $k): ?>
+                <button type="button" data-kat="<?= (int) $k->id ?>" onclick="setKategori('<?= (int) $k->id ?>', this)"
+                    class="kat-chip category-item w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-medium transition text-left" aria-label="Tampilkan kategori <?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?>">
+                    <span class="truncate pr-2"><?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="category-badge"><?= (int)($kat_counts[(string)$k->id] ?? 0) ?></span>
+                </button>
+                <?php endforeach ?>
             </div>
         </div>
 
         <!-- ================= MAIN CONTENT ================= -->
-        <div class="flex-1 min-w-0 space-y-3 lg:min-h-[750px]">
+        <div class="flex-1 min-w-0 space-y-4 lg:min-h-[750px]">
 
-            <!-- SEARCH BAR -->
-            <div class="relative w-full">
-                <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z"/>
-                </svg>
-                <input id="searchInput" type="text" placeholder="Cari nama atau kode barang..."
-                    class="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-slate-200/90 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 shadow-sm transition">
-            </div>
-
-            <!-- SHOPEE STYLE SORT BAR (ALA IMAGE 1) -->
-            <div class="bg-slate-100/90 rounded-xl p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2.5 text-xs border border-slate-200/60">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-slate-500 font-semibold px-1">Urutkan</span>
-                    <button type="button" onclick="setSortMode('name_asc')" id="sortBtn-name_asc"
-                        class="sort-tab-btn h-9 px-4 rounded-lg font-bold transition text-white bg-[#ee4d2d] shadow-sm cursor-pointer">
-                        Nama A-Z
-                    </button>
-                    <button type="button" onclick="setSortMode('terlaris')" id="sortBtn-terlaris"
-                        class="sort-tab-btn h-9 px-4 rounded-lg font-semibold transition bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer">
-                        Terlaris
-                    </button>
-                    <div class="relative">
-                        <select id="sortFilter" onchange="handleSortSelect(this.value)"
-                            class="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 font-semibold text-slate-700 hover:border-slate-300 focus:outline-none cursor-pointer shadow-sm">
-                            <option value="name_asc">Lainnya...</option>
-                            <option value="name_desc">Nama Z-A</option>
-                            <option value="rating_highest">Rating Tertinggi</option>
-                            <option value="rating_lowest">Rating Terburuk</option>
-                        </select>
-                        <svg class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </div>
+            <!-- SEARCH BAR & FILTER SORT -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                    <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z"/>
+                    </svg>
+                    <input id="searchInput" type="text" placeholder="Cari nama atau kode barang..."
+                        class="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-slate-200/90 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 shadow-sm transition">
                 </div>
-                <p id="katalogInfo" class="text-xs text-slate-500 font-medium px-1">
-                    Menampilkan <?= count($barang_list ?? []) ?> barang
-                </p>
+
+                <!-- Filter Sort Dropdown -->
+                <div class="relative sm:w-48 flex-shrink-0">
+                    <select id="sortFilter" onchange="applyFilter(true)"
+                        class="w-full h-11 appearance-none bg-white border border-slate-200/90 rounded-xl px-4 pr-9 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 shadow-sm cursor-pointer transition">
+                        <option value="name_asc" selected>Nama A-Z</option>
+                        <option value="name_desc">Nama Z-A</option>
+                        <option value="terlaris">Terlaris</option>
+                        <option value="rating_highest">Rating Tertinggi</option>
+                        <option value="rating_lowest">Rating Terburuk</option>
+                    </select>
+                    <svg class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </div>
             </div>
+
+            <!-- SUBTITLE INFO -->
+            <p id="katalogInfo" class="text-xs text-slate-500 font-medium px-1">
+                Menampilkan <?= count($barang_list ?? []) ?> barang
+            </p>
 
             <!-- ================= GRID KATALOG ================= -->
             <div id="emptyState" class="hidden bg-white rounded-2xl p-10 shadow-sm border border-slate-200 text-center">
@@ -731,40 +722,6 @@ function applyFilter(useSkeleton) {
     renderPage(useSkeleton !== false);
 }
 
-function setSortMode(val) {
-    var sel = document.getElementById('sortFilter');
-    if (sel) {
-        sel.value = val;
-    }
-    updateSortButtons(val);
-    applyFilter(true);
-}
-
-function handleSortSelect(val) {
-    updateSortButtons(val);
-    applyFilter(true);
-}
-
-function updateSortButtons(val) {
-    var btnName = document.getElementById('sortBtn-name_asc');
-    var btnTerlaris = document.getElementById('sortBtn-terlaris');
-
-    if (btnName) {
-        if (val === 'name_asc') {
-            btnName.className = 'sort-tab-btn h-9 px-4 rounded-lg font-bold transition text-white bg-[#ee4d2d] shadow-sm cursor-pointer';
-        } else {
-            btnName.className = 'sort-tab-btn h-9 px-4 rounded-lg font-semibold transition bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer';
-        }
-    }
-    if (btnTerlaris) {
-        if (val === 'terlaris') {
-            btnTerlaris.className = 'sort-tab-btn h-9 px-4 rounded-lg font-bold transition text-white bg-[#ee4d2d] shadow-sm cursor-pointer';
-        } else {
-            btnTerlaris.className = 'sort-tab-btn h-9 px-4 rounded-lg font-semibold transition bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer';
-        }
-    }
-}
-
 function visibleCards() {
     var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
     var sortVal = document.getElementById('sortFilter') ? document.getElementById('sortFilter').value : 'name_asc';
@@ -1320,7 +1277,6 @@ function validCheckout() {
         if (sSort) {
             var sSel = document.getElementById('sortFilter');
             if (sSel) sSel.value = sSort;
-            updateSortButtons(sSort);
         }
 
         if (!isNaN(uPage) && uPage >= 1) {
