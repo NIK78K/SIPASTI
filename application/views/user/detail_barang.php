@@ -514,7 +514,6 @@ $infoItems[] = [
         <button type="submit" class="w-full h-14 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-xl shadow-slate-900/20 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
             CHECKOUT NOW
         </button>
-        <button type="button" onclick="toggleCart(false)" class="w-full h-11 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-slate-600 font-bold text-xs transition-all cursor-pointer">Tutup</button>
     </form>
 </aside>
 
