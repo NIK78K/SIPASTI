@@ -43,22 +43,18 @@ $infoItems[] = [
 
     <!-- ================= BREADCRUMB ================= -->
     <nav aria-label="Breadcrumb">
-        <div class="flex items-center gap-2 text-sm min-w-0">
+        <div class="flex items-center gap-2 text-sm text-slate-400 font-normal min-w-0">
             <a href="<?= base_url('user/dashboard') ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Dashboard
             </a>
-            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-            </svg>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Katalog
             </a>
-            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-            </svg>
-            <span class="text-slate-900 font-medium truncate"><?= htmlspecialchars($namaBarang) ?></span>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
+            <span class="text-slate-700 font-semibold truncate"><?= htmlspecialchars($namaBarang) ?></span>
         </div>
     </nav>
 
@@ -519,64 +515,108 @@ $infoItems[] = [
 <style>
 #cartDrawer.open { display: flex; }
 #cartOverlay.open { display: block; }
-.detail-stepper { display: flex; align-items: center; width: 100%; height: 56px; overflow: hidden; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; }
-.detail-stepper button { width: 58px; height: 100%; flex: 0 0 58px; border: 0; background: transparent; color: #173f75; font-size: 22px; font-weight: 800; cursor: pointer; }
-.detail-stepper button:hover { background: #dbeafe; }
-.detail-stepper input { width: 100%; min-width: 0; height: 32px; border: 0; border-right: 1px solid #bfdbfe; border-left: 1px solid #bfdbfe; background: #fff; color: #173f75; font-size: 16px; font-weight: 850; text-align: center; }
-.detail-stepper input::-webkit-outer-spin-button, .detail-stepper input::-webkit-inner-spin-button { appearance: none; margin: 0; }
-.detail-stepper input[type=number] { appearance: textfield; }
+.detail-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+    height: 56px;
+}
+.detail-stepper button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 9999px;
+    border: 0;
+    background: #f1f5f9;
+    color: #1e293b;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .12s ease;
+}
+.detail-stepper button:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.detail-stepper button:active {
+    transform: scale(.88);
+}
+.detail-stepper input {
+    width: 48px;
+    min-width: 0;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    color: #0f172a;
+    font-size: 20px;
+    font-weight: 800;
+    text-align: center;
+    padding: 0;
+}
+.detail-stepper input:focus {
+    outline: none;
+}
+.detail-stepper input::-webkit-outer-spin-button,
+.detail-stepper input::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+}
+.detail-stepper input[type=number] {
+    appearance: textfield;
+}
 
 .qty-stepper {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 12px;
     width: 100%;
     height: 38px;
-    overflow: hidden;
-    border: 1px solid #bfdbfe;
-    border-radius: 12px;
-    background: #eff6ff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
 }
 .qty-stepper-button {
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 100%;
-    flex: 0 0 42px;
-    border: 0;
-    background: transparent;
-    color: #1e3a8a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #1e293b;
+    border: none;
     font-size: 18px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
-    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+    transition: background-color .15s ease, transform .12s ease;
 }
 .qty-stepper-button:hover {
-    background: #dbeafe;
-    color: #172554;
+    background: #e2e8f0;
+    color: #0f172a;
 }
 .qty-stepper-button:active {
     transform: scale(.88);
 }
-.qty-stepper-button:focus-visible,
-.qty-stepper-input:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: -2px;
+.qty-stepper-button:focus-visible {
+    outline: 2px solid #0B2E6B;
+    outline-offset: 2px;
 }
 .qty-stepper-input {
-    width: 100%;
-    height: 24px;
+    width: 38px;
+    height: 32px;
     min-width: 0;
-    border: 0;
-    border-right: 1px solid #bfdbfe;
-    border-left: 1px solid #bfdbfe;
-    background: #fff;
-    color: #172554;
-    font-size: 14px;
+    border: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 16px;
     font-weight: 800;
     line-height: 1;
     text-align: center;
+    padding: 0;
 }
 .qty-stepper-input:focus {
     outline: none;

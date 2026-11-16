@@ -1,18 +1,18 @@
 <div class="max-w-5xl mx-auto mt-12 mb-24 space-y-8 px-4">
 
-    <!-- BACK -->
+    <!-- BACK / BREADCRUMB -->
     <div>
-        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-slate-400 font-normal">
             <a href="<?= base_url('user/dashboard') ?>"
-               class="text-slate-500 hover:text-slate-800 font-medium transition">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Dashboard
             </a>
-            <span class="text-slate-300 font-normal">/</span>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a href="<?= base_url('user_ticket/create_persediaan') ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 font-bold transition">
+               class="text-slate-700 hover:text-slate-900 font-semibold transition whitespace-nowrap">
                 Pilih Layanan Lain
             </a>
-        </div>
+        </nav>
     </div>
 
     <!-- ================= HEADER ================= -->

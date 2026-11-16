@@ -51,7 +51,7 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
 
     #cartDrawer.open { display: flex !important; }
     #cartOverlay.open { display: block !important; }
-    .detail-stepper { display: flex; align-items: center; }
+    .detail-stepper { display: flex; align-items: center; justify-content: center; gap: 12px; }
 
     @keyframes cartShake {
         0%   { transform: scale(1) rotate(0deg); }
@@ -85,29 +85,23 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
 
     <!-- ================= NAV ATAS ================= -->
     <nav aria-label="Breadcrumb">
-        <div class="flex items-center gap-2 text-sm min-w-0">
+        <div class="flex items-center gap-2 text-sm text-slate-400 font-normal min-w-0">
             <a href="<?= base_url('user/dashboard') ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Dashboard
             </a>
-            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-            </svg>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Katalog
             </a>
-            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-            </svg>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a href="<?= $detailUrl ?>"
-               class="text-[#0B2E6B] hover:text-blue-950 transition truncate">
+               class="text-slate-400 hover:text-slate-700 transition truncate">
                 <?= htmlspecialchars($namaBarang) ?>
             </a>
-            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-            </svg>
-            <span class="text-slate-900 font-medium whitespace-nowrap">Ulasan Barang</span>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
+            <span class="text-slate-700 font-semibold whitespace-nowrap">Ulasan Barang</span>
         </div>
     </nav>
 
@@ -219,10 +213,10 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
                 </svg>
                 <span>+ Keranjang</span>
             </button>
-            <div id="detailStepper" class="detail-stepper h-12 border-2 border-blue-900 bg-blue-50/50 rounded-full overflow-hidden items-center" style="display:none">
-                <button type="button" onclick="detailStep(-1)" class="w-10 h-full font-black text-blue-900 hover:bg-blue-100 transition flex items-center justify-center text-lg cursor-pointer" aria-label="Kurangi jumlah">−</button>
-                <input id="detailQty" type="number" value="1" min="1" onchange="detailInput(this.value)" class="w-12 h-full text-center text-sm font-extrabold text-blue-950 bg-white border-x-2 border-blue-900 focus:outline-none" aria-label="Jumlah barang">
-                <button type="button" onclick="detailStep(1)" class="w-10 h-full font-black text-blue-900 hover:bg-blue-100 transition flex items-center justify-center text-lg cursor-pointer" aria-label="Tambah jumlah">+</button>
+            <div id="detailStepper" class="detail-stepper h-12 items-center justify-center gap-3" style="display:none">
+                <button type="button" onclick="detailStep(-1)" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center text-lg cursor-pointer transition" aria-label="Kurangi jumlah">−</button>
+                <input id="detailQty" type="number" value="1" min="1" onchange="detailInput(this.value)" class="w-10 text-center text-base font-extrabold text-slate-900 bg-transparent border-0 focus:outline-none" aria-label="Jumlah barang">
+                <button type="button" onclick="detailStep(1)" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center text-lg cursor-pointer transition" aria-label="Tambah jumlah">+</button>
             </div>
         </div>
     </header>

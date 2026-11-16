@@ -1,16 +1,16 @@
 <!-- ================= BREADCRUMB ================= -->
 <div class="max-w-7xl mx-auto mt-6 mb-5 px-4">
-    <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
+    <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-slate-400 font-normal">
         <a href="<?= base_url('user/dashboard') ?>"
-           class="text-slate-500 hover:text-slate-800 font-medium transition">
+           class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
             Dashboard
         </a>
-        <span class="text-slate-300 font-normal">/</span>
+        <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
         <a href="<?= base_url('user_ticket/create_persediaan') ?>"
-           class="text-[#0B2E6B] hover:text-blue-950 font-bold transition">
+           class="text-slate-700 hover:text-slate-900 font-semibold transition whitespace-nowrap">
             Pilih Layanan Lain
         </a>
-    </div>
+    </nav>
 </div>
 
 <div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">
@@ -497,54 +497,50 @@
 .qty-stepper {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 12px;
     width: 100%;
     height: 38px;
-    overflow: hidden;
-    border: 1px solid #bfdbfe;
-    border-radius: 12px;
-    background: #eff6ff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
 }
 .qty-stepper-button {
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 100%;
-    flex: 0 0 42px;
-    border: 0;
-    background: transparent;
-    color: #1e3a8a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #1e293b;
+    border: none;
     font-size: 18px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
-    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+    transition: background-color .15s ease, transform .12s ease;
 }
 .qty-stepper-button:hover {
-    background: #dbeafe;
-    color: #172554;
+    background: #e2e8f0;
+    color: #0f172a;
 }
 .qty-stepper-button:active {
     transform: scale(.88);
 }
-.qty-stepper-button:focus-visible,
-.qty-stepper-input:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: -2px;
+.qty-stepper-button:focus-visible {
+    outline: 2px solid #0B2E6B;
+    outline-offset: 2px;
 }
 .qty-stepper-input {
-    width: 100%;
-    height: 24px;
+    width: 38px;
+    height: 32px;
     min-width: 0;
-    border: 0;
-    border-right: 1px solid #bfdbfe;
-    border-left: 1px solid #bfdbfe;
-    background: #fff;
-    color: #172554;
-    font-size: 14px;
+    border: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 16px;
     font-weight: 800;
     line-height: 1;
     text-align: center;
+    padding: 0;
 }
 .qty-stepper-input:focus {
     outline: none;
