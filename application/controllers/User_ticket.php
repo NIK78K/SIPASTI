@@ -348,20 +348,23 @@ private function _cart_persediaan_summary()
 
     foreach ($cart as $bid => $qty) {
         $b = $this->db
-            ->select('id, kode_barang, nama_barang, satuan, status')
+            ->select('id, kode_barang, nama_barang, satuan, status, gambar')
             ->where('id', (int) $bid)
             ->get('master_barang_persediaan')
             ->row_array();
         if (!$b) { unset($cart[$bid]); $pruned = true; continue; }
         $sisa = $this->User_ticket_model->get_sisa_persediaan((int) $bid, (int) date('n'), (int) date('Y'));
+        $gambar_url = !empty($b['gambar']) && file_exists(FCPATH . 'uploads/persediaan/' . $b['gambar'])
+            ? base_url('uploads/persediaan/' . $b['gambar']) : null;
         $items[] = [
-            'barang_id' => (int) $bid,
-            'kode'      => $b['kode_barang'],
-            'nama'      => $b['nama_barang'],
-            'satuan'    => $b['satuan'],
-            'status'    => $b['status'],
-            'sisa'      => (int) $sisa,
-            'qty'       => (int) $qty,
+            'barang_id'  => (int) $bid,
+            'kode'       => $b['kode_barang'],
+            'nama'       => $b['nama_barang'],
+            'satuan'     => $b['satuan'],
+            'status'     => $b['status'],
+            'gambar_url' => $gambar_url,
+            'sisa'       => (int) $sisa,
+            'qty'        => (int) $qty,
         ];
         $total += (int) $qty;
     }

@@ -410,10 +410,14 @@
                     class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
             </div>
         </div>
-        <button type="submit" class="w-full h-14 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-sm transition-all shadow-lg shadow-blue-900/25 active:scale-[.99]">
-            Buat Permintaan &bull; Tandai Kebutuhan
+        <div class="pt-2 pb-1 flex items-baseline justify-between border-t border-slate-200/80">
+            <span class="text-sm font-bold text-slate-700">Total</span>
+            <span id="cartDrawerTotal" class="text-base font-black text-slate-900">0 Item</span>
+        </div>
+        <button type="submit" class="w-full h-14 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-xl shadow-slate-900/20 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
+            CHECKOUT NOW
         </button>
-        <button type="button" onclick="toggleCart(false)" class="w-full h-12 rounded-xl bg-white border-2 border-gray-200 hover:border-gray-300 text-slate-600 font-bold text-sm transition-all">Batal</button>
+        <button type="button" onclick="toggleCart(false)" class="w-full h-11 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-slate-600 font-bold text-xs transition-all cursor-pointer">Tutup</button>
     </form>
 </aside>
 
@@ -1021,6 +1025,10 @@ function refreshCart() {
                 badge.classList.toggle('inline-flex', res.total_qty > 0);
             }
             document.getElementById('cartTotalLabel').textContent = (res.count || 0) + ' jenis • ' + (res.total_qty || 0) + ' item';
+            var drawerTotal = document.getElementById('cartDrawerTotal');
+            if (drawerTotal) {
+                drawerTotal.textContent = (res.total_qty || 0) + ' Item';
+            }
             renderCartItems(res.items || []);
             syncCards(res.items || []);
         });
@@ -1045,21 +1053,40 @@ function syncCards(items) {
 
 function renderCartItems(items) {
     var box = document.getElementById('cartItems');
+    if (!box) return;
     if (!items.length) {
         box.innerHTML = '<div class="text-center py-10"><div class="text-5xl mb-3">🛒</div><p class="font-bold text-gray-700">Keranjang masih kosong</p><p class="text-sm text-gray-500">Pilih barang di katalog lalu tekan + Keranjang.</p></div>';
         return;
     }
     box.innerHTML = items.map(function (it) {
-        return '<div class="rounded-2xl border border-gray-100 shadow-sm p-4 space-y-2">'
-            + '<div class="flex items-start justify-between gap-2">'
-            + '<div><p class="font-mono text-[11px] text-slate-400">' + escapeHtml(it.kode || '') + '</p>'
-            + '<p class="font-bold text-sm text-gray-800 leading-snug">' + escapeHtml(it.nama || '') + '</p></div>'
-            + '<button type="button" onclick="cartRemove(' + it.barang_id + ')" class="text-red-500 hover:text-red-700 text-lg leading-none">×</button></div>'
+        var bid = Number(it.barang_id);
+        var q = Number(it.qty) || 1;
+        var initial = (it.nama || 'B').trim().substring(0, 2).toUpperCase();
+        var imgHtml = it.gambar_url
+            ? '<img src="' + escapeHtml(it.gambar_url) + '" alt="' + escapeHtml(it.nama || '') + '" class="w-full h-full object-contain p-1 mix-blend-multiply">'
+            : '<span class="text-xs font-black tracking-wider text-slate-300 select-none">' + escapeHtml(initial) + '</span>';
+
+        return '<div class="flex items-center gap-3.5 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:border-slate-300 transition">'
+            + '<div class="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0">'
+            + imgHtml
+            + '</div>'
+            + '<div class="flex-1 min-w-0 flex flex-col justify-between h-16 py-0.5">'
+            + '<div>'
+            + '<p class="font-bold text-sm text-slate-900 leading-tight truncate" title="' + escapeHtml(it.nama || '') + '">' + escapeHtml(it.nama || '') + '</p>'
+            + '<p class="text-[11px] font-medium text-slate-500 mt-0.5 truncate">' + escapeHtml(it.kode || '-') + (it.satuan ? ' &bull; per ' + escapeHtml(it.satuan) : '') + '</p>'
+            + '</div>'
+            + '<div class="flex items-center justify-between gap-2 mt-auto">'
             + '<div class="flex items-center gap-2">'
-            + '<button type="button" onclick="cartSetQty(' + it.barang_id + ',' + (it.qty - 1) + ')" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 font-extrabold text-slate-600">−</button>'
-            + '<span class="min-w-[3rem] text-center text-sm font-extrabold text-gray-800">' + it.qty + ' ' + escapeHtml(it.satuan || '') + '</span>'
-            + '<button type="button" onclick="cartSetQty(' + it.barang_id + ',' + (it.qty + 1) + ')" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 font-extrabold text-slate-600">+</button>'
-            + '</div></div>';
+            + '<button type="button" onclick="cartSetQty(' + bid + ',' + (q - 1) + ')" class="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs transition cursor-pointer" aria-label="Kurangi">&minus;</button>'
+            + '<span class="min-w-[1.25rem] text-center text-xs font-black text-slate-900">' + q + '</span>'
+            + '<button type="button" onclick="cartSetQty(' + bid + ',' + (q + 1) + ')" class="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs transition cursor-pointer" aria-label="Tambah">+</button>'
+            + '</div>'
+            + '<button type="button" onclick="cartRemove(' + bid + ')" class="text-[11px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider transition cursor-pointer">'
+            + 'REMOVE'
+            + '</button>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
     }).join('');
 }
 

@@ -470,10 +470,14 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
                 <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>" class="mt-1 h-12 w-full rounded-xl border-2 border-gray-200 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-800 focus:ring-4 focus:ring-blue-100 transition-all">
             </div>
         </div>
-        <button type="submit" class="h-14 w-full rounded-xl bg-blue-900 text-sm font-extrabold text-white hover:bg-blue-950 transition shadow-lg shadow-blue-900/25 active:scale-[.99]">
-            Buat Permintaan • Tandai Kebutuhan
+        <div class="pt-2 pb-1 flex items-baseline justify-between border-t border-slate-200/80">
+            <span class="text-sm font-bold text-slate-700">Total</span>
+            <span id="cartDrawerTotal" class="text-base font-black text-slate-900">0 Item</span>
+        </div>
+        <button type="submit" class="w-full h-14 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-xl shadow-slate-900/20 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
+            CHECKOUT NOW
         </button>
-        <button type="button" onclick="toggleCart(false)" class="h-12 w-full rounded-xl border-2 border-gray-200 bg-white text-sm font-bold text-slate-600 hover:border-gray-300 transition">Batal</button>
+        <button type="button" onclick="toggleCart(false)" class="w-full h-11 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-slate-600 font-bold text-xs transition-all cursor-pointer">Tutup</button>
     </form>
 </aside>
 
@@ -652,6 +656,10 @@ function refreshCart() {
             }
             var label = document.getElementById('cartTotalLabel');
             if (label) label.textContent = (data.count || 0) + ' jenis • ' + total + ' item';
+            var drawerTotal = document.getElementById('cartDrawerTotal');
+            if (drawerTotal) {
+                drawerTotal.textContent = total + ' Item';
+            }
             renderCartItems(data.items || []);
             syncDetailStepper(data.items || []);
         });
@@ -665,13 +673,34 @@ function renderCartItems(items) {
         return;
     }
     container.innerHTML = items.map(function (item) {
-        return '<div class="space-y-2 rounded-2xl border border-gray-100 p-4 shadow-sm">'
-            + '<div class="flex items-start justify-between gap-2"><div><p class="font-mono text-[11px] text-slate-400">' + escapeHtml(item.kode) + '</p>'
-            + '<p class="font-bold text-sm leading-snug text-gray-800">' + escapeHtml(item.nama || '') + '</p></div>'
-            + '<button type="button" onclick="cartRemove(' + Number(item.barang_id) + ')" class="text-lg leading-none text-red-500 hover:text-red-700 transition">×</button></div>'
-            + '<div class="flex items-center gap-2"><button type="button" onclick="cartSetQty(' + Number(item.barang_id) + ',' + (item.qty - 1) + ')" class="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 font-extrabold text-slate-700 transition">−</button>'
-            + '<span class="min-w-[3rem] text-center text-sm font-extrabold text-slate-900">' + Number(item.qty) + ' ' + escapeHtml(item.satuan || '') + '</span>'
-            + '<button type="button" onclick="cartSetQty(' + Number(item.barang_id) + ',' + (item.qty + 1) + ')" class="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 font-extrabold text-slate-700 transition">+</button></div></div>';
+        var bid = Number(item.barang_id);
+        var q = Number(item.qty) || 1;
+        var initial = (item.nama || 'B').trim().substring(0, 2).toUpperCase();
+        var imgHtml = item.gambar_url
+            ? '<img src="' + escapeHtml(item.gambar_url) + '" alt="' + escapeHtml(item.nama || '') + '" class="w-full h-full object-contain p-1 mix-blend-multiply">'
+            : '<span class="text-xs font-black tracking-wider text-slate-300 select-none">' + escapeHtml(initial) + '</span>';
+
+        return '<div class="flex items-center gap-3.5 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:border-slate-300 transition">'
+            + '<div class="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0">'
+            + imgHtml
+            + '</div>'
+            + '<div class="flex-1 min-w-0 flex flex-col justify-between h-16 py-0.5">'
+            + '<div>'
+            + '<p class="font-bold text-sm text-slate-900 leading-tight truncate" title="' + escapeHtml(item.nama || '') + '">' + escapeHtml(item.nama || '') + '</p>'
+            + '<p class="text-[11px] font-medium text-slate-500 mt-0.5 truncate">' + escapeHtml(item.kode || '-') + (item.satuan ? ' &bull; per ' + escapeHtml(item.satuan) : '') + '</p>'
+            + '</div>'
+            + '<div class="flex items-center justify-between gap-2 mt-auto">'
+            + '<div class="flex items-center gap-2">'
+            + '<button type="button" onclick="cartSetQty(' + bid + ',' + (q - 1) + ')" class="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs transition cursor-pointer" aria-label="Kurangi">&minus;</button>'
+            + '<span class="min-w-[1.25rem] text-center text-xs font-black text-slate-900">' + q + '</span>'
+            + '<button type="button" onclick="cartSetQty(' + bid + ',' + (q + 1) + ')" class="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs transition cursor-pointer" aria-label="Tambah">+</button>'
+            + '</div>'
+            + '<button type="button" onclick="cartRemove(' + bid + ')" class="text-[11px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider transition cursor-pointer">'
+            + 'REMOVE'
+            + '</button>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
     }).join('');
 }
 
