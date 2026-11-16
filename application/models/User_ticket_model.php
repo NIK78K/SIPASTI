@@ -1164,7 +1164,7 @@ public function get_katalog_persediaan_with_sisa($bulan = null, $tahun = null)
     $is_future = ($tahun > $cur_tahun) || ($tahun === $cur_tahun && $bulan > $cur_bulan);
 
     $rows = $this->db
-        ->select('b.id, b.kode_barang, b.nama_barang, b.satuan, b.gambar, b.stok_minimum, b.status, b.kategori_id, k.kode AS kategori_kode, k.nama AS kategori_nama')
+        ->select('b.id, b.kode_barang, b.nama_barang, b.satuan, b.gambar, b.stok_minimum, b.status, b.kategori_id, b.created_at, b.updated_at, k.kode AS kategori_kode, k.nama AS kategori_nama')
         ->from('master_barang_persediaan b')
         ->join('master_kategori_persediaan k', 'k.id = b.kategori_id', 'left')
         ->where('b.status', 'Aktif')

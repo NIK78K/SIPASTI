@@ -600,6 +600,9 @@ class Barang_persediaan_model extends CI_Model {
                 $upd_existing = [];
                 if ($existing->status !== 'Aktif') {
                     $upd_existing['status'] = 'Aktif';
+                    $now = date('Y-m-d H:i:s');
+                    $upd_existing['created_at'] = $now;
+                    $upd_existing['updated_at'] = $now;
                 }
                 if (empty($existing->gambar) && !empty($it['gambar'])) {
                     $upd_existing['gambar'] = $it['gambar'];

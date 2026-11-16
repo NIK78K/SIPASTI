@@ -141,6 +141,7 @@ class Barang_persediaan extends CI_Controller {
             }
         }
 
+        $now = date('Y-m-d H:i:s');
         $ok = $this->Barang_persediaan_model->insert([
             'kategori_id' => $kategori_id,
             'kode_barang' => $kode_barang,
@@ -148,7 +149,9 @@ class Barang_persediaan extends CI_Controller {
             'satuan' => $satuan,
             'gambar' => $gambar,
             'stok_minimum' => $stok_minimum,
-            'status' => $status
+            'status' => $status,
+            'created_at' => $now,
+            'updated_at' => $now
         ]);
 
         echo json_encode($ok

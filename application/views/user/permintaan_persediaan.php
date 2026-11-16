@@ -127,9 +127,10 @@
                         class="w-full h-11 appearance-none bg-white border border-slate-200/90 rounded-xl px-4 pr-9 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 shadow-sm cursor-pointer transition">
                         <option value="name_asc" selected>Nama A-Z</option>
                         <option value="name_desc">Nama Z-A</option>
+                        <option value="terbaru">Terbaru</option>
                         <option value="terlaris">Terlaris</option>
                         <option value="rating_highest">Rating Tertinggi</option>
-                        <option value="rating_lowest">Rating Terburuk</option>
+                        <option value="rating_lowest">Rating Terendah</option>
                     </select>
                     <svg class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
@@ -187,6 +188,7 @@
                      data-id="<?= $bId ?>"
                      data-kat="<?= htmlspecialchars($b['kategori_id'] ?? '') ?>"
                      data-nama="<?= htmlspecialchars(strtolower($b['nama_barang'] ?? '')) ?>"
+                     data-created="<?= !empty($b['created_at']) ? strtotime($b['created_at']) : $bId ?>"
                      data-rating="<?= (float) ($b['rating_avg'] ?? 0) ?>"
                      data-terlaris="<?= (int) ($b['total_terlaris'] ?? 0) ?>"
                      data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
@@ -721,6 +723,13 @@ function visibleCards() {
     } else if (sortVal === 'name_desc') {
         out.sort(function(a, b) {
             return (b.dataset.nama || '').localeCompare(a.dataset.nama || '');
+        });
+    } else if (sortVal === 'terbaru') {
+        out.sort(function(a, b) {
+            var tA = parseInt(a.dataset.created || 0, 10);
+            var tB = parseInt(b.dataset.created || 0, 10);
+            if (tA !== tB) return tB - tA;
+            return (parseInt(b.dataset.id || 0, 10)) - (parseInt(a.dataset.id || 0, 10));
         });
     } else if (sortVal === 'terlaris') {
         out.sort(function(a, b) {
