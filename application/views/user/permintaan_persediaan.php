@@ -90,23 +90,14 @@
             <div id="categoryList" class="category-list space-y-0.5">
                 <!-- Item Semua -->
                 <button type="button" data-kat="all" onclick="setKategori('all', this)"
-                    class="kat-chip category-item category-item-active w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-semibold transition text-left" aria-label="Tampilkan semua kategori">
+                    class="kat-chip category-item category-item-active w-full py-1.5 px-2 text-xs font-semibold transition text-left" aria-label="Tampilkan semua kategori">
                     <span>Semua</span>
-                    <span class="category-badge"><?= count($barang_list ?? []) ?></span>
                 </button>
                 <!-- Item per Kategori -->
-                <?php 
-                $kat_counts = [];
-                foreach (($barang_list ?? []) as $bi) {
-                    $kid = (string)($bi['kategori_id'] ?? '');
-                    $kat_counts[$kid] = ($kat_counts[$kid] ?? 0) + 1;
-                }
-                ?>
                 <?php foreach (($kategori_list ?? []) as $k): ?>
                 <button type="button" data-kat="<?= (int) $k->id ?>" onclick="setKategori('<?= (int) $k->id ?>', this)"
-                    class="kat-chip category-item w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-medium transition text-left" aria-label="Tampilkan kategori <?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?>">
-                    <span class="truncate pr-2"><?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?></span>
-                    <span class="category-badge"><?= (int)($kat_counts[(string)$k->id] ?? 0) ?></span>
+                    class="kat-chip category-item w-full py-1.5 px-2 text-xs font-medium transition text-left" aria-label="Tampilkan kategori <?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?>">
+                    <span class="truncate block"><?= htmlspecialchars($k->nama, ENT_QUOTES, 'UTF-8') ?></span>
                 </button>
                 <?php endforeach ?>
             </div>
@@ -450,26 +441,13 @@
     border: none;
     cursor: pointer;
     text-align: left;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    transition: color 0.15s ease;
 }
 .category-item:hover {
-    color: #ee4d2d;
-    background-color: #fff7ed !important;
+    color: #0B2E6B;
 }
 .category-item.category-item-active {
-    color: #ee4d2d !important;
-    font-weight: 700 !important;
-    background-color: transparent !important;
-}
-.category-item .category-badge {
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 500;
-    min-width: 20px;
-    text-align: right;
-}
-.category-item.category-item-active .category-badge {
-    color: #ee4d2d !important;
+    color: #0B2E6B !important;
     font-weight: 700 !important;
 }
 @media (max-width: 1023px) {
@@ -486,12 +464,13 @@
         width: auto !important;
         border: 1px solid #e2e8f0;
         border-radius: 9999px;
-        padding: 5px 12px !important;
+        padding: 5px 14px !important;
         background: #fff !important;
     }
     .category-item.category-item-active {
-        border-color: #ee4d2d !important;
-        background: #fff7ed !important;
+        border-color: #0B2E6B !important;
+        background: #eff6ff !important;
+        color: #0B2E6B !important;
     }
 }
 @media (min-width: 1024px) {
