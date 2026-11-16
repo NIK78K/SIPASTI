@@ -9,9 +9,13 @@
             </a>
             <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a href="<?= base_url('user_ticket/create_persediaan') ?>"
-               class="text-slate-700 hover:text-slate-900 font-semibold transition whitespace-nowrap">
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Pilih Layanan Lain
             </a>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
+            <span class="text-slate-700 font-semibold whitespace-nowrap">
+                Pengajuan Barang
+            </span>
         </nav>
     </div>
 
