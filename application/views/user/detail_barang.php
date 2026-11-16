@@ -49,6 +49,11 @@ $infoItems[] = [
                 Dashboard
             </a>
             <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
+            <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+               class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
+                Pilih Layanan Lain
+            </a>
+            <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
             <a id="katalogBreadcrumb" href="<?= $katalogUrl ?>"
                class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Katalog
@@ -511,7 +516,7 @@ $infoItems[] = [
             <span class="text-sm font-bold text-slate-700">Total</span>
             <span id="cartDrawerTotal" class="text-base font-black text-slate-900">0 Item</span>
         </div>
-        <button type="submit" class="w-full h-14 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-xl shadow-slate-900/20 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
+        <button type="submit" class="w-full h-14 rounded-2xl bg-[#0B2E6B] hover:bg-blue-950 text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-lg shadow-blue-900/25 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
             CHECKOUT NOW
         </button>
     </form>
