@@ -1,15 +1,16 @@
 <!-- ================= BREADCRUMB ================= -->
 <div class="max-w-7xl mx-auto mt-6 mb-5 px-4">
-    <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm min-w-0">
+    <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-slate-300 shadow-sm text-sm">
         <a href="<?= base_url('user/dashboard') ?>"
-           class="text-[#0B2E6B] hover:text-blue-950 transition whitespace-nowrap">
+           class="text-slate-500 hover:text-slate-800 font-medium transition">
             Dashboard
         </a>
-        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7"/>
-        </svg>
-        <span class="text-slate-900 font-medium truncate">Katalog Persediaan</span>
-    </nav>
+        <span class="text-slate-300 font-normal">/</span>
+        <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+           class="text-[#0B2E6B] hover:text-blue-950 font-bold transition">
+            Pilih Layanan Lain
+        </a>
+    </div>
 </div>
 
 <div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">
@@ -189,7 +190,7 @@
                      data-terlaris="<?= (int) ($b['total_terlaris'] ?? 0) ?>"
                      data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
 
-                    <!-- Gambar persegi + label kategori di pojok kiri bawah -->
+                    <!-- Gambar persegi (bersih tanpa label kategori di dalam) -->
                     <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center transition-shadow duration-300 group-hover:shadow-lg">
                         <?php if ($bGambar): ?>
                             <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>"
@@ -200,51 +201,51 @@
                                 <?= htmlspecialchars($bInisial) ?>
                             </span>
                         <?php endif; ?>
-
-                        <?php if (!empty($b['kategori_nama'])): ?>
-                            <span class="absolute left-0 bottom-0 max-w-[85%] truncate rounded-tr-lg bg-[#0B2E6B] px-2 py-1 text-[10px] font-bold text-white">
-                                <?= htmlspecialchars($b['kategori_nama']) ?>
-                            </span>
-                        <?php endif; ?>
                     </div>
 
-                    <!-- Info -->
+                    <!-- Info (Kategori di bawah gambar, mirip Image 1) -->
                     <div class="flex flex-col gap-1 pt-2.5 flex-1">
-                        <h3 class="text-[13px] font-medium leading-snug text-slate-800 line-clamp-2 min-h-[2.5rem] group-hover:text-[#0B2E6B] transition-colors">
+                        <!-- Kategori di bawah gambar -->
+                        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 truncate block">
+                            <?= htmlspecialchars(!empty($b['kategori_nama']) ? $b['kategori_nama'] : 'Persediaan') ?>
+                        </span>
+
+                        <!-- Nama barang -->
+                        <h3 class="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 min-h-[2.4rem] group-hover:text-[#0B2E6B] transition-colors">
                             <?= htmlspecialchars($bNama) ?>
                         </h3>
 
-                        <!-- Satuan (menggantikan harga) -->
-                        <p class="leading-tight text-slate-900">
-                            <span class="text-[11px] font-medium text-slate-500">per</span>
-                            <span class="text-base font-bold"><?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></span>
-                        </p>
-
-                        <!-- Rating · Diminta (klik = halaman ulasan) -->
+                        <!-- Rating Bintang & Diminta -->
                         <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation(); saveKatalogState(<?= $bId ?>);"
                            title="Lihat ulasan barang"
-                           class="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
-                            <span class="<?= $bRCount > 0 ? 'text-amber-400' : 'text-slate-300' ?>" aria-hidden="true">★</span>
+                           class="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
+                            <span class="text-xs tracking-tighter leading-none" aria-hidden="true">
+                                <?php
+                                $rStars = $bRCount > 0 ? (int) round((float) ($b['rating_avg'] ?? 0)) : 0;
+                                for ($s = 1; $s <= 5; $s++) {
+                                    echo $s <= $rStars ? '<span class="text-amber-400">★</span>' : '<span class="text-slate-200">★</span>';
+                                }
+                                ?>
+                            </span>
                             <?php if ($bRCount > 0): ?>
-                                <span class="font-medium text-slate-700"><?= $bAvg ?></span>
-                            <?php else: ?>
-                                <span>Belum ada rating</span>
+                                <span class="font-bold text-slate-700 ml-0.5"><?= $bAvg ?></span>
                             <?php endif; ?>
                             <?php if ($bDiminta > 0): ?>
-                                <span aria-hidden="true">·</span>
-                                <span>Diminta <?= $bDiminta ?>×</span>
+                                <span class="text-slate-300" aria-hidden="true">&bull;</span>
+                                <span class="text-slate-500 font-medium">Diminta <?= $bDiminta ?>×</span>
                             <?php endif; ?>
                         </a>
 
-                        <!-- Kode barang -->
-                        <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] text-slate-500">
-                            <span class="w-4 h-4 rounded-full bg-slate-100 text-slate-400 inline-flex items-center justify-center flex-shrink-0">
-                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A2 2 0 015 10V5a2 2 0 012-2z"/>
-                                </svg>
+                        <!-- Satuan & Kode barang -->
+                        <div class="flex items-baseline justify-between gap-1 pt-0.5">
+                            <p class="leading-tight text-slate-900">
+                                <span class="text-[11px] font-medium text-slate-500">per</span>
+                                <span class="text-sm font-extrabold text-[#0B2E6B]"><?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></span>
+                            </p>
+                            <span class="font-mono text-[10px] text-slate-400 truncate max-w-[50%]">
+                                <?= htmlspecialchars($b['kode_barang'] ?? '-') ?>
                             </span>
-                            <span class="font-mono truncate"><?= htmlspecialchars($b['kode_barang'] ?? '-') ?></span>
-                        </span>
+                        </div>
 
                         <!-- Aksi keranjang -->
                         <div class="mt-auto pt-2.5 w-full" onclick="event.stopPropagation()">
@@ -257,7 +258,7 @@
                                     class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
                             </div>
                             <button id="add-<?= $bId ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= $bId ?>)"
-                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-white text-[#0B2E6B] hover:bg-[#0B2E6B] hover:text-white text-xs font-bold transition-colors active:scale-95 flex items-center justify-center gap-1.5">
+                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-[#0B2E6B] text-white hover:bg-white hover:text-[#0B2E6B] text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
                                 + Keranjang
                             </button>
                         </div>

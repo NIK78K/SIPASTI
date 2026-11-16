@@ -213,7 +213,7 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
         <!-- Aksi + Keranjang & Stepper -->
         <div id="detailCartControl" class="flex-shrink-0">
             <button type="button" id="detailAddButton" onclick="cartAddFirst(<?= (int) ($barang->id ?? 0) ?>)"
-                    class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-[var(--brand)] text-white text-sm font-semibold hover:opacity-90 active:scale-[.98] transition whitespace-nowrap shadow-md shadow-blue-900/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)] cursor-pointer">
+                    class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full border-2 border-[var(--brand)] bg-[var(--brand)] text-white hover:bg-white hover:text-[var(--brand)] text-sm font-bold active:scale-[.98] transition whitespace-nowrap shadow-md shadow-blue-900/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)] cursor-pointer">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H5l1-8h12"/>
                 </svg>
