@@ -1,12 +1,12 @@
 <!-- ================= BREADCRUMB ================= -->
 <div class="max-w-7xl mx-auto mt-6 mb-5 px-4">
     <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-slate-400 font-normal">
-        <a href="<?= base_url('user/dashboard') ?>"
+        <a href="<?= base_url('user/dashboard') ?>" onclick="clearKatalogState()"
            class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
             Dashboard
         </a>
         <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
-        <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+        <a href="<?= base_url('user_ticket/create_persediaan') ?>" onclick="clearKatalogState()"
            class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
             Pilih Layanan Lain
         </a>
@@ -1250,9 +1250,17 @@ function validCheckout() {
 // Pemulihan state pagination & filter saat dibuka kembali (back / link katalog)
 (function initKatalogState() {
     try {
+        var ref = (document.referrer || '').toLowerCase();
+        var fromDetailOrUlasan = ref.indexOf('detail_barang') !== -1 || ref.indexOf('ulasan_barang') !== -1;
         var uPage = parseInt(getUrlParam('page'), 10);
-        var sPage = parseInt(sessionStorage.getItem('katalog_page'), 10);
         var uKat  = getUrlParam('kat');
+
+        // Jika bukan navigasi kembali dari detail/ulasan dan URL tidak membawa parameter khusus:
+        if (!fromDetailOrUlasan && isNaN(uPage) && !uKat) {
+            clearKatalogState();
+        }
+
+        var sPage = parseInt(sessionStorage.getItem('katalog_page'), 10);
         var sKat  = sessionStorage.getItem('katalog_kat');
         var uSearch = getUrlParam('q');
         var sSearch = sessionStorage.getItem('katalog_search');

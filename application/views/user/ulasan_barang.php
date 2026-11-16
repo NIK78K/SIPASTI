@@ -86,12 +86,12 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
     <!-- ================= NAV ATAS ================= -->
     <nav aria-label="Breadcrumb">
         <div class="flex items-center gap-2 text-sm text-slate-400 font-normal min-w-0">
-            <a href="<?= base_url('user/dashboard') ?>"
+            <a href="<?= base_url('user/dashboard') ?>" onclick="clearKatalogState()"
                class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Dashboard
             </a>
             <span class="text-slate-400 select-none flex-shrink-0 text-base leading-none">&rsaquo;</span>
-            <a href="<?= base_url('user_ticket/create_persediaan') ?>"
+            <a href="<?= base_url('user_ticket/create_persediaan') ?>" onclick="clearKatalogState()"
                class="text-slate-400 hover:text-slate-700 transition whitespace-nowrap">
                 Pilih Layanan Lain
             </a>

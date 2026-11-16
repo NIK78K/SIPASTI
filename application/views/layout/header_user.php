@@ -174,6 +174,25 @@ document.addEventListener('click', () => {
 </script>
 
 <script>
+function clearKatalogState() {
+    try {
+        sessionStorage.removeItem('katalog_page');
+        sessionStorage.removeItem('katalog_kat');
+        sessionStorage.removeItem('katalog_search');
+        sessionStorage.removeItem('katalog_sort');
+        sessionStorage.removeItem('katalog_last_barang_id');
+    } catch(e) {}
+}
+window.clearKatalogState = clearKatalogState;
+
+<?php
+$curr_uri = strtolower(uri_string());
+$is_katalog_flow = (strpos($curr_uri, 'permintaan_persediaan') !== false || strpos($curr_uri, 'detail_barang') !== false || strpos($curr_uri, 'ulasan_barang') !== false);
+if (!$is_katalog_flow): ?>
+// Jika berada di luar alur katalog persediaan (misal layanan IT, dashboard, dll), reset storage katalog
+clearKatalogState();
+<?php endif; ?>
+
 function confirmLogout() {
     Swal.fire({
         title: 'Yakin ingin logout?',

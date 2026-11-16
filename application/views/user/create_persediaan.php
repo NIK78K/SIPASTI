@@ -1,7 +1,7 @@
 <div class="service-page">
 
     <!-- TOMBOL KEMBALI KE DASHBOARD -->
-    <a href="<?= base_url('user/dashboard') ?>"
+    <a href="<?= base_url('user/dashboard') ?>" onclick="clearKatalogState()"
        class="absolute top-5 left-6 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-semibold text-sm transition border border-white/25 shadow-lg">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -11,7 +11,7 @@
 
     <!-- PILIHAN LAYANAN -->
     <div class="service-grid">
-        <a href="<?= base_url('user_ticket/permintaan_persediaan') ?>"
+        <a href="<?= base_url('user_ticket/permintaan_persediaan') ?>" onclick="clearKatalogState()"
            class="service-choice" aria-label="Permintaan Barang">
             <span class="service-choice-content">
                 <strong class="service-choice-label">Permintaan Barang</strong>
