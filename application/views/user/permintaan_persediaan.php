@@ -144,7 +144,7 @@
             </p>
 
             <!-- ================= GRID KATALOG ================= -->
-            <div id="emptyState" class="hidden bg-white rounded-2xl p-10 shadow-sm border border-slate-200 text-center">
+            <div id="emptyState" class="hidden rounded-2xl p-10 text-center">
                 <div class="text-5xl mb-3">🔍</div>
                 <p class="text-lg font-bold text-gray-800">Tidak ada barang yang cocok</p>
                 <p class="text-sm text-gray-500">Coba kata kunci atau kategori lain.</p>

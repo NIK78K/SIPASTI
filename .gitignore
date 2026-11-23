@@ -9,6 +9,12 @@ application/logs/*
 !application/*/.htaccess
 
 composer.lock
+ERD-PERSEDIAAN.md
+FLOWCHART-PERSEDIAAN.md
+USECASE-PERSEDIAAN.md
+erd-persediaan.md
+flowchart-persediaan.md  
+usecase-persediaan.md
 tests/mocks/database/ci_test.sqlite
 
 user_guide_src/build/*

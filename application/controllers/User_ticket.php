@@ -227,12 +227,15 @@ public function create_permintaan()
 
    $this->load->model('Kendaraan_model');
 $this->load->model('Master_bmn_model');
+list($unit_kerja_list, $unit_kerja_default) = $this->_unit_kerja_options();
 
 $data = [
     'kategori_id'      => $kategori_id,
     'sub_kategori'     => $this->User_ticket_model->get_sub_kategori($kategori_id),
     'daftar_kendaraan' => $this->Kendaraan_model->get_all(),
     'daftar_bmn'       => $this->Master_bmn_model->get_aktif(),
+    'unit_kerja_list'  => $unit_kerja_list,
+    'unit_kerja_default' => $unit_kerja_default,
 ];
 
     $this->load->view('layout/header_user');

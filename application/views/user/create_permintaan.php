@@ -76,7 +76,7 @@
 
                     <optgroup label="Permintaan Layanan IT">
                         <?php foreach ($sub_kategori as $sk): ?>
-                            <?php if ($sk->slug !== 'permintaan-ruang-rapat' && $sk->slug !== 'permintaan-kendaraan' && $sk->slug !== 'permintaan-peminjaman-bmn'): ?>
+                            <?php if (!in_array($sk->slug, ['permintaan-ruang-rapat', 'permintaan-kendaraan', 'permintaan-peminjaman-bmn', 'permintaan-persediaan', 'permintaan-barang-persediaan', 'pengajuan-persediaan', 'pengajuan-barang-persediaan'], true)): ?>
                             <option value="<?= $sk->id ?>"
                                     data-perlu-jadwal="<?= $sk->perlu_jadwal ?>"
                                     data-slug="<?= $sk->slug ?>">
@@ -87,7 +87,7 @@
                     </optgroup>
 
                     <optgroup label="Permintaan Layanan Umum">
-                        <?php foreach ($sub_kategori as $sk): ?>
+                        <?php foreach ($sub_kategori as $sk): ?>    
                             <?php if ($sk->slug === 'permintaan-ruang-rapat'): ?>
                             <option value="<?= $sk->id ?>"
                                     data-perlu-jadwal="<?= $sk->perlu_jadwal ?>"
@@ -305,11 +305,17 @@
 
                     <div>
                         <label class="text-xs text-gray-600 font-semibold mb-1.5 block">Unit/Tim Kerja <span class="text-red-500">*</span></label>
-                        <input type="text" name="unit_kerja" id="unitKerja"
-                               placeholder="Contoh: Bagian Keuangan / Tim IPDS"
-                               class="w-full h-14 rounded-xl px-5 border-2 border-gray-200
-                                      focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100
-                                      text-gray-800 transition-all hover:border-gray-300">
+                        <select name="unit_kerja" id="unitKerja"
+                                class="w-full h-14 rounded-xl px-5 border-2 border-gray-200
+                                       focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100
+                                       text-gray-800 transition-all hover:border-gray-300">
+                            <option value="">-- Pilih unit kerja --</option>
+                            <?php foreach (($unit_kerja_list ?? []) as $uk): ?>
+                                <option value="<?= htmlspecialchars($uk) ?>" <?= (string) ($unit_kerja_default ?? '') === (string) $uk ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($uk) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div>
@@ -616,11 +622,17 @@
                     <!-- Detail lainnya -->
                     <div>
                         <label class="text-xs text-gray-600 font-semibold mb-1.5 block">Unit/Bidang Kerja <span class="text-red-500">*</span></label>
-                        <input type="text" name="kend_unit_kerja" id="kendUnitKerja"
-                               placeholder="Contoh: Bagian Keuangan / Tim IPDS"
-                               class="w-full h-14 rounded-xl px-5 border-2 border-gray-200
-                                      focus:border-amber-500 focus:ring-4 focus:ring-amber-100
-                                      text-gray-800 transition-all hover:border-gray-300">
+                        <select name="kend_unit_kerja" id="kendUnitKerja"
+                                class="w-full h-14 rounded-xl px-5 border-2 border-gray-200
+                                       focus:border-amber-500 focus:ring-4 focus:ring-amber-100
+                                       text-gray-800 transition-all hover:border-gray-300">
+                            <option value="">-- Pilih unit kerja --</option>
+                            <?php foreach (($unit_kerja_list ?? []) as $uk): ?>
+                                <option value="<?= htmlspecialchars($uk) ?>" <?= (string) ($unit_kerja_default ?? '') === (string) $uk ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($uk) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div>
