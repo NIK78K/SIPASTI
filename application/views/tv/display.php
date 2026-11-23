@@ -56,6 +56,8 @@ html, body {
 
 .ruangan-chip { display:inline-flex;align-items:center;gap:3px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:#065f46;white-space:nowrap; }
 .kendaraan-chip { display:inline-flex;align-items:center;gap:3px;background:#fef9c3;border:1px solid #fde047;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:#713f12;white-space:nowrap; }
+.persediaan-chip { display:inline-flex;align-items:center;gap:3px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:#6d28d9;white-space:nowrap; }
+.ps-table tbody tr:hover { background:#f5f3ff; }
 
 .zoom-empty { text-align:center;padding:40px 12px;color:#94a3b8; }
 .zoom-empty .zi { font-size:30px;margin-bottom:8px; }
@@ -317,6 +319,7 @@ html, body {
         <button class="tv-tab active" id="tab0" onclick="goTo(0,true)">📹 Zoom Meeting</button>
         <button class="tv-tab"        id="tab1" onclick="goTo(1,true)">🏢 Ruang Rapat</button>
         <button class="tv-tab"        id="tab2" onclick="goTo(2,true)">🚗 Kendaraan Dinas</button>
+        <button class="tv-tab"        id="tab3" onclick="goTo(3,true)">📦 Barang Persediaan</button>
       </div>
 
       <button class="tv-date-btn" id="tvDateBtn" onclick="dpOpen()">
@@ -358,6 +361,7 @@ html, body {
             <span class="car-dot active" onclick="goTo(0,true)"></span>
             <span class="car-dot"        onclick="goTo(1,true)"></span>
             <span class="car-dot"        onclick="goTo(2,true)"></span>
+            <span class="car-dot"        onclick="goTo(3,true)"></span>
           </div>
         </div>
 
@@ -418,6 +422,7 @@ html, body {
             <span class="car-dot"        onclick="goTo(0,true)"></span>
             <span class="car-dot active" onclick="goTo(1,true)"></span>
             <span class="car-dot"        onclick="goTo(2,true)"></span>
+            <span class="car-dot"        onclick="goTo(3,true)"></span>
           </div>
         </div>
 
@@ -476,6 +481,7 @@ html, body {
             <span class="car-dot"        onclick="goTo(0,true)"></span>
             <span class="car-dot"        onclick="goTo(1,true)"></span>
             <span class="car-dot active" onclick="goTo(2,true)"></span>
+            <span class="car-dot"        onclick="goTo(3,true)"></span>
           </div>
         </div>
 
@@ -513,6 +519,65 @@ html, body {
             <span id="kFooter">—</span>
           </span>
           <span class="widget-footer-right"><span class="live-dot"></span>Auto-refresh · Sumber: Peminjaman Kendaraan Dinas</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SLIDE 3 — BARANG PERSEDIAAN
+    ══════════════════════════════════════ -->
+    <div class="tv-slide" id="slide3">
+      <div class="widget-card">
+        <div class="widget-header" style="background:linear-gradient(100deg,#4c1d95 0%,#7c3aed 60%,#8b5cf6 100%)">
+          <div class="widget-header-left">
+            <div style="width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex-shrink:0;background:rgba(124,58,237,.4);border:1px solid rgba(255,255,255,.2);">📦</div>
+            <div>
+              <div class="widget-header-title">Permintaan Barang Persediaan</div>
+              <div class="widget-header-sub">Permintaan &amp; pengajuan barang persediaan BPS Provinsi Riau · <span id="pDateTag">—</span></div>
+            </div>
+          </div>
+          <div class="car-dots" id="dotP">
+            <span class="car-dot"        onclick="goTo(0,true)"></span>
+            <span class="car-dot"        onclick="goTo(1,true)"></span>
+            <span class="car-dot"        onclick="goTo(2,true)"></span>
+            <span class="car-dot active" onclick="goTo(3,true)"></span>
+          </div>
+        </div>
+
+        <div class="custom-date-banner" id="pCustomBanner" style="display:none;">
+          <svg fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Menampilkan permintaan untuk: <strong id="pCustomBannerDate">—</strong>
+          &nbsp;·&nbsp;<span style="cursor:pointer;text-decoration:underline;" onclick="dpReset()">Kembali ke Hari Ini</span>
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat-cell"><div id="pSt0" class="stat-num" style="color:#d97706">–</div><div class="stat-lbl">⏳ Menunggu</div></div>
+          <div class="stat-cell"><div id="pSt1" class="stat-num" style="color:#2563eb">–</div><div class="stat-lbl">🔄 Diproses</div></div>
+          <div class="stat-cell"><div id="pSt2" class="stat-num" style="color:#16a34a">–</div><div class="stat-lbl">✅ Selesai</div></div>
+        </div>
+
+        <div class="tbl-scroll">
+          <table class="zt-table ps-table">
+            <colgroup>
+              <col style="width:28px"><col style="width:120px"><col style="width:32%">
+              <col style="width:145px"><col style="width:70px"><col style="width:95px">
+            </colgroup>
+            <thead><tr>
+              <th>#</th><th>Jenis &amp; Pelapor</th><th>Barang Diminta</th>
+              <th class="th-center">Keperluan &amp; Unit Kerja</th><th class="th-center">Jumlah</th><th class="th-center">Status</th>
+            </tr></thead>
+            <tbody id="pTbody">
+              <tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="widget-footer">
+          <span class="widget-footer-left">
+            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#94a3b8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <span id="pFooter">—</span>
+          </span>
+          <span class="widget-footer-right"><span class="live-dot"></span>Auto-refresh · Sumber: Permintaan Barang Persediaan</span>
         </div>
       </div>
     </div>
@@ -703,6 +768,7 @@ function updateDateUI() {
         ['zCustomBanner','zCustomBannerDate'],
         ['rCustomBanner','rCustomBannerDate'],
         ['kCustomBanner','kCustomBannerDate'],
+        ['pCustomBanner','pCustomBannerDate'],
     ].forEach(([bid, did]) => {
         document.getElementById(bid).style.display = isCustomDate ? '' : 'none';
         document.getElementById(did).textContent   = fmtFull(d);
@@ -712,6 +778,7 @@ function updateDateUI() {
     document.getElementById('zDateTag').textContent = dShort;
     document.getElementById('rDateTag').textContent = dShort;
     document.getElementById('kDateTag').textContent = dShort;
+    document.getElementById('pDateTag').textContent = dShort;
 }
 
 /* ════════════════════════════════════════
@@ -737,11 +804,11 @@ setInterval(() => {
    CAROUSEL — 3 SLIDE
 ════════════════════════════════════════ */
 let cur = 0;
-const TOTAL = 3, AUTO_SEC = 60;
+const TOTAL = 4, AUTO_SEC = 60;
 let cd = AUTO_SEC, timer = null;
 
 function updateDots(){
-    ['dotZ','dotR','dotK'].forEach(id => {
+    ['dotZ','dotR','dotK','dotP'].forEach(id => {
         document.getElementById(id)?.querySelectorAll('.car-dot').forEach((d,i)=>{
             d.classList.toggle('active', i===cur);
         });
@@ -756,7 +823,7 @@ function goTo(n, manual=false){
     sp.classList.remove('active'); sp.classList.add('out');
     setTimeout(()=>sp.classList.remove('out'), 600);
     sc.classList.add('active');
-    [0,1,2].forEach(i => document.getElementById('tab'+i).classList.toggle('active', i===cur));
+    [0,1,2,3].forEach(i => document.getElementById('tab'+i).classList.toggle('active', i===cur));
     updateDots();
     resetTimer();
 }
@@ -1003,11 +1070,71 @@ function renderKendaraan(rows){
 }
 
 /* ════════════════════════════════════════
+   RENDER BARANG PERSEDIAAN
+════════════════════════════════════════ */
+function renderPersediaan(rows){
+    let cW=0,cP=0,cSe=0;
+    rows.forEach(r=>{
+        const st=(r.status||'').toLowerCase();
+        if(st==='menunggu'||st==='waiting') cW++;
+        else if(st==='on progress'||st==='diproses'||st==='proses') cP++;
+        else if(st==='selesai'||st==='disetujui') cSe++;
+    });
+    document.getElementById('pSt0').textContent=cW;
+    document.getElementById('pSt1').textContent=cP;
+    document.getElementById('pSt2').textContent=cSe;
+    document.getElementById('pFooter').textContent=rows.length+' permintaan/pengajuan · '+fmtFull(selectedDate);
+
+    const tbody=document.getElementById('pTbody');
+    if(!rows.length){
+        tbody.innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML='';
+    rows.forEach((r,i)=>{
+        const st=(r.status||'Menunggu').toLowerCase();
+        let badge=BADGE.belum;
+        if(st==='on progress'||st==='diproses'||st==='proses') badge='<span class="zbadge zb-jadwal">🔄 Diproses</span>';
+        else if(st==='selesai') badge=BADGE.selesai;
+        else if(st==='dibatalkan'||st==='ditolak') badge='<span class="zbadge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">❌ '+esc(r.status)+'</span>';
+
+        const items=(r.items||[]);
+        const barang=items.length
+            ? items.map(item=>esc(item.nama_barang)).join(', ')
+            : '—';
+        const pelapor=esc(r.pelapor||'—');
+        const unit=esc(r.unit_kerja||'');
+        const keperluan=esc(r.keperluan||r.kebutuhan||'—');
+        const jenis=esc(r.jenis||'Permintaan');
+
+        const tr=document.createElement('tr');
+        if(st==='on progress'||st==='diproses'||st==='proses') tr.classList.add('row-live');
+        tr.innerHTML=`
+            <td style="color:#cbd5e1;font-weight:700;font-size:10px;text-align:center">${i+1}</td>
+            <td>
+                <span class="persediaan-chip">📦 ${jenis}</span>
+                <div class="tc-host" style="margin-top:4px;">${pelapor}</div>
+                <div style="font-size:9px;color:#cbd5e1;margin-top:2px;">${esc(r.kode_tiket||'—')}</div>
+            </td>
+            <td><div style="font-weight:700;color:#1e293b;font-size:11px;line-height:1.35;" title="${barang}">${barang}</div></td>
+            <td class="td-center">
+                <div style="font-size:10px;font-weight:700;color:#475569;line-height:1.35;">${keperluan}</div>
+                ${unit?'<div class="tc-host" style="margin-top:3px;">'+unit+'</div>':''}
+            </td>
+            <td class="td-center"><span class="tdur" style="font-size:12px;">${Number(r.total_qty||0)} item</span></td>
+            <td class="td-center">${badge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/* ════════════════════════════════════════
    FETCH DATA
 ════════════════════════════════════════ */
 const ZOOM_URL     = '<?= base_url("tv/zoom_ajax") ?>';
 const ROOM_URL     = '<?= base_url("tv/room_ajax") ?>';
 const KENDARAAN_URL= '<?= base_url("tv/kendaraan_ajax") ?>';
+const PERSEDIAAN_URL= '<?= base_url("tv/persediaan_ajax") ?>';
 
 function loadAll(){
     const tgl = toStr(selectedDate);
@@ -1015,6 +1142,7 @@ function loadAll(){
     document.getElementById('zTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
     document.getElementById('rTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
     document.getElementById('kTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
+    document.getElementById('pTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
 
     fetch(`${ZOOM_URL}?tanggal=${tgl}`)
         .then(r=>r.json())
@@ -1035,6 +1163,13 @@ function loadAll(){
         .then(j=>{ if(j.status==='success') renderKendaraan(j.rows); })
         .catch(()=>{
             document.getElementById('kTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⚠️</div><p>Gagal memuat data</p></div></td></tr>`;
+        });
+
+    fetch(`${PERSEDIAAN_URL}?tanggal=${tgl}`)
+        .then(r=>r.json())
+        .then(j=>{ if(j.status==='success') renderPersediaan(j.rows); })
+        .catch(()=>{
+            document.getElementById('pTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⚠️</div><p>Gagal memuat data persediaan</p></div></td></tr>`;
         });
 }
 

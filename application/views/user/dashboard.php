@@ -610,6 +610,7 @@
             <button class="car-tab" id="ctab1" onclick="carGoTo(1)">🏢 Ruang Rapat</button>
             <button class="car-tab" id="ctab2" onclick="carGoTo(2)">🚗 Kendaraan</button>
             <button class="car-tab" id="ctab3" onclick="carGoTo(3)">📦 Peminjaman BMN</button>
+            <button class="car-tab" id="ctab4" onclick="carGoTo(4)">📦 Barang Persediaan</button>
         </div>
 
         <!-- Carousel Wrapper -->
@@ -857,15 +858,72 @@
                     </div>
                 </div>
 
+                <!-- ── SLIDE 4 — BARANG PERSEDIAAN ── -->
+                <div class="car-slide">
+                    <div class="widget-card bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden">
+                        <div class="widget-header" style="background:linear-gradient(100deg,#4c1d95 0%,#7c3aed 60%,#8b5cf6 100%)">
+                            <div class="widget-header-left">
+                                <div style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:14px;flex-shrink:0;background:rgba(124,58,237,.4);border:1px solid rgba(255,255,255,.2);">📦</div>
+                                <div style="min-width:0;">
+                                    <div class="widget-header-title">Permintaan Barang Persediaan</div>
+                                    <div class="widget-header-sub">Permintaan &amp; pengajuan barang persediaan · <span id="pDateLabel">–</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-banner" style="background:#faf5ff;border-color:#e9d5ff;">
+                            <svg width="13" height="13" fill="none" stroke="#6d28d9" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span style="color:#6d28d9;">Permintaan barang dibuat pengguna dan diproses oleh teknisi.</span>
+                        </div>
+                        <div class="stats-bar">
+                            <div class="stat-cell"><div id="pStMenunggu" class="stat-num" style="color:#d97706">–</div><div class="stat-lbl">⏳ Menunggu</div></div>
+                            <div class="stat-cell"><div id="pStProses" class="stat-num" style="color:#2563eb">–</div><div class="stat-lbl">🔄 Diproses</div></div>
+                            <div class="stat-cell"><div id="pStSelesai" class="stat-num" style="color:#16a34a">–</div><div class="stat-lbl">✅ Selesai</div></div>
+                        </div>
+                        <div class="tbl-scroll">
+                            <table class="zt-table bmn-table">
+                                <colgroup>
+                                    <col style="width:22px">
+                                    <col style="width:130px">
+                                    <col style="width:32%">
+                                    <col style="width:28%">
+                                    <col style="width:70px">
+                                    <col style="width:82px">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Jenis &amp; Pelapor</th>
+                                        <th>Barang Diminta</th>
+                                        <th>Keperluan &amp; Unit Kerja</th>
+                                        <th class="th-center">Jumlah</th>
+                                        <th class="th-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pTbody">
+                                    <tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="widget-footer">
+                            <span class="widget-footer-left">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#94a3b8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                <span id="pFooter">—</span>
+                            </span>
+                            <span class="widget-footer-right">Sumber: Permintaan Barang Persediaan</span>
+                        </div>
+                    </div>
+                </div>
+
             </div><!-- /car-track -->
         </div><!-- /car-wrap -->
 
-        <!-- Dot indicator — 4 dots -->
+        <!-- Dot indicator -->
         <div style="display:flex;justify-content:center;gap:6px;margin-top:10px;" id="carDots">
             <span class="car-dot active" onclick="carGoTo(0)"></span>
             <span class="car-dot" onclick="carGoTo(1)"></span>
             <span class="car-dot" onclick="carGoTo(2)"></span>
             <span class="car-dot" onclick="carGoTo(3)"></span>
+            <span class="car-dot" onclick="carGoTo(4)"></span>
         </div>
 
     </div><!-- /carousel container -->
@@ -908,14 +966,14 @@ function carEqualizeHeight() {
 }
 
 function carGoTo(n) {
-    carCur = n;
-    document.getElementById('carTrack').style.transform = `translateX(-${n * 100}%)`;
-    [0,1,2,3].forEach(i => {
-        document.getElementById('ctab'+i).classList.toggle('active', i===n);
+    carCur = ((n % 5) + 5) % 5;
+    document.getElementById('carTrack').style.transform = `translateX(-${carCur * 100}%)`;
+    [0,1,2,3,4].forEach(i => {
+        document.getElementById('ctab'+i)?.classList.toggle('active', i===carCur);
     });
-    document.querySelectorAll('.car-dot').forEach((d,i) => d.classList.toggle('active', i===n));
+    document.querySelectorAll('#carDots .car-dot').forEach((d,i) => d.classList.toggle('active', i===carCur));
 }
-function carSlide(dir) { carGoTo((carCur + dir + 4) % 4); }
+function carSlide(dir) { carGoTo((carCur + dir + 5) % 5); }
 
 (function(){
     let sx = 0;
@@ -1037,9 +1095,9 @@ function escHtml(s) {
 }
 
 /* ═══ LOAD TRACKER ═══ */
-const loadDone = { zoom: false, rapat: false, kendaraan: false, bmn: false };
+const loadDone = { zoom: false, rapat: false, kendaraan: false, bmn: false, persediaan: false };
 function checkAllLoaded() {
-    if (loadDone.zoom && loadDone.rapat && loadDone.kendaraan && loadDone.bmn)
+    if (loadDone.zoom && loadDone.rapat && loadDone.kendaraan && loadDone.bmn && loadDone.persediaan)
         setTimeout(carEqualizeHeight, 50);
 }
 
@@ -1519,6 +1577,88 @@ function bmnShowError(msg) {
     loadDone.bmn = true; checkAllLoaded();
 }
 
+/* ═══ BARANG PERSEDIAAN WIDGET ═══ */
+function pRender(rows) {
+    const tbody = document.getElementById('pTbody');
+    const today = zdpFmt(new Date());
+    document.getElementById('pDateLabel').textContent = today;
+
+    let cMenunggu = 0, cProses = 0, cSelesai = 0;
+    rows.forEach(r => {
+        const st = (r.status || '').toLowerCase();
+        if (st === 'menunggu') cMenunggu++;
+        else if (st === 'on progress' || st === 'diproses' || st === 'proses') cProses++;
+        else if (st === 'selesai') cSelesai++;
+    });
+    document.getElementById('pStMenunggu').textContent = cMenunggu;
+    document.getElementById('pStProses').textContent = cProses;
+    document.getElementById('pStSelesai').textContent = cSelesai;
+    document.getElementById('pFooter').textContent = rows.length + ' permintaan/pengajuan · ' + today;
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
+        loadDone.persediaan = true; checkAllLoaded(); return;
+    }
+
+    tbody.innerHTML = '';
+    rows.forEach((r, i) => {
+        const st = (r.status || 'Menunggu').toLowerCase();
+        let badge = '<span class="zbadge zb-belum"><span class="zdot"></span>⏳ Menunggu</span>';
+        if (st === 'on progress' || st === 'diproses' || st === 'proses') {
+            badge = '<span class="zbadge zb-jadwal">🔄 Diproses</span>';
+        } else if (st === 'selesai') {
+            badge = '<span class="zbadge zb-selesai">✅ Selesai</span>';
+        } else if (st === 'dibatalkan' || st === 'ditolak') {
+            badge = '<span class="zbadge zb-berlangsung">❌ ' + escHtml(r.status) + '</span>';
+        }
+
+        const items = r.items || [];
+        const barang = items.length ? items.map(item => escHtml(item.nama_barang)).join(', ') : '—';
+        const jenis = escHtml(r.jenis || 'Permintaan');
+        const pelapor = escHtml(r.pelapor || '—');
+        const keperluan = escHtml(r.keperluan || r.kebutuhan || '—');
+        const unit = r.unit_kerja ? `<div class="tc-host" style="margin-top:3px;">${escHtml(r.unit_kerja)}</div>` : '';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="color:#cbd5e1;font-weight:700;font-size:10px;text-align:center">${i+1}</td>
+            <td>
+                <span class="bmn-chip" style="background:#f5f3ff;border-color:#ddd6fe;color:#6d28d9;">📦 ${jenis}</span>
+                <div class="tc-host" style="margin-top:3px;">${pelapor}</div>
+                <div style="font-size:8.5px;color:#cbd5e1;margin-top:2px;">${escHtml(r.kode_tiket || '—')}</div>
+            </td>
+            <td><div style="font-size:10.5px;font-weight:700;color:#1e293b;">${barang}</div></td>
+            <td>
+                <div style="font-size:10px;font-weight:700;color:#475569;">${keperluan}</div>
+                ${unit}
+            </td>
+            <td class="td-center"><span class="tdur" style="font-size:11px;">${Number(r.total_qty || 0)} item</span></td>
+            <td class="td-center">${badge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    loadDone.persediaan = true; checkAllLoaded();
+}
+
+function pLoad() {
+    document.getElementById('pTbody').innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
+    ['pStMenunggu','pStProses','pStSelesai'].forEach(id => { document.getElementById(id).textContent = '–'; });
+    loadDone.persediaan = false;
+    fetch(`<?= base_url('tv/persediaan_ajax') ?>?tanggal=${zdpStr(new Date())}`)
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(json => {
+            if (json.status === 'success') pRender(json.rows);
+            else pShowError(json.message || 'Terjadi kesalahan');
+        })
+        .catch(err => pShowError('Gagal memuat data: ' + err.message));
+}
+
+function pShowError(msg) {
+    document.getElementById('pTbody').innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⚠️</div><p>${escHtml(msg)}</p></div></td></tr>`;
+    ['pStMenunggu','pStProses','pStSelesai'].forEach(id => { document.getElementById(id).textContent = '–'; });
+    loadDone.persediaan = true; checkAllLoaded();
+}
+
 /* ═══ INIT ═══ */
 document.getElementById('zDateLabel').textContent   = zdpFmt(dpState.zoom.selected);
 document.getElementById('rrDateLabel').textContent  = zdpFmt(dpState.rapat.selected);
@@ -1528,7 +1668,8 @@ document.getElementById('bmnDateLabel').textContent = zdpFmt(dpState.bmn.selecte
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(carEqualizeHeight, 100); });
 
-zLoad(); rrLoad(); kvLoad(); bmnLoad();
+zLoad(); rrLoad(); kvLoad(); bmnLoad(); pLoad();
+setInterval(pLoad, 120000);
 </script>
 <!-- ═══ MODAL DOKUMEN RAPAT ═══ -->
 <div id="dokModal"

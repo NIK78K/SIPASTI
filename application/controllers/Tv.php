@@ -142,4 +142,84 @@ class Tv extends CI_Controller {
 
         echo json_encode(['status' => 'success', 'rows' => $result]);
     }
+
+    // ── AJAX: Permintaan Barang Persediaan (tanpa cek sesi) ─────
+    public function persediaan_ajax()
+    {
+        header('Content-Type: application/json');
+
+        $tanggal = $this->input->get('tanggal') ?: date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) {
+            $tanggal = date('Y-m-d');
+        }
+
+        $tickets = $this->db
+            ->select('id, kode_tiket, pelapor, kebutuhan, jenis_kerusakan, status, created_at')
+            ->where('DATE(created_at)', $tanggal)
+            ->group_start()
+                ->like('jenis_kerusakan', '[PERMINTAAN BARANG PERSEDIAAN]')
+                ->or_like('jenis_kerusakan', '[PENGAJUAN BARANG PERSEDIAAN]')
+            ->group_end()
+            ->order_by('created_at', 'DESC')
+            ->get('tickets')
+            ->result_array();
+
+        $rows = [];
+        foreach ($tickets as $ticket) {
+            $unit_kerja = '';
+            $keperluan = '';
+            $tanggal_permintaan = '';
+            $lines = preg_split("/\r\n|\n/", (string) ($ticket['jenis_kerusakan'] ?? ''));
+
+            foreach ($lines as $line) {
+                if (preg_match('/^Unit Kerja:\s*(.+)$/i', trim($line), $m)) {
+                    $unit_kerja = trim($m[1]);
+                } elseif (preg_match('/^Keperluan:\s*(.+)$/i', trim($line), $m)) {
+                    $keperluan = trim($m[1]);
+                } elseif (preg_match('/^Tanggal permintaan:\s*(.+)$/i', trim($line), $m)) {
+                    $tanggal_permintaan = trim($m[1]);
+                }
+            }
+
+            $items = [];
+            $total_qty = 0;
+            if ($this->db->table_exists('ticket_persediaan_items')) {
+                $item_rows = $this->db
+                    ->select('nama_barang_snapshot, satuan_snapshot, SUM(jumlah) AS jumlah')
+                    ->where('ticket_id', (int) $ticket['id'])
+                    ->group_by(['nama_barang_snapshot', 'satuan_snapshot'])
+                    ->order_by('nama_barang_snapshot', 'ASC')
+                    ->get('ticket_persediaan_items')
+                    ->result_array();
+
+                foreach ($item_rows as $item) {
+                    $qty = (int) $item['jumlah'];
+                    $total_qty += $qty;
+                    $items[] = [
+                        'nama_barang' => $item['nama_barang_snapshot'],
+                        'satuan' => $item['satuan_snapshot'],
+                        'jumlah' => $qty,
+                    ];
+                }
+            }
+
+            $rows[] = [
+                'id' => (int) $ticket['id'],
+                'kode_tiket' => $ticket['kode_tiket'],
+                'pelapor' => $ticket['pelapor'],
+                'kebutuhan' => $ticket['kebutuhan'],
+                'keperluan' => $keperluan,
+                'unit_kerja' => $unit_kerja,
+                'tanggal_permintaan' => $tanggal_permintaan ?: substr($ticket['created_at'], 0, 10),
+                'status' => $ticket['status'],
+                'items' => $items,
+                'total_qty' => $total_qty,
+                'jenis' => strpos($ticket['jenis_kerusakan'], '[PENGAJUAN BARANG PERSEDIAAN]') !== false
+                    ? 'Pengajuan'
+                    : 'Permintaan',
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'rows' => $rows]);
+    }
 }
