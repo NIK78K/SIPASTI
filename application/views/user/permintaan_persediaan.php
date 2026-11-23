@@ -19,47 +19,6 @@
 
 <div class="catalog-page max-w-7xl mx-auto mt-0 mb-24 space-y-6 px-4">
 
-    <!-- ================= WEBSHOP HERO BANNER ================= -->
-    <div class="webshop-hero-banner relative rounded-3xl overflow-hidden border border-slate-200/80 shadow-md min-h-[300px] lg:min-h-[340px] flex items-center bg-slate-900">
-        
-        <!-- FULL BACKGROUND IMAGE (BPS.JPG) -->
-        <img src="<?= base_url('assets/img/BPS.jpg') ?>"
-             alt="Background Gedung BPS Provinsi Riau"
-             class="absolute inset-0 w-full h-full object-cover object-center filter brightness-95">
-
-        <!-- GRADIENT OVERLAY FOR READABILITY & BRAND IDENTITY -->
-        <div class="absolute inset-0 bg-gradient-to-r from-[#0B2E6B]/95 via-[#0A3D8F]/85 to-[#0B2E6B]/40"></div>
-        <div class="absolute inset-0 bg-black/25"></div>
-
-        <!-- CONTENT ON TOP OF BACKGROUND -->
-        <div class="relative z-10 p-6 sm:p-10 lg:p-14 max-w-2xl space-y-4">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-white text-[11px] font-extrabold tracking-wider uppercase border border-white/20">
-                <span>BPS PROVINSI RIAU</span>
-                <span>&bull;</span>
-                <span>SIPASTI</span>
-            </div>
-
-            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.12] uppercase font-sans drop-shadow-sm">
-                Katalog<br>Persediaan
-            </h1>
-
-            <p class="text-xs sm:text-sm text-blue-100 max-w-lg leading-relaxed font-medium drop-shadow-sm">
-                Layanan permintaan barang operasional kantor dan administrasi harian BPS Provinsi Riau. Pilih kebutuhan barang persediaan langsung dari katalog digital.
-            </p>
-
-            <div class="pt-2 flex flex-wrap items-center gap-3">
-                <button type="button" onclick="document.getElementById('katalogGrid').scrollIntoView({behavior:'smooth'})"
-                    class="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 inline-flex items-center gap-2">
-                    <span>Lihat Daftar Barang</span>
-                    <svg class="w-4 h-4 text-slate-900" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-    </div>
-
     <?php if ($this->session->flashdata('error')): ?>
     <div class="catalog-alert flex items-center gap-3 px-5 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,7 +381,7 @@
             <span id="cartDrawerTotal" class="text-base font-black text-slate-900">0 Item</span>
         </div>
         <button type="submit" class="w-full h-14 rounded-2xl bg-[#0B2E6B] hover:bg-blue-950 text-white font-extrabold text-sm tracking-wider uppercase transition-all shadow-lg shadow-blue-900/25 active:scale-[.99] flex items-center justify-center gap-2 cursor-pointer">
-            CHECKOUT NOW
+            CHECKOUT
         </button>
     </form>
 </aside>

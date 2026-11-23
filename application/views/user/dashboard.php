@@ -883,24 +883,30 @@
                             <table class="zt-table bmn-table">
                                 <colgroup>
                                     <col style="width:22px">
-                                    <col style="width:130px">
-                                    <col style="width:32%">
+                                    <col style="width:85px">
+                                    <col style="width:110px">
                                     <col style="width:28%">
-                                    <col style="width:70px">
+                                    <col style="width:140px">
+                                    <col style="width:120px">
+                                    <col style="width:80px">
+                                    <col style="width:85px">
                                     <col style="width:82px">
                                 </colgroup>
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Jenis &amp; Pelapor</th>
-                                        <th>Barang Diminta</th>
-                                        <th>Keperluan &amp; Unit Kerja</th>
-                                        <th class="th-center">Jumlah</th>
+                                        <th class="th-center">Jenis</th>
+                                        <th>Pelapor</th>
+                                        <th>Barang</th>
+                                        <th>Keperluan</th>
+                                        <th>Unit Kerja</th>
+                                        <th class="th-center">Jumlah Diminta</th>
+                                        <th class="th-center">Jumlah Disetujui</th>
                                         <th class="th-center">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pTbody">
-                                    <tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
+                                    <tr><td colspan="9"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1596,7 +1602,7 @@ function pRender(rows) {
     document.getElementById('pFooter').textContent = rows.length + ' permintaan/pengajuan · ' + today;
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
         loadDone.persediaan = true; checkAllLoaded(); return;
     }
 
@@ -1617,22 +1623,18 @@ function pRender(rows) {
         const jenis = escHtml(r.jenis || 'Permintaan');
         const pelapor = escHtml(r.pelapor || '—');
         const keperluan = escHtml(r.keperluan || r.kebutuhan || '—');
-        const unit = r.unit_kerja ? `<div class="tc-host" style="margin-top:3px;">${escHtml(r.unit_kerja)}</div>` : '';
+        const unit = escHtml(r.unit_kerja || '—');
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="color:#cbd5e1;font-weight:700;font-size:10px;text-align:center">${i+1}</td>
-            <td>
-                <span class="bmn-chip" style="background:#f5f3ff;border-color:#ddd6fe;color:#6d28d9;">📦 ${jenis}</span>
-                <div class="tc-host" style="margin-top:3px;">${pelapor}</div>
-                <div style="font-size:8.5px;color:#cbd5e1;margin-top:2px;">${escHtml(r.kode_tiket || '—')}</div>
-            </td>
+            <td style="font-weight:700;color:#475569;text-align:center;">${jenis}</td>
+            <td><div style="font-size:10.5px;font-weight:700;color:#1e293b;">${pelapor}</div><div style="font-size:8.5px;color:#94a3b8;margin-top:2px;">${escHtml(r.kode_tiket || '—')}</div></td>
             <td><div style="font-size:10.5px;font-weight:700;color:#1e293b;">${barang}</div></td>
-            <td>
-                <div style="font-size:10px;font-weight:700;color:#475569;">${keperluan}</div>
-                ${unit}
-            </td>
+            <td><div style="font-size:10px;font-weight:700;color:#475569;">${keperluan}</div></td>
+            <td><div style="font-size:10px;color:#475569;">${unit}</div></td>
             <td class="td-center"><span class="tdur" style="font-size:11px;">${Number(r.total_qty || 0)} item</span></td>
+            <td class="td-center"><span class="tdur" style="font-size:11px;color:#16a34a;">${Number(r.total_disetujui || 0)} item</span></td>
             <td class="td-center">${badge}</td>
         `;
         tbody.appendChild(tr);
@@ -1641,7 +1643,7 @@ function pRender(rows) {
 }
 
 function pLoad() {
-    document.getElementById('pTbody').innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
+    document.getElementById('pTbody').innerHTML = `<tr><td colspan="9"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
     ['pStMenunggu','pStProses','pStSelesai'].forEach(id => { document.getElementById(id).textContent = '–'; });
     loadDone.persediaan = false;
     fetch(`<?= base_url('tv/persediaan_ajax') ?>?tanggal=${zdpStr(new Date())}`)
@@ -1654,7 +1656,7 @@ function pLoad() {
 }
 
 function pShowError(msg) {
-    document.getElementById('pTbody').innerHTML = `<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⚠️</div><p>${escHtml(msg)}</p></div></td></tr>`;
+    document.getElementById('pTbody').innerHTML = `<tr><td colspan="9"><div class="zoom-empty"><div class="zi">⚠️</div><p>${escHtml(msg)}</p></div></td></tr>`;
     ['pStMenunggu','pStProses','pStSelesai'].forEach(id => { document.getElementById(id).textContent = '–'; });
     loadDone.persediaan = true; checkAllLoaded();
 }

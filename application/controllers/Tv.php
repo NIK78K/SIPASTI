@@ -153,15 +153,18 @@ class Tv extends CI_Controller {
             $tanggal = date('Y-m-d');
         }
 
-        $tickets = $this->db
-            ->select('id, kode_tiket, pelapor, kebutuhan, jenis_kerusakan, status, created_at')
-            ->where('DATE(created_at)', $tanggal)
+        $this->db
+            ->select('t.id, t.kode_tiket, t.pelapor, t.kebutuhan, t.jenis_kerusakan, t.status, t.created_at, up.unit_kerja AS unit_kerja_profile')
+            ->from('tickets t')
+            ->join('user_profiles up', 'up.user_id = t.user_id', 'left')
+            ->where('DATE(t.created_at)', $tanggal)
             ->group_start()
-                ->like('jenis_kerusakan', '[PERMINTAAN BARANG PERSEDIAAN]')
-                ->or_like('jenis_kerusakan', '[PENGAJUAN BARANG PERSEDIAAN]')
+                ->like('t.jenis_kerusakan', '[PERMINTAAN BARANG PERSEDIAAN]')
+                ->or_like('t.jenis_kerusakan', '[PENGAJUAN BARANG PERSEDIAAN]')
             ->group_end()
-            ->order_by('created_at', 'DESC')
-            ->get('tickets')
+            ->order_by('t.created_at', 'DESC');
+        $tickets = $this->db
+            ->get()
             ->result_array();
 
         $rows = [];
@@ -180,14 +183,18 @@ class Tv extends CI_Controller {
                     $tanggal_permintaan = trim($m[1]);
                 }
             }
+            if ($unit_kerja === '' && !empty($ticket['unit_kerja_profile'])) {
+                $unit_kerja = trim($ticket['unit_kerja_profile']);
+            }
 
             $items = [];
             $total_qty = 0;
+            $total_disetujui = 0;
             if ($this->db->table_exists('ticket_persediaan_items')) {
+                $has_acc = $this->db->field_exists('jumlah_disetujui', 'ticket_persediaan_items');
                 $item_rows = $this->db
-                    ->select('nama_barang_snapshot, satuan_snapshot, SUM(jumlah) AS jumlah')
+                    ->select('nama_barang_snapshot, satuan_snapshot, jumlah' . ($has_acc ? ', jumlah_disetujui' : ''))
                     ->where('ticket_id', (int) $ticket['id'])
-                    ->group_by(['nama_barang_snapshot', 'satuan_snapshot'])
                     ->order_by('nama_barang_snapshot', 'ASC')
                     ->get('ticket_persediaan_items')
                     ->result_array();
@@ -195,10 +202,15 @@ class Tv extends CI_Controller {
                 foreach ($item_rows as $item) {
                     $qty = (int) $item['jumlah'];
                     $total_qty += $qty;
+                    $acc = $has_acc && $item['jumlah_disetujui'] !== null && $item['jumlah_disetujui'] !== ''
+                        ? (int) $item['jumlah_disetujui']
+                        : (($ticket['status'] === 'Selesai') ? $qty : 0);
+                    $total_disetujui += $acc;
                     $items[] = [
                         'nama_barang' => $item['nama_barang_snapshot'],
                         'satuan' => $item['satuan_snapshot'],
                         'jumlah' => $qty,
+                        'jumlah_disetujui' => $acc,
                     ];
                 }
             }
@@ -214,6 +226,7 @@ class Tv extends CI_Controller {
                 'status' => $ticket['status'],
                 'items' => $items,
                 'total_qty' => $total_qty,
+                'total_disetujui' => $total_disetujui,
                 'jenis' => strpos($ticket['jenis_kerusakan'], '[PENGAJUAN BARANG PERSEDIAAN]') !== false
                     ? 'Pengajuan'
                     : 'Permintaan',

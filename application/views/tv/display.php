@@ -559,15 +559,18 @@ html, body {
         <div class="tbl-scroll">
           <table class="zt-table ps-table">
             <colgroup>
-              <col style="width:28px"><col style="width:120px"><col style="width:32%">
-              <col style="width:145px"><col style="width:70px"><col style="width:95px">
+              <col style="width:28px"><col style="width:85px"><col style="width:110px">
+              <col style="width:28%"><col style="width:140px"><col style="width:120px">
+              <col style="width:80px"><col style="width:85px"><col style="width:95px">
             </colgroup>
             <thead><tr>
-              <th>#</th><th>Jenis &amp; Pelapor</th><th>Barang Diminta</th>
-              <th class="th-center">Keperluan &amp; Unit Kerja</th><th class="th-center">Jumlah</th><th class="th-center">Status</th>
+              <th>#</th><th class="th-center">Jenis</th><th>Pelapor</th><th>Barang</th>
+              <th>Keperluan</th><th>Unit Kerja</th>
+              <th class="th-center">Jumlah Diminta</th><th class="th-center">Jumlah Disetujui</th>
+              <th class="th-center">Status</th>
             </tr></thead>
             <tbody id="pTbody">
-              <tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
+              <tr><td colspan="9"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1087,7 +1090,7 @@ function renderPersediaan(rows){
 
     const tbody=document.getElementById('pTbody');
     if(!rows.length){
-        tbody.innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
+        tbody.innerHTML=`<tr><td colspan="9"><div class="zoom-empty"><div class="zi">📦</div><p>Tidak ada permintaan barang persediaan pada tanggal ini</p></div></td></tr>`;
         return;
     }
     tbody.innerHTML='';
@@ -1111,17 +1114,18 @@ function renderPersediaan(rows){
         if(st==='on progress'||st==='diproses'||st==='proses') tr.classList.add('row-live');
         tr.innerHTML=`
             <td style="color:#cbd5e1;font-weight:700;font-size:10px;text-align:center">${i+1}</td>
+            <td style="font-weight:700;color:#475569;text-align:center;">${jenis}</td>
             <td>
-                <span class="persediaan-chip">📦 ${jenis}</span>
-                <div class="tc-host" style="margin-top:4px;">${pelapor}</div>
-                <div style="font-size:9px;color:#cbd5e1;margin-top:2px;">${esc(r.kode_tiket||'—')}</div>
+                <div style="font-weight:700;color:#1e293b;font-size:11px;line-height:1.35;">${pelapor}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px;">${esc(r.kode_tiket||'—')}</div>
             </td>
             <td><div style="font-weight:700;color:#1e293b;font-size:11px;line-height:1.35;" title="${barang}">${barang}</div></td>
-            <td class="td-center">
+            <td>
                 <div style="font-size:10px;font-weight:700;color:#475569;line-height:1.35;">${keperluan}</div>
-                ${unit?'<div class="tc-host" style="margin-top:3px;">'+unit+'</div>':''}
             </td>
+            <td><div style="font-size:10px;color:#475569;line-height:1.35;">${unit||'—'}</div></td>
             <td class="td-center"><span class="tdur" style="font-size:12px;">${Number(r.total_qty||0)} item</span></td>
+            <td class="td-center"><span class="tdur" style="font-size:12px;color:#16a34a;">${Number(r.total_disetujui||0)} item</span></td>
             <td class="td-center">${badge}</td>
         `;
         tbody.appendChild(tr);
@@ -1142,7 +1146,7 @@ function loadAll(){
     document.getElementById('zTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
     document.getElementById('rTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
     document.getElementById('kTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat jadwal...</p></div></td></tr>`;
-    document.getElementById('pTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
+    document.getElementById('pTbody').innerHTML=`<tr><td colspan="9"><div class="zoom-empty"><div class="zi">⏳</div><p>Memuat permintaan persediaan...</p></div></td></tr>`;
 
     fetch(`${ZOOM_URL}?tanggal=${tgl}`)
         .then(r=>r.json())
@@ -1169,7 +1173,7 @@ function loadAll(){
         .then(r=>r.json())
         .then(j=>{ if(j.status==='success') renderPersediaan(j.rows); })
         .catch(()=>{
-            document.getElementById('pTbody').innerHTML=`<tr><td colspan="6"><div class="zoom-empty"><div class="zi">⚠️</div><p>Gagal memuat data persediaan</p></div></td></tr>`;
+            document.getElementById('pTbody').innerHTML=`<tr><td colspan="9"><div class="zoom-empty"><div class="zi">⚠️</div><p>Gagal memuat data persediaan</p></div></td></tr>`;
         });
 }
 
