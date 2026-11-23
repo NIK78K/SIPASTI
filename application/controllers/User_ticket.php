@@ -486,7 +486,7 @@ public function checkout_persediaan()
     $judul              = trim($this->input->post('judul', true) ?? '');
     $deskripsi          = trim($this->input->post('deskripsi', true) ?? '');
     $unit_kerja         = trim($this->input->post('unit_kerja', true) ?? '');
-    $tanggal_permintaan = trim($this->input->post('tanggal_permintaan', true) ?: ($this->input->post('tanggal_dibutuhkan', true) ?? ''));
+    $tanggal_permintaan = date('Y-m-d');
 
     if ($judul === '' && $keperluan === '') {
         $this->session->set_flashdata('error', 'Judul/Keperluan wajib diisi.');
@@ -502,14 +502,6 @@ public function checkout_persediaan()
         exit;
     }
 
-    if ($tanggal_permintaan !== '') {
-        $d = DateTime::createFromFormat('Y-m-d', $tanggal_permintaan);
-        if (!$d || $d->format('Y-m-d') !== $tanggal_permintaan || $tanggal_permintaan < date('Y-m-d')) {
-            $this->session->set_flashdata('error', 'Tanggal permintaan tidak valid. Pilih hari ini atau tanggal ke depan.');
-            redirect('user_ticket/permintaan_persediaan');
-            exit;
-        }
-    }
 
     $lines = [];
     $errors = [];

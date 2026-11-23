@@ -412,7 +412,8 @@
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
-                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>"
+                <input name="tanggal_permintaan" id="fTanggalButuh" type="date"
+                    value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" readonly
                     class="mt-1 w-full h-12 rounded-xl px-4 border-2 border-gray-200 focus:border-blue-800 focus:ring-4 focus:ring-blue-100 text-sm text-gray-800 font-medium transition-all">
             </div>
         </div>
@@ -1128,8 +1129,8 @@ function validCheckout() {
     if (tglEl && tglEl.value) {
         var now = new Date();
         var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        if (tglEl.value < today) {
-            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal permintaan tidak boleh mundur. Pilih hari ini atau tanggal ke depan.' });
+        if (tglEl.value !== today) {
+            Swal.fire({ icon: 'warning', title: 'Tanggal tidak valid', text: 'Tanggal permintaan hanya dapat hari ini.' });
             return false;
         }
     }
