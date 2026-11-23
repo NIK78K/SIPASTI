@@ -160,11 +160,18 @@ class Transaksi_persediaan_model extends CI_Model {
         if (!$ticket) return ['ok' => false, 'msg' => 'Tiket tidak ditemukan.'];
         $items = $this->get_items($ticket_id);
         if (empty($items)) return ['ok' => false, 'msg' => 'Bukan tiket persediaan.'];
+        if (!in_array($ticket['status'] ?? '', ['Menunggu', 'On Progress'], true)) {
+            return ['ok' => false, 'msg' => 'Tiket sudah diproses.'];
+        }
+        if (($ticket['status'] ?? '') === 'Menunggu' && empty($ticket['teknisi_id'])) {
+            return ['ok' => false, 'msg' => 'Tiket persediaan belum ditugaskan ke teknisi.'];
+        }
 
         $this->db->trans_begin();
 
-        // (1) guarded flip: hanya dari On Progress
-        $this->db->where('id', $ticket_id)->where('status', 'On Progress')
+        // (1) guarded flip: izinkan penyelesaian langsung oleh admin/manajemen
+        // untuk tiket yang sudah ditugaskan tetapi masih status Menunggu.
+        $this->db->where('id', $ticket_id)->where_in('status', ['Menunggu', 'On Progress'])
             ->update('tickets', ['status' => 'Selesai', 'selesai_at' => date('Y-m-d H:i:s')]);
         if ((int) $this->db->affected_rows() !== 1) {
             $this->db->trans_rollback();

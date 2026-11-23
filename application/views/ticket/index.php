@@ -451,7 +451,19 @@ $no = $page + 1;
                         $isPengajuanPersediaan = (strpos($t['jenis_kerusakan'] ?? '', '[PENGAJUAN BARANG PERSEDIAAN]') !== false)
                             || (!empty($t['nama_sub_kategori']) && stripos($t['nama_sub_kategori'], 'Pengajuan Persediaan') !== false);
                         ?>
-                        <?php if ($status === 'On Progress' || ($status === 'Menunggu' && $isPengajuanPersediaan)): ?>
+                        <?php if (
+                            $status === 'On Progress'
+                            || ($status === 'Menunggu' && $isPengajuanPersediaan)
+                            || ($status === 'Menunggu' && $isPersediaan && !$isBelumTeknisi)
+                        ):
+                            $canFinish = $this->session->userdata('role') !== 'teknisi';
+                            if (!$canFinish) {
+                                $currentTeknisi = $this->Teknisi_model->get_by_user($this->session->userdata('user_id'));
+                                $canFinish = $currentTeknisi
+                                    && (int) ($t['teknisi_id'] ?? 0) === (int) $currentTeknisi['id'];
+                            }
+                        ?>
+                        <?php if ($canFinish): ?>
                         <a href="<?= base_url('ticket/selesai/'.$t['id']) ?>" 
                            title="<?= $isPengajuanPersediaan ? 'Setujui & Selesaikan Pengajuan' : 'Tandai Selesai' ?>"
                            onclick="event.preventDefault(); confirmTicketAction(this.href, '<?= $isPengajuanPersediaan ? 'Setujui pengajuan?' : 'Selesaikan tiket?' ?>', '<?= $isPengajuanPersediaan ? 'Pengajuan akan disetujui dan barang dimasukkan ke master persediaan.' : 'Tiket ini akan ditandai sebagai selesai.' ?>', 'warning', '#16a34a');"
@@ -461,6 +473,7 @@ $no = $page + 1;
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
                         </a>
+                        <?php endif ?>
                         <?php endif ?>
                         <?php if ($this->session->userdata('role') !== 'teknisi'): ?>
                         <a href="<?= base_url('ticket/delete/'.$t['id']) ?>" title="Hapus"

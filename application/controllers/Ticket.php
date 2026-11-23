@@ -14,7 +14,7 @@ public function __construct()
 
     // 🔒 KUNCI: teknisi hanya boleh LIHAT
     if ($this->session->userdata('role') === 'teknisi') {
-        $allowed = ['index', 'detail'];
+        $allowed = ['index', 'detail', 'selesai'];
         if (!in_array($this->router->fetch_method(), $allowed)) {
 
             // kalau request dari fetch / ajax
@@ -272,16 +272,32 @@ public function index()
 
     public function selesai($id)
     {
+        $ticket = $this->Ticket_model->get_by_id($id);
+        if (!$ticket) {
+            $this->session->set_flashdata('error', 'Tiket tidak ditemukan.');
+            redirect('ticket');
+            exit;
+        }
+
+        if ($this->session->userdata('role') === 'teknisi') {
+            $teknisi = $this->Teknisi_model->get_by_user($this->session->userdata('user_id'));
+            $teknisi_id = $teknisi ? (int) $teknisi['id'] : 0;
+
+            if (!$teknisi_id || (int) ($ticket['teknisi_id'] ?? 0) !== $teknisi_id) {
+                $this->session->set_flashdata('error', 'Tiket ini bukan milik Anda.');
+                redirect('ticket');
+                exit;
+            }
+        }
+
         // Jalur persediaan: stock-out atomik via model, email via Ticket_model->update.
         $this->load->model('Transaksi_persediaan_model');
         if ($this->Transaksi_persediaan_model->has_items((int) $id)) {
             $res = $this->Transaksi_persediaan_model->selesaikan_persediaan((int) $id);
             $this->session->set_flashdata($res['ok'] ? 'success' : 'error', $res['msg']);
             redirect('ticket');
+            exit;
         }
-
-        // ambil tiket
-        $ticket = $this->Ticket_model->get_by_id($id);
 
         // update tiket
         $this->Ticket_model->update($id, [
