@@ -454,7 +454,7 @@ $no = $page + 1;
                         <?php if ($status === 'On Progress' || ($status === 'Menunggu' && $isPengajuanPersediaan)): ?>
                         <a href="<?= base_url('ticket/selesai/'.$t['id']) ?>" 
                            title="<?= $isPengajuanPersediaan ? 'Setujui & Selesaikan Pengajuan' : 'Tandai Selesai' ?>"
-                           onclick="return confirm('<?= $isPengajuanPersediaan ? 'Setujui pengajuan dan masukkan barang ke master barang persediaan?' : 'Tandai tiket ini sebagai selesai?' ?>')"
+                           onclick="event.preventDefault(); confirmTicketAction(this.href, '<?= $isPengajuanPersediaan ? 'Setujui pengajuan?' : 'Selesaikan tiket?' ?>', '<?= $isPengajuanPersediaan ? 'Pengajuan akan disetujui dan barang dimasukkan ke master persediaan.' : 'Tiket ini akan ditandai sebagai selesai.' ?>', 'warning', '#16a34a');"
                            class="p-1 rounded-md bg-green-600/20 hover:bg-green-500/40
                                   text-green-500 hover:text-green-600 transition-all hover:scale-105 active:scale-95">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -464,7 +464,7 @@ $no = $page + 1;
                         <?php endif ?>
                         <?php if ($this->session->userdata('role') !== 'teknisi'): ?>
                         <a href="<?= base_url('ticket/delete/'.$t['id']) ?>" title="Hapus"
-                           onclick="return confirm('Hapus tiket ini permanen?')"
+                           onclick="event.preventDefault(); confirmTicketAction(this.href, 'Hapus tiket?', 'Tiket akan dihapus permanen dan tidak dapat dikembalikan.', 'warning', '#ef4444');"
                            class="p-1 rounded-md bg-red-600/20 hover:bg-red-500/40
                                   text-red-500 hover:text-red-600 transition-all hover:scale-105 active:scale-95">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -751,6 +751,33 @@ table.table-fixed td { overflow: hidden; text-overflow: ellipsis; }
 function getSwalColors() {
     const isLight = document.documentElement.classList.contains('light');
     return { background: isLight ? '#ffffff' : '#0e141b', color: isLight ? '#0f172a' : '#fff' };
+}
+
+function confirmTicketAction(url, title, text, icon, confirmColor) {
+    const C = getSwalColors();
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, lanjutkan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: confirmColor,
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true,
+        ...C
+    }).then(result => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Memproses...',
+                html: 'Mohon tunggu sebentar',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                ...C
+            });
+            window.location.href = url;
+        }
+    });
 }
 
 /* ── DETAIL MODAL ── */
