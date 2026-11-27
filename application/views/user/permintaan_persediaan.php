@@ -109,28 +109,21 @@
                 <p class="text-sm text-gray-500">Coba kata kunci atau kategori lain.</p>
             </div>
 
-            <!-- ================= SKELETON LOADING (ALA MARKETPLACE LAZADA) ================= -->
-            <div id="katalogSkeleton" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+            <!-- ================= SKELETON LOADING (GAYA CLEAN) ================= -->
+            <div id="katalogSkeleton" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
                 <?php for ($sk = 0; $sk < 12; $sk++): ?>
-                <div class="skeleton-card flex flex-col p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm pointer-events-none select-none">
-                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center skeleton-shimmer">
-                        <span class="text-xl sm:text-2xl font-black tracking-widest text-slate-300/60 uppercase font-sans">SIPASTI</span>
-                    </div>
-                    <div class="pt-3 flex flex-col gap-2 flex-1">
-                        <div class="h-3.5 w-full rounded-md skeleton-shimmer"></div>
-                        <div class="h-3.5 w-3/5 rounded-md skeleton-shimmer"></div>
-                        <div class="h-3 w-1/3 rounded-md skeleton-shimmer mt-0.5"></div>
-                        <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
-                        <div class="mt-auto pt-2.5 w-full">
-                            <div class="h-[38px] w-full rounded-xl skeleton-shimmer"></div>
-                        </div>
+                <div class="skeleton-card flex flex-col pointer-events-none select-none">
+                    <div class="aspect-square rounded-2xl skeleton-shimmer"></div>
+                    <div class="pt-3 flex flex-col gap-2 px-0.5">
+                        <div class="h-4 w-4/5 rounded-md skeleton-shimmer"></div>
+                        <div class="h-3.5 w-1/2 rounded-md skeleton-shimmer"></div>
                     </div>
                 </div>
                 <?php endfor; ?>
             </div>
 
-            <!-- Kartu transparan bergaya marketplace: hanya gambar + teks, tanpa kotak kartu -->
-            <div id="katalogGrid" style="display:none" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+            <!-- Kartu bersih ala Canva: tile pastel + judul tebal + keterangan abu-abu -->
+            <div id="katalogGrid" style="display:none" class="catalog-products grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
                 <?php foreach (($barang_list ?? []) as $b): ?>
                 <?php
                     $bId      = (int) $b['id'];
@@ -140,7 +133,7 @@
                     $bDiminta = (int) ($b['total_terlaris'] ?? 0);
                     $bInisial = strtoupper(mb_substr(trim($bNama), 0, 2));
                     // 5.0 -> "5", 3.5 -> "3,5"
-                    $bAvg     = $bRCount > 0 ? rtrim(rtrim(number_format((float) ($b['rating_avg'] ?? 0), 1, ',', '.'), '0'), ',') : '';
+                    $bAvg     = $bRCount > 0 ? rtrim(rtrim(number_format((float) ($b['rating_avg'] ?? 0), 1, ',', '.'), '0'), ',') : '0';
                 ?>
                 <div class="barang-card group flex flex-col cursor-pointer"
                      onclick="openDetailBarang(<?= $bId ?>, event)"
@@ -152,65 +145,20 @@
                      data-terlaris="<?= (int) ($b['total_terlaris'] ?? 0) ?>"
                      data-search="<?= htmlspecialchars(strtolower(($b['kode_barang'] ?? '') . ' ' . ($b['nama_barang'] ?? ''))) ?>">
 
-                    <!-- Gambar persegi (bersih tanpa label kategori di dalam) -->
-                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center transition-shadow duration-300 group-hover:shadow-lg">
+                    <!-- Tile gambar dengan latar pastel -->
+                    <div class="barang-thumb tone-<?= $bId % 6 ?> relative aspect-square rounded-2xl overflow-hidden flex items-center justify-center">
                         <?php if ($bGambar): ?>
                             <img src="<?= base_url('uploads/persediaan/' . $b['gambar']) ?>"
                                  alt="<?= htmlspecialchars($bNama) ?>" loading="lazy"
-                                 class="w-full h-full object-contain p-3 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
+                                 class="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
                         <?php else: ?>
-                            <span class="text-3xl font-extrabold tracking-wide text-slate-300 select-none" aria-hidden="true">
+                            <span class="text-4xl font-extrabold tracking-wide text-slate-400/50 select-none" aria-hidden="true">
                                 <?= htmlspecialchars($bInisial) ?>
                             </span>
                         <?php endif; ?>
-                    </div>
 
-                    <!-- Info (Kategori di bawah gambar, mirip Image 1) -->
-                    <div class="flex flex-col gap-1 pt-2.5 flex-1">
-                        <!-- Kategori di bawah gambar -->
-                        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 truncate block">
-                            <?= htmlspecialchars(!empty($b['kategori_nama']) ? $b['kategori_nama'] : 'Persediaan') ?>
-                        </span>
-
-                        <!-- Nama barang -->
-                        <h3 class="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 min-h-[2.4rem] group-hover:text-[#0B2E6B] transition-colors">
-                            <?= htmlspecialchars($bNama) ?>
-                        </h3>
-
-                        <!-- Rating Bintang & Diminta -->
-                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation(); saveKatalogState(<?= $bId ?>);"
-                           title="Lihat ulasan barang"
-                           class="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
-                            <span class="text-xs tracking-tighter leading-none" aria-hidden="true">
-                                <?php
-                                $rStars = $bRCount > 0 ? (int) round((float) ($b['rating_avg'] ?? 0)) : 0;
-                                for ($s = 1; $s <= 5; $s++) {
-                                    echo $s <= $rStars ? '<span class="text-amber-400">★</span>' : '<span class="text-slate-200">★</span>';
-                                }
-                                ?>
-                            </span>
-                            <?php if ($bRCount > 0): ?>
-                                <span class="font-bold text-slate-700 ml-0.5"><?= $bAvg ?></span>
-                            <?php endif; ?>
-                            <?php if ($bDiminta > 0): ?>
-                                <span class="text-slate-300" aria-hidden="true">&bull;</span>
-                                <span class="text-slate-500 font-medium">Diminta <?= $bDiminta ?>×</span>
-                            <?php endif; ?>
-                        </a>
-
-                        <!-- Satuan & Kode barang -->
-                        <div class="flex items-baseline justify-between gap-1 pt-0.5">
-                            <p class="leading-tight text-slate-900">
-                                <span class="text-[11px] font-medium text-slate-500">per</span>
-                                <span class="text-sm font-extrabold text-[#0B2E6B]"><?= htmlspecialchars($b['satuan'] ?? 'pcs') ?></span>
-                            </p>
-                            <span class="font-mono text-[10px] text-slate-400 truncate max-w-[50%]">
-                                <?= htmlspecialchars($b['kode_barang'] ?? '-') ?>
-                            </span>
-                        </div>
-
-                        <!-- Aksi keranjang -->
-                        <div class="mt-auto pt-2.5 w-full" onclick="event.stopPropagation()">
+                        <!-- Aksi keranjang: tombol bulat kecil di pojok gambar -->
+                        <div class="absolute bottom-2.5 right-2.5" onclick="event.stopPropagation()">
                             <div id="stepper-<?= $bId ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
                                 <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, -1)"
                                     class="qty-stepper-button" aria-label="Kurangi jumlah">−</button>
@@ -220,10 +168,30 @@
                                     class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
                             </div>
                             <button id="add-<?= $bId ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= $bId ?>)"
-                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-[#0B2E6B] text-white hover:bg-white hover:text-[#0B2E6B] text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                                + Keranjang
+                                class="add-circle" aria-label="Tambah ke keranjang" title="Tambah ke keranjang">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+                                </svg>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Teks: judul tebal + keterangan abu-abu -->
+                    <div class="pt-3 px-0.5">
+                        <h3 class="text-[15px] font-semibold leading-snug text-slate-900 line-clamp-2 min-h-[2.5rem]">
+                            <?= htmlspecialchars($bNama) ?>
+                        </h3>
+                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation(); saveKatalogState(<?= $bId ?>);"
+                           title="Lihat ulasan barang"
+                           class="mt-1 flex w-full items-center text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
+                            <span class="inline-flex items-center gap-1">
+                                <span class="text-amber-400">★</span>
+                                <span class="font-semibold text-slate-700"><?= $bAvg ?></span>
+                            </span>
+                            <span class="ml-auto">
+                                Diminta <?= $bDiminta ?>×
+                            </span>
+                        </a>
                     </div>
                 </div>
                 <?php endforeach ?>
@@ -231,18 +199,11 @@
 
             <!-- ================= SKELETON APPEND TEMPLATE (SAAT KLIK MUAT LEBIH BANYAK) ================= -->
             <template id="appendSkeletonTemplate">
-                <div class="append-skeleton-card flex flex-col p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm pointer-events-none select-none">
-                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center skeleton-shimmer">
-                        <span class="text-xl sm:text-2xl font-black tracking-widest text-slate-300/60 uppercase font-sans">SIPASTI</span>
-                    </div>
-                    <div class="pt-3 flex flex-col gap-2 flex-1">
-                        <div class="h-3.5 w-full rounded-md skeleton-shimmer"></div>
-                        <div class="h-3.5 w-3/5 rounded-md skeleton-shimmer"></div>
-                        <div class="h-3 w-1/3 rounded-md skeleton-shimmer mt-0.5"></div>
-                        <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
-                        <div class="mt-auto pt-2.5 w-full">
-                            <div class="h-[38px] w-full rounded-xl skeleton-shimmer"></div>
-                        </div>
+                <div class="append-skeleton-card flex flex-col pointer-events-none select-none">
+                    <div class="aspect-square rounded-2xl skeleton-shimmer"></div>
+                    <div class="pt-3 flex flex-col gap-2 px-0.5">
+                        <div class="h-4 w-4/5 rounded-md skeleton-shimmer"></div>
+                        <div class="h-3.5 w-1/2 rounded-md skeleton-shimmer"></div>
                     </div>
                 </div>
             </template>
@@ -463,6 +424,45 @@
 .catalog-alert {
     grid-column: 1 / -1;
 }
+
+/* ===== Kartu bersih ala Canva ===== */
+.barang-thumb {
+    transition: box-shadow .25s ease;
+}
+.barang-card:hover .barang-thumb {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+}
+.tone-0 { background: #eef4ff; }
+.tone-1 { background: #edf6f1; }
+.tone-2 { background: #fdf1ee; }
+.tone-3 { background: #f1effc; }
+.tone-4 { background: #fdf6e7; }
+.tone-5 { background: #eaf6f8; }
+
+/* Tombol + bulat */
+.add-circle {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: #fff;
+    color: #0B2E6B;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .15);
+    transition: background-color .15s ease, color .15s ease, transform .12s ease;
+}
+.add-circle:hover {
+    background: #0B2E6B;
+    color: #fff;
+}
+.add-circle:active {
+    transform: scale(.9);
+}
+
+/* Stepper jumlah */
 .qty-stepper {
     display: flex;
     align-items: center;
@@ -522,6 +522,30 @@
 .qty-stepper-input[type=number] {
     appearance: textfield;
 }
+/* Stepper versi pill di atas gambar */
+.barang-thumb .qty-stepper {
+    width: auto;
+    height: 36px;
+    gap: 2px;
+    padding: 0 4px;
+    background: #fff;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .15);
+}
+.barang-thumb .qty-stepper-button {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    background: transparent;
+}
+.barang-thumb .qty-stepper-button:hover {
+    background: #f1f5f9;
+}
+.barang-thumb .qty-stepper-input {
+    width: 30px;
+    font-size: 14px;
+}
+
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 #cartDrawer.open { display: flex !important; }
 #cartOverlay.open { display: block !important; }
@@ -555,7 +579,7 @@
     animation: cartShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
 }
 
-/* Skeleton Loading Shimmer (Gaya Marketplace Lazada) */
+/* Skeleton Loading Shimmer */
 @keyframes skeletonShimmer {
     0%   { background-position: -200% 0; }
     100% { background-position: 200% 0; }
@@ -1027,7 +1051,7 @@ function renderCartItems(items) {
     var box = document.getElementById('cartItems');
     if (!box) return;
     if (!items.length) {
-        box.innerHTML = '<div class="text-center py-10"><div class="text-5xl mb-3">🛒</div><p class="font-bold text-gray-700">Keranjang masih kosong</p><p class="text-sm text-gray-500">Pilih barang di katalog lalu tekan + Keranjang.</p></div>';
+        box.innerHTML = '<div class="text-center py-10"><div class="text-5xl mb-3">🛒</div><p class="font-bold text-gray-700">Keranjang masih kosong</p><p class="text-sm text-gray-500">Pilih barang di katalog lalu tekan tombol +.</p></div>';
         return;
     }
     box.innerHTML = items.map(function (it) {

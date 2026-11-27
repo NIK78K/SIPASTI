@@ -381,71 +381,22 @@ $infoItems[] = [
                 $bCount     = (int) ($b->rating_count ?? 0);
                 $bDisetujui = (int) ($b->total_disetujui ?? ($b->total_diminta ?? 0));
                 $bInisial   = strtoupper(mb_substr(trim($bNama), 0, 2));
-                $bAvg       = $bCount > 0 ? rtrim(rtrim(number_format($bRating, 1, ',', '.'), '0'), ',') : '';
-                $bKatNama   = $b->kategori_nama ?? ($kategoriNama ?? '');
+                $bAvg       = $bCount > 0 ? rtrim(rtrim(number_format($bRating, 1, ',', '.'), '0'), ',') : '0';
                 ?>
                 <div class="barang-card group flex flex-col cursor-pointer"
                      onclick="openDetailBarang(<?= $bId ?>, event)">
 
-                    <!-- Gambar persegi (bersih tanpa label di dalam) -->
-                    <div class="relative aspect-square rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center transition-shadow duration-300 group-hover:shadow-lg">
+                    <div class="barang-thumb tone-<?= $bId % 6 ?> relative aspect-square rounded-2xl overflow-hidden flex items-center justify-center">
                         <?php if ($bGambar): ?>
                             <img src="<?= base_url('uploads/persediaan/' . $b->gambar) ?>"
                                  alt="<?= htmlspecialchars($bNama) ?>" loading="lazy"
-                                 class="w-full h-full object-contain p-3 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
+                                 class="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
                         <?php else: ?>
-                            <span class="text-3xl font-extrabold tracking-wide text-slate-300 select-none" aria-hidden="true">
+                            <span class="text-4xl font-extrabold tracking-wide text-slate-400/50 select-none" aria-hidden="true">
                                 <?= htmlspecialchars($bInisial) ?>
                             </span>
                         <?php endif; ?>
-                    </div>
-
-                    <!-- Info (Kategori di bawah gambar, mirip Image 1) -->
-                    <div class="flex flex-col gap-1 pt-2.5 flex-1">
-                        <!-- Kategori di bawah gambar -->
-                        <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 truncate block">
-                            <?= htmlspecialchars(!empty($bKatNama) ? $bKatNama : 'Persediaan') ?>
-                        </span>
-
-                        <!-- Nama barang -->
-                        <h3 class="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 min-h-[2.4rem] group-hover:text-[#0B2E6B] transition-colors">
-                            <?= htmlspecialchars($bNama) ?>
-                        </h3>
-
-                        <!-- Rating Bintang (5 Bintang) & Diminta -->
-                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation()"
-                           title="Lihat ulasan barang"
-                           class="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
-                            <span class="text-xs tracking-tighter leading-none" aria-hidden="true">
-                                <?php
-                                $rStars = $bCount > 0 ? (int) round((float) $bRating) : 0;
-                                for ($s = 1; $s <= 5; $s++) {
-                                    echo $s <= $rStars ? '<span class="text-amber-400">★</span>' : '<span class="text-slate-200">★</span>';
-                                }
-                                ?>
-                            </span>
-                            <?php if ($bCount > 0): ?>
-                                <span class="font-bold text-slate-700 ml-0.5"><?= $bAvg ?></span>
-                            <?php endif; ?>
-                            <?php if ($bDisetujui > 0): ?>
-                                <span class="text-slate-300" aria-hidden="true">&bull;</span>
-                                <span class="text-slate-500 font-medium">Diminta <?= $bDisetujui ?>×</span>
-                            <?php endif; ?>
-                        </a>
-
-                        <!-- Satuan & Kode barang -->
-                        <div class="flex items-baseline justify-between gap-1 pt-0.5">
-                            <p class="leading-tight text-slate-900">
-                                <span class="text-[11px] font-medium text-slate-500">per</span>
-                                <span class="text-sm font-extrabold text-[#0B2E6B]"><?= htmlspecialchars($b->satuan ?? 'pcs') ?></span>
-                            </p>
-                            <span class="font-mono text-[10px] text-slate-400 truncate max-w-[50%]">
-                                <?= htmlspecialchars($b->kode_barang ?? '-') ?>
-                            </span>
-                        </div>
-
-                        <!-- Aksi keranjang -->
-                        <div class="mt-auto pt-2.5 w-full" onclick="event.stopPropagation()">
+                        <div class="absolute bottom-2.5 right-2.5" onclick="event.stopPropagation()">
                             <div id="stepper-<?= $bId ?>" class="qty-stepper" style="display:none" onclick="event.stopPropagation()">
                                 <button type="button" onclick="event.stopPropagation();cardStep(<?= $bId ?>, -1)"
                                     class="qty-stepper-button" aria-label="Kurangi jumlah">−</button>
@@ -455,10 +406,28 @@ $infoItems[] = [
                                     class="qty-stepper-button" aria-label="Tambah jumlah">+</button>
                             </div>
                             <button id="add-<?= $bId ?>" type="button" onclick="event.stopPropagation();cartAddFirst(<?= $bId ?>)"
-                                class="w-full h-[38px] rounded-xl border border-[#0B2E6B] bg-[#0B2E6B] text-white hover:bg-white hover:text-[#0B2E6B] text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                                + Keranjang
+                                class="add-circle" aria-label="Tambah ke keranjang" title="Tambah ke keranjang">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+                                </svg>
                             </button>
                         </div>
+                    </div>
+
+                    <div class="pt-3 px-0.5">
+                        <h3 class="text-[15px] font-semibold leading-snug text-slate-900 line-clamp-2 min-h-[2.5rem]">
+                            <?= htmlspecialchars($bNama) ?>
+                        </h3>
+
+                        <a href="<?= base_url('user_ticket/ulasan_barang/' . $bId) ?>" onclick="event.stopPropagation()"
+                           title="Lihat ulasan barang"
+                           class="mt-1 flex w-full items-center text-[12px] text-slate-500 hover:text-[#0B2E6B] transition-colors">
+                            <span class="inline-flex items-center gap-1">
+                                <span class="text-amber-400" aria-hidden="true">★</span>
+                                <span class="font-semibold text-slate-700"><?= $bAvg ?></span>
+                            </span>
+                            <span class="ml-auto">Diminta <?= $bDisetujui ?>×</span>
+                        </a>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -580,6 +549,40 @@ $infoItems[] = [
     appearance: textfield;
 }
 
+.barang-thumb {
+    transition: box-shadow .25s ease;
+}
+.barang-card:hover .barang-thumb {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+}
+.tone-0 { background: #eef4ff; }
+.tone-1 { background: #edf6f1; }
+.tone-2 { background: #fdf1ee; }
+.tone-3 { background: #f1effc; }
+.tone-4 { background: #fdf6e7; }
+.tone-5 { background: #eaf6f8; }
+.add-circle {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: #fff;
+    color: #0B2E6B;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .15);
+    transition: background-color .15s ease, color .15s ease, transform .12s ease;
+}
+.add-circle:hover {
+    background: #0B2E6B;
+    color: #fff;
+}
+.add-circle:active {
+    transform: scale(.9);
+}
+
 .qty-stepper {
     display: flex;
     align-items: center;
@@ -638,6 +641,28 @@ $infoItems[] = [
 }
 .qty-stepper-input[type=number] {
     appearance: textfield;
+}
+.barang-thumb .qty-stepper {
+    width: auto;
+    height: 36px;
+    gap: 2px;
+    padding: 0 4px;
+    background: #fff;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .15);
+}
+.barang-thumb .qty-stepper-button {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    background: transparent;
+}
+.barang-thumb .qty-stepper-button:hover {
+    background: #f1f5f9;
+}
+.barang-thumb .qty-stepper-input {
+    width: 30px;
+    font-size: 14px;
 }
 
 @keyframes cartShake {
