@@ -472,7 +472,7 @@ $bintangHtml = static function (int $n, string $cls = 'text-sm'): string {
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
-                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>" class="mt-1 h-12 w-full rounded-xl border-2 border-gray-200 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-800 focus:ring-4 focus:ring-blue-100 transition-all">
+                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" readonly class="mt-1 h-12 w-full rounded-xl border-2 border-gray-200 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-800 focus:ring-4 focus:ring-blue-100 transition-all">
             </div>
         </div>
         <div class="pt-2 pb-1 flex items-baseline justify-between border-t border-slate-200/80">

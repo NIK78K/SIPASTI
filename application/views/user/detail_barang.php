@@ -509,7 +509,7 @@ $infoItems[] = [
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-700">Tanggal permintaan</label>
-                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" min="<?= date('Y-m-d') ?>" class="mt-1 h-12 w-full rounded-xl border-2 border-gray-200 px-4 text-sm text-gray-800">
+                <input name="tanggal_permintaan" id="fTanggalButuh" type="date" value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" readonly class="mt-1 h-12 w-full rounded-xl border-2 border-gray-200 px-4 text-sm text-gray-800">
             </div>
         </div>
         <div class="pt-2 pb-1 flex items-baseline justify-between border-t border-slate-200/80">
